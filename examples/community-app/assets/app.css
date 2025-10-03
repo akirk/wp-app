@@ -1,0 +1,340 @@
+/* Reset and base styles for WpApp */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f5;
+    line-height: 1.6;
+}
+
+/* Remove any theme interference */
+.wp-site-blocks,
+.wp-block-group,
+.entry-content {
+    all: unset;
+}
+
+/* App container styles */
+.my-web-app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.app-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.app-header h1 {
+    font-size: 2.5em;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.app-tagline {
+    font-size: 1.2em;
+    color: #7f8c8d;
+}
+
+/* User welcome section */
+.user-welcome {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 40px;
+}
+
+.user-info h2 {
+    margin: 0 0 10px 0;
+    color: #2c3e50;
+}
+
+.user-stats {
+    margin: 0;
+}
+
+.user-stats .level {
+    background: #3498db;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    margin-right: 10px;
+}
+
+.user-stats .points {
+    background: #f39c12;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+}
+
+/* Feature cards */
+.app-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.feature-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.feature-card h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.feature-card p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+/* Guest welcome */
+.guest-welcome {
+    text-align: center;
+    background: #ecf0f1;
+    padding: 40px;
+    border-radius: 10px;
+    margin-bottom: 40px;
+}
+
+.auth-buttons {
+    margin-top: 20px;
+}
+
+.auth-buttons .button {
+    margin: 0 10px;
+}
+
+.features-preview {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.features-preview ul {
+    list-style: none;
+    padding: 0;
+}
+
+.features-preview li {
+    padding: 10px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.features-preview li:before {
+    content: "✓";
+    color: #27ae60;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+/* Buttons */
+.button {
+    display: inline-block;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.button-primary {
+    background: #3498db;
+    color: white;
+}
+
+.button-primary:hover {
+    background: #2980b9;
+    color: white;
+}
+
+.button:not(.button-primary) {
+    background: #ecf0f1;
+    color: #2c3e50;
+}
+
+.button:not(.button-primary):hover {
+    background: #bdc3c7;
+    color: #2c3e50;
+}
+
+/* Dashboard specific styles */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.user-details h1 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+}
+
+.user-email {
+    margin: 0;
+    color: #7f8c8d;
+}
+
+.progress-summary {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    min-width: 80px;
+}
+
+.stat-box.level { background: #3498db; color: white; }
+.stat-box.points { background: #f39c12; color: white; }
+.stat-box.posts { background: #27ae60; color: white; }
+
+.stat-number {
+    font-size: 1.8em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+.dashboard-content {
+    display: grid;
+    gap: 30px;
+}
+
+.dashboard-section {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.dashboard-section h2 {
+    margin: 0 0 20px 0;
+    color: #2c3e50;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* 404 Error page styles */
+.error-container {
+    max-width: 600px;
+    margin: 100px auto;
+    padding: 40px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.error-code {
+    font-size: 72px;
+    font-weight: bold;
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+.error-title {
+    font-size: 32px;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.error-message {
+    font-size: 18px;
+    color: #7f8c8d;
+    margin-bottom: 30px;
+}
+
+.error-path {
+    background: #ecf0f1;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    color: #34495e;
+    margin-bottom: 30px;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.button-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.button-secondary:hover {
+    background: #7f8c8d;
+    color: white;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .progress-summary {
+        justify-content: center;
+    }
+
+    .action-buttons {
+        justify-content: center;
+    }
+
+    .user-welcome {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .app-features {
+        grid-template-columns: 1fr;
+    }
+}

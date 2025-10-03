@@ -1,0 +1,15 @@
+{
+    "name": "my-company/my-web-app-plugin",
+    "description": "WordPress plugin that uses akirk/wp-app to create a web application",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.4",
+        "akirk/wp-app": "dev-main"
+    },
+    "repositories": {
+        "wp-app": {
+            "type": "path",
+            "url": "/Users/alex/Sites/wp-app"
+        }
+    }
+}
