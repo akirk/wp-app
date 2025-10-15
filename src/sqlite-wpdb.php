@@ -1,9 +1,5 @@
 <?php
-/**
- * SQLite-capable WPDB Subclass
- *
- * Extends the existing wpdb polyfill to support SQLite with MySQL query translation.
- */
+namespace WpApp;
 
 require_once __DIR__ . '/wpdb-polyfill.php';
 
@@ -22,16 +18,16 @@ class sqlite_wpdb extends wpdb {
                 mkdir( $db_dir, 0755, true );
             }
 
-            $this->pdo = new PDO( "sqlite:{$sqlite_file}", null, null, array(
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            $this->pdo = new \PDO( "sqlite:{$sqlite_file}", null, null, array(
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC
             ) );
 
             // Enable foreign keys and set pragmas for better MySQL compatibility
             $this->pdo->exec( 'PRAGMA foreign_keys = ON' );
             $this->pdo->exec( 'PRAGMA journal_mode = WAL' );
 
-        } catch ( PDOException $e ) {
+        } catch ( \PDOException $e ) {
             $this->last_error = 'SQLite connection failed: ' . $e->getMessage();
             throw new Exception( $this->last_error );
         }
@@ -74,7 +70,7 @@ class sqlite_wpdb extends wpdb {
 
             return false;
 
-        } catch ( PDOException $e ) {
+        } catch ( \PDOException $e ) {
             $this->last_error = $e->getMessage();
             return false;
         }

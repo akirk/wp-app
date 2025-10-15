@@ -26,13 +26,6 @@ abstract class BaseStorage {
 	 * Initialize database - create tables and run migrations
 	 */
 	private function init_database() {
-		if ( ! function_exists( 'dbDelta' ) ) {
-			if ( ! defined( 'ABSPATH' ) ) {
-				throw new \Exception( 'ABSPATH not defined. BaseStorage requires WordPress environment.' );
-			}
-			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-		}
-
 		$this->init_migrations();
 
 		$this->run_migration( 'initial_table_creation', function() {
@@ -67,7 +60,7 @@ abstract class BaseStorage {
 			UNIQUE KEY unique_migration (migration_name)
 		) $charset_collate;";
 
-		dbDelta( $sql );
+		$this->wpdb->query( $sql );
 	}
 
 	/**
