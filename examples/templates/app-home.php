@@ -2,8 +2,15 @@
 /**
  * App home template example
  */
-
-get_header(); ?>
+?>
+<!DOCTYPE html>
+<html <?php echo wp_app_language_attributes(); ?>>
+<head>
+    <title><?php echo wp_app_title(); ?></title>
+    <?php wp_app_head(); ?>
+</head>
+<body class="wp-app-body">
+<?php wp_app_body_open(); ?>
 
 <div class="wp-app-container">
     <h1>Welcome to My App</h1>
@@ -47,4 +54,6 @@ get_header(); ?>
 }
 </style>
 
-<?php get_footer();
+<?php wp_app_body_close(); ?>
+</body>
+</html>

@@ -13,8 +13,15 @@ $user = get_user_by( 'ID', $user_id );
 if ( ! $user ) {
     wp_die( 'User not found' );
 }
-
-get_header(); ?>
+?>
+<!DOCTYPE html>
+<html <?php echo wp_app_language_attributes(); ?>>
+<head>
+    <title><?php echo wp_app_title(); ?></title>
+    <?php wp_app_head(); ?>
+</head>
+<body class="wp-app-body">
+<?php wp_app_body_open(); ?>
 
 <div class="wp-app-container">
     <h1><?php echo esc_html( $user->display_name ); ?>'s Profile</h1>
@@ -93,4 +100,6 @@ fetch('/api/user-data/<?php echo $user_id; ?>')
     });
 </script>
 
-<?php get_footer();
+<?php wp_app_body_close(); ?>
+</body>
+</html>

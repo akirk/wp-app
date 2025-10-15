@@ -209,5 +209,6 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
     </div>
 </div>
 
+<?php wp_app_body_close(); ?>
 </body>
 </html>

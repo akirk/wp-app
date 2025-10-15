@@ -33,8 +33,12 @@ abstract class BaseStorage {
 			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 		}
 
-		$this->create_tables();
 		$this->init_migrations();
+
+		$this->run_migration( 'initial_table_creation', function() {
+			$this->create_tables();
+		} );
+
 		$this->run_migrations();
 	}
 

@@ -10,36 +10,20 @@ if ( ! function_exists( 'wp_app_head' ) ) {
      * Similar to wp_head() but clean and without theme/plugin interference
      */
     function wp_app_head() {
-        // Basic meta tags
-        echo '<meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '">' . "\n";
-        echo '<meta name="viewport" content="width=device-width, initial-scale=1">' . "\n";
+        if ( function_exists( 'wp_head' ) ) {
+            wp_head();
+        } else {
+            // Basic meta tags (fallback when WordPress is not present)
+            echo '<meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '">' . "\n";
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1">' . "\n";
 
-        // CSRF token for AJAX requests
-        echo '<meta name="csrf-token" content="' . esc_attr( wp_create_nonce( 'wp_rest' ) ) . '">' . "\n";
+            // CSRF token for AJAX requests
+            echo '<meta name="csrf-token" content="' . esc_attr( wp_create_nonce( 'wp_rest' ) ) . '">' . "\n";
 
-        // Allow language attributes
-        if ( function_exists( 'get_language_attributes' ) ) {
-            echo '<meta name="language" content="' . esc_attr( get_language_attributes() ) . '">' . "\n";
-        }
-
-        // Include WordPress admin bar styles and scripts if showing
-        if ( is_admin_bar_showing() ) {
-            // Use the new recommended method for WordPress 6.4+
-            if ( function_exists( 'wp_enqueue_admin_bar_header_styles' ) ) {
-                wp_enqueue_admin_bar_header_styles();
-            } else {
-                // Fallback for older WordPress versions
-                if ( function_exists( 'wp_admin_bar_header' ) ) {
-                    wp_admin_bar_header();
-                }
+            // Allow language attributes
+            if ( function_exists( 'get_language_attributes' ) ) {
+                echo '<meta name="language" content="' . esc_attr( get_language_attributes() ) . '">' . "\n";
             }
-
-            // Manually include admin bar CSS if not loaded
-            $admin_bar_css_url = includes_url( 'css/admin-bar.min.css' );
-            $dashicons_css_url = includes_url( 'css/dashicons.min.css' );
-
-            echo '<link rel="stylesheet" id="admin-bar-css" href="' . esc_url( $admin_bar_css_url ) . '?ver=' . get_bloginfo( 'version' ) . '" type="text/css" media="all" />' . "\n";
-            echo '<link rel="stylesheet" id="dashicons-css" href="' . esc_url( $dashicons_css_url ) . '?ver=' . get_bloginfo( 'version' ) . '" type="text/css" media="all" />' . "\n";
         }
 
         // Custom app head hook - allows components to add styles/scripts
@@ -73,6 +57,10 @@ if ( ! function_exists( 'wp_app_body_close' ) ) {
      * Generate body close content for app templates
      */
     function wp_app_body_close() {
+        if ( function_exists( 'wp_footer' ) ) {
+            wp_footer();
+        }
+
         // Custom app body close hook
         do_action( 'wp_app_body_close' );
     }
@@ -190,6 +178,84 @@ if ( ! function_exists( 'wp_app_add_inline_script' ) ) {
         } );
     }
 }
+
+if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
+    /**
+     * Remove theme styles and scripts from app pages
+     */
+    function wp_app_dequeue_theme_assets() {
+        global $wp_styles, $wp_scripts;
+
+        // Only run on app pages
+        if ( ! get_query_var( 'wp_app_request' ) ) {
+            return;
+        }
+
+        if ( ! $wp_styles ) {
+            return;
+        }
+
+        // Get all enqueued styles
+        $enqueued_styles = $wp_styles->queue;
+
+        // Whitelist of styles to keep (WordPress core and essential plugins)
+        $keep_styles = [
+            'admin-bar',
+            'dashicons',
+            'debug-bar',
+            'query-monitor',
+            'qm-',
+        ];
+
+        foreach ( $enqueued_styles as $handle ) {
+            $should_keep = false;
+
+            // Check if this style should be kept
+            foreach ( $keep_styles as $keep ) {
+                if ( $handle === $keep || strpos( $handle, $keep ) === 0 ) {
+                    $should_keep = true;
+                    break;
+                }
+            }
+
+            // Dequeue if not in whitelist
+            if ( ! $should_keep ) {
+                wp_dequeue_style( $handle );
+                error_log( 'WP-App: Dequeued style - ' . $handle );
+            }
+        }
+
+        // Also dequeue scripts we don't need (but keep admin bar and debugging tools)
+        if ( $wp_scripts ) {
+            $enqueued_scripts = $wp_scripts->queue;
+
+            $keep_scripts = [
+                'admin-bar',
+                'query-monitor',
+                'qm-',
+            ];
+
+            foreach ( $enqueued_scripts as $handle ) {
+                $should_keep = false;
+
+                foreach ( $keep_scripts as $keep ) {
+                    if ( $handle === $keep || strpos( $handle, $keep ) === 0 ) {
+                        $should_keep = true;
+                        break;
+                    }
+                }
+
+                if ( ! $should_keep ) {
+                    wp_dequeue_script( $handle );
+                    error_log( 'WP-App: Dequeued script - ' . $handle );
+                }
+            }
+        }
+    }
+}
+
+// Hook into wp_enqueue_scripts to dequeue theme assets on app pages
+add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
 
 if ( ! function_exists( 'wp_app_get_route_var' ) ) {
     /**
