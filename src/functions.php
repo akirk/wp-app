@@ -221,7 +221,6 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
             // Dequeue if not in whitelist
             if ( ! $should_keep ) {
                 wp_dequeue_style( $handle );
-                error_log( 'WP-App: Dequeued style - ' . $handle );
             }
         }
 
@@ -247,7 +246,6 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
 
                 if ( ! $should_keep ) {
                     wp_dequeue_script( $handle );
-                    error_log( 'WP-App: Dequeued script - ' . $handle );
                 }
             }
         }
@@ -255,7 +253,9 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
 }
 
 // Hook into wp_enqueue_scripts to dequeue theme assets on app pages
-add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
+if ( function_exists( 'add_action' ) ) {
+    add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
+}
 
 if ( ! function_exists( 'wp_app_get_route_var' ) ) {
     /**
