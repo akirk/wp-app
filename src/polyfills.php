@@ -258,12 +258,39 @@ if ( ! function_exists( 'is_user_logged_in' ) ) {
 
 if ( ! function_exists( 'wp_get_current_user' ) ) {
 	function wp_get_current_user() {
-		// Return a simple user object for standalone mode
-		return (object) array(
-			'ID' => 1,
-			'user_login' => 'admin',
-			'display_name' => 'Administrator'
-		);
+		static $current_user = null;
+
+		if ( $current_user === null ) {
+			$current_user = new class {
+				public $ID = 1;
+				public $user_login = 'admin';
+				public $display_name = 'Administrator';
+				public $user_email = 'admin@example.com';
+				public $allcaps = [];
+
+				public function __construct() {
+					$this->allcaps = [
+						'read' => true,
+						'edit_posts' => true,
+						'publish_posts' => true,
+						'manage_options' => true
+					];
+				}
+
+				public function has_cap( $capability ) {
+					if ( is_array( $capability ) ) {
+						$capability = array_shift( $capability );
+					}
+					return isset( $this->allcaps[ $capability ] ) && $this->allcaps[ $capability ];
+				}
+
+				public function exists() {
+					return true;
+				}
+			};
+		}
+
+		return $current_user;
 	}
 }
 
@@ -385,5 +412,5 @@ if ( ! function_exists( 'wp_json_encode' ) ) {
 	}
 }
 if ( ! class_exists( 'wpdb' ) ) {
-	require_once __DIR__ . '/sqlite-wpdb.php';
+	require_once __DIR__ . '/sqlite_wpdb.php';
 }

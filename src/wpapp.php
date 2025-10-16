@@ -2,10 +2,14 @@
 
 namespace WpApp;
 
-// Load database abstraction classes
-require_once __DIR__ . '/wpdb-polyfill.php';
-require_once __DIR__ . '/sqlite-wpdb.php';
+// Load BaseStorage (always needed)
 require_once __DIR__ . '/BaseStorage.php';
+
+// Load database abstraction classes only in standalone mode
+if ( ! defined( 'WPINC' ) ) {
+	require_once __DIR__ . '/wpdb-polyfill.php';
+	require_once __DIR__ . '/sqlite_wpdb.php';
+}
 
 /**
  * Main WpApp class that coordinates all components
@@ -93,6 +97,9 @@ class WpApp {
         if ( ! function_exists( 'wp_app_head' ) ) {
             require_once __DIR__ . '/functions.php';
         }
+
+        // Don't load polyfills here - they will be loaded later if needed
+        // This prevents them from overriding WordPress functions that load after this
     }
 
     /**
@@ -101,6 +108,12 @@ class WpApp {
     public function init() {
         if ( $this->initialized ) {
             return;
+        }
+
+        // Load polyfills only if we're NOT in WordPress
+        // WPINC is defined very early in WordPress bootstrap
+        if ( ! defined( 'WPINC' ) ) {
+            require_once __DIR__ . '/polyfills.php';
         }
 
         // Set up defaults automatically

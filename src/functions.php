@@ -4,9 +4,6 @@
  * Global functions for WpApp framework
  */
 
-// Load polyfills for WordPress functions when not in WordPress context
-require_once __DIR__ . '/polyfills.php';
-
 if ( ! function_exists( 'wp_app_head' ) ) {
     /**
      * Generate HTML head content for app templates
@@ -256,7 +253,9 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
 }
 
 // Hook into wp_enqueue_scripts to dequeue theme assets on app pages
-add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
+if ( function_exists( 'add_action' ) ) {
+	add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
+}
 
 if ( ! function_exists( 'wp_app_get_route_var' ) ) {
     /**
