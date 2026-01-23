@@ -1,6 +1,6 @@
-# WP-App Tutorial: From Minimal to Full-Featured
+# WpApp Tutorial: From Minimal to Full-Featured
 
-This tutorial will guide you through building web applications using the wp-app framework, starting from the minimal example and gradually adding more features.
+This tutorial will guide you through building web applications using the WpApp framework, starting from the minimal example and gradually adding features using the BaseApp pattern.
 
 ## Why Build on WordPress?
 
@@ -12,13 +12,18 @@ Before diving into code, let's understand why WordPress is an excellent foundati
 - **🧩 Rich plugin ecosystem** - Integrate payments, email, analytics, and thousands of other features
 - **📱 Admin interface** - Professional backend for managing users and content without building from scratch
 
-The wp-app framework lets you build modern applications while getting all these benefits for free.
+The WpApp framework lets you build modern applications while getting all these benefits for free.
 
 ## Getting Started: The Minimal Example
 
-The simplest possible wp-app requires just 3 lines of PHP. Check out `examples/minimal-app/`:
+The simplest possible WpApp requires just 3 lines of PHP. Check out `examples/minimal-app/`:
 
 ```php
+<?php
+/**
+ * Plugin Name: Minimal App
+ */
+
 require_once __DIR__ . '/vendor/autoload.php';
 use WpApp\WpApp;
 
@@ -32,10 +37,10 @@ For more control, pass a configuration array:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'minimal', [
-    'show_masterbar_for_anonymous' => true,  // Show navigation for logged-out users
-    'show_wp_logo' => false,                 // Hide WordPress logo
-    'show_site_name' => true,               // Show your site name
-    'require_login' => true                 // Require login to access (alias for require_capability => 'read')
+	'show_masterbar_for_anonymous' => true,  // Show navigation for logged-out users
+	'show_wp_logo'                 => false, // Hide WordPress logo
+	'show_site_name'               => true,  // Show your site name
+	'require_login'                => true,  // Require login (alias for require_capability => 'read')
 ] );
 $app->init();
 ```
@@ -48,100 +53,241 @@ This automatically gives you:
 
 ## Step 1: Adding More Pages
 
-Create additional templates in your `templates/` directory:
-
-```
-templates/
-├── index.php          # Handles /minimal
-├── about.php          # Handles /minimal/about
-└── contact.php        # Handles /minimal/contact
-```
-
-The framework auto-discovers these templates - no configuration needed!
-
-## Step 2: Dynamic Routes with Variables
-
-Create templates with variables in their names:
-
-```
-templates/
-├── user/{id}.php      # Handles /minimal/user/123
-├── posts/{slug}.php   # Handles /minimal/posts/my-post
-└── profile/{username}/edit.php  # Handles /minimal/profile/john/edit
-```
-
-Access variables in your templates:
-```php
-$user_id = get_query_var( 'id' );
-$post_slug = get_query_var( 'slug' );
-$username = get_query_var( 'username' );
-```
-
-## Step 3: Using the Database Manager
-
-Add database functionality to track user data:
+Add routes for additional pages:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'minimal' );
 
-// Create a simple table
-$app->database()->create_table( 'user_visits', [
-    'id' => 'bigint(20) unsigned NOT NULL AUTO_INCREMENT',
-    'user_id' => 'bigint(20) unsigned NOT NULL',
-    'page_visited' => 'varchar(255) NOT NULL',
-    'visit_time' => 'datetime NOT NULL',
-    'PRIMARY KEY' => '(id)'
-] );
+// Main page -> templates/index.php
+$app->route( '' );
+
+// About page -> templates/about.php
+$app->route( 'about' );
+
+// Contact page -> templates/contact.php
+$app->route( 'contact' );
 
 $app->init();
 ```
 
-## Step 4: Customizing the Admin Bar
+The framework automatically discovers template files based on route names.
 
-Add custom menu items and modify the admin bar:
+## Step 2: Dynamic Routes with Parameters
+
+Create routes with parameters:
 
 ```php
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
+// User profile -> templates/user.php
+$app->route( 'user/{user_id}' );
 
-// Add custom menu items
-$app->add_menu_item( 'dashboard', 'My Dashboard', home_url( '/minimal/dashboard' ) );
-$app->add_menu_item( 'settings', 'Settings', home_url( '/minimal/settings' ) );
+// Post view -> templates/post.php
+$app->route( 'posts/{post_id}' );
 
-// For clean app-only admin bar, remove all WordPress items
-$app->clear_admin_bar();
-
-// Or just clear your app's menu items
-$app->clear_menu_items();
-
-$app->init();
+// Nested parameters -> templates/user-posts.php
+$app->route( 'user/{user_id}/posts/{post_id}' );
 ```
 
-## Step 5: Access Control and User Management
+Access parameters in your templates:
+
+```php
+<?php
+$user_id = get_query_var( 'user_id' );
+$post_id = get_query_var( 'post_id' );
+?>
+<h1>User <?php echo intval( $user_id ); ?>, Post <?php echo intval( $post_id ); ?></h1>
+```
+
+## Step 3: Using BaseApp Pattern for Structured Apps
+
+For larger applications, use the BaseApp pattern for better organization. This separates concerns into:
+- **Storage** - Database schema and data access
+- **App** - Routing and configuration
+- **Views** - Template files
+
+### Create a Storage Class
+
+```php
+<?php
+use WpApp\BaseStorage;
+
+class MyAppStorage extends BaseStorage {
+
+	/**
+	 * Define database schema
+	 */
+	protected function get_schema() {
+		$charset_collate = $this->wpdb->get_charset_collate();
+
+		return array(
+			"CREATE TABLE {$this->wpdb->prefix}user_visits (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				user_id bigint(20) unsigned NOT NULL,
+				page_visited varchar(255) NOT NULL,
+				visit_time datetime DEFAULT CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				KEY user_id (user_id)
+			) $charset_collate;",
+		);
+	}
+
+	/**
+	 * Get user visit history
+	 */
+	public function get_user_visits( $user_id ) {
+		return $this->wpdb->get_results(
+			$this->wpdb->prepare(
+				"SELECT * FROM {$this->wpdb->prefix}user_visits WHERE user_id = %d ORDER BY visit_time DESC",
+				$user_id
+			)
+		);
+	}
+
+	/**
+	 * Log a visit
+	 */
+	public function log_visit( $user_id, $page ) {
+		$this->wpdb->insert(
+			$this->wpdb->prefix . 'user_visits',
+			array(
+				'user_id'      => $user_id,
+				'page_visited' => $page,
+			),
+			array( '%d', '%s' )
+		);
+	}
+}
+```
+
+### Create Your App Class
+
+```php
+<?php
+use WpApp\WpApp;
+use WpApp\BaseApp;
+
+class MyApp extends BaseApp {
+
+	public function __construct() {
+		// Initialize storage
+		$this->storage = new MyAppStorage();
+
+		// Initialize WpApp
+		$this->app = new WpApp(
+			plugin_dir_path( __FILE__ ) . 'templates',
+			'my-app',
+			array(
+				'require_login' => true,
+				'app_name'      => 'My App',
+			)
+		);
+
+		// Hook into WordPress
+		add_action( 'plugins_loaded', array( $this, 'init' ) );
+		register_activation_hook( __FILE__, array( $this, 'activate' ) );
+	}
+
+	protected function setup_database() {
+		// Database schema is defined in storage class
+		// Tables are created in activate() hook
+	}
+
+	protected function setup_routes() {
+		$this->app->route( '' );
+		$this->app->route( 'dashboard' );
+		$this->app->route( 'history' );
+	}
+
+	protected function setup_menu() {
+		$this->app->add_menu_item( 'dashboard', 'Dashboard', home_url( '/my-app/dashboard' ) );
+		$this->app->add_menu_item( 'history', 'History', home_url( '/my-app/history' ) );
+	}
+
+	public function activate() {
+		// Create/update database tables
+		$this->storage->create_tables();
+
+		// Set up routes before flushing
+		$this->setup_routes();
+
+		// Flush rewrite rules
+		flush_rewrite_rules();
+	}
+}
+
+new MyApp();
+```
+
+### Use Storage in Templates
+
+```php
+<?php
+// templates/history.php
+global $app; // Access via BaseApp pattern
+
+$user_id = get_current_user_id();
+$visits  = $app->get_storage()->get_user_visits( $user_id );
+?>
+<!DOCTYPE html>
+<html <?php echo wp_app_language_attributes(); ?>>
+<head>
+	<title><?php echo wp_app_title( 'Visit History' ); ?></title>
+	<?php wp_app_head(); ?>
+</head>
+<body>
+	<?php wp_app_body_open(); ?>
+
+	<h1>Your Visit History</h1>
+
+	<?php if ( $visits ) : ?>
+		<ul>
+			<?php foreach ( $visits as $visit ) : ?>
+				<li>
+					<?php echo esc_html( $visit->page_visited ); ?>
+					- <?php echo esc_html( $visit->visit_time ); ?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	<?php else : ?>
+		<p>No visits recorded yet.</p>
+	<?php endif; ?>
+
+	<?php wp_app_body_close(); ?>
+</body>
+</html>
+```
+
+## Step 4: Access Control and User Management
 
 Control who can access your app with WordPress's capability system:
 
 ### Require Login for Entire App
 
 ```php
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
-
-// Require users to be logged in (have 'read' capability)
-$app->require_capability( 'read' );
-
-$app->init();
+$this->app = new WpApp(
+	plugin_dir_path( __FILE__ ) . 'templates',
+	'my-app',
+	array(
+		'require_login' => true, // Alias for require_capability => 'read'
+	)
+);
 ```
 
 ### Per-Route Access Control
 
 ```php
-// Public route - anyone can access
-$app->route( 'about', 'about.php' );
+protected function setup_routes() {
+	// Public route - anyone can access
+	$this->app->route( 'about' );
 
-// Logged-in users only
-$app->route( 'dashboard', 'dashboard.php', [], 'read' );
+	// Logged-in users only
+	$this->app->route( 'dashboard', 'dashboard.php', array(), 'read' );
 
-// Editors and above only
-$app->route( 'admin', 'admin.php', [], 'edit_pages' );
+	// Editors and above only
+	$this->app->route( 'admin', 'admin.php', array(), 'edit_pages' );
+
+	// Administrators only
+	$this->app->route( 'settings', 'settings.php', array(), 'manage_options' );
+}
 ```
 
 ### Custom App Roles
@@ -149,36 +295,112 @@ $app->route( 'admin', 'admin.php', [], 'edit_pages' );
 Create specific roles for your app that automatically appear in wp-admin:
 
 ```php
-$app = new WpApp( __DIR__ . '/templates', 'community' );
+public function __construct() {
+	// ... existing code ...
 
-// Create custom roles for your app
-$app->add_role( 'member', 'Community Member', [ 'read' => true ] );
-$app->add_role( 'moderator', 'Community Moderator', [
-    'read' => true,
-    'moderate_community' => true,
-    'edit_community_posts' => true
-] );
+	// Create custom roles
+	$this->app->add_role( 'member', 'Community Member', array( 'read' => true ) );
+	$this->app->add_role( 'moderator', 'Community Moderator', array(
+		'read'          => true,
+		'moderate_app'  => true,
+		'edit_app_posts' => true,
+	) );
+}
 
-// Require minimum member access
-$app->require_capability( 'read' );
-
-// Moderator-only route
-$app->route( 'moderate', 'moderate.php', [], 'moderate_community' );
-
-$app->init();
+protected function setup_routes() {
+	// Moderator-only route
+	$this->app->route( 'moderate', 'moderate.php', array(), 'moderate_app' );
+}
 ```
 
 The custom roles will automatically appear in each user's profile in wp-admin, allowing administrators to grant app-specific access easily.
 
-## Step 6: WordPress Integration
+## Step 5: Customizing the Admin Bar
+
+Add custom menu items and modify the admin bar:
+
+```php
+protected function setup_menu() {
+	// Add submenu items (appears under your app name)
+	$this->app->add_menu_item( 'dashboard', 'Dashboard', home_url( '/my-app/dashboard' ) );
+	$this->app->add_menu_item( 'settings', 'Settings', home_url( '/my-app/settings' ) );
+
+	// Add top-level menu items (appears directly in admin bar)
+	$this->app->add_top_level_menu_item( 'important', 'Important', '/important' );
+
+	// Add user menu items (shown when logged in)
+	if ( is_user_logged_in() ) {
+		$current_user = wp_get_current_user();
+		$this->app->add_user_menu_item(
+			'profile',
+			'My Profile',
+			home_url( '/my-app/user/' . $current_user->ID )
+		);
+	}
+
+	// For clean app-only admin bar, remove all WordPress items
+	// $this->app->clear_admin_bar();
+}
+```
+
+## Step 6: Adding REST API Endpoints
+
+Integrate with WordPress REST API for AJAX functionality:
+
+```php
+protected function setup_routes() {
+	// Regular routes
+	$this->app->route( '' );
+	$this->app->route( 'dashboard' );
+
+	// Register REST API endpoints
+	add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
+}
+
+public function register_rest_endpoints() {
+	register_rest_route(
+		'my-app/v1',
+		'/user-stats',
+		array(
+			'methods'             => 'GET',
+			'callback'            => array( $this, 'get_user_stats' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+		)
+	);
+}
+
+public function check_permissions() {
+	return is_user_logged_in();
+}
+
+public function get_user_stats() {
+	$user_id = get_current_user_id();
+	$visits  = $this->storage->get_user_visits( $user_id );
+
+	return rest_ensure_response(
+		array(
+			'user_id'     => $user_id,
+			'total_visits' => count( $visits ),
+			'last_visit'  => $visits[0]->visit_time ?? null,
+		)
+	);
+}
+```
+
+Access the endpoint at: `/wp-json/my-app/v1/user-stats`
+
+## Step 7: WordPress Integration Best Practices
 
 Use WordPress functions in your templates:
 
 ```php
+<?php
 // templates/dashboard.php
+
+// Check authentication
 if ( ! is_user_logged_in() ) {
-    wp_redirect( wp_login_url( home_url( '/minimal/dashboard' ) ) );
-    exit;
+	wp_redirect( wp_login_url( home_url( '/my-app/dashboard' ) ) );
+	exit;
 }
 
 $current_user = wp_get_current_user();
@@ -186,74 +408,60 @@ $current_user = wp_get_current_user();
 <!DOCTYPE html>
 <html <?php echo wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title( 'My Dashboard' ); ?></title>
-    <?php wp_app_head(); ?>
+	<title><?php echo wp_app_title( 'My Dashboard' ); ?></title>
+	<?php wp_app_head(); ?>
+	<?php wp_app_enqueue_style( 'my-app-style', plugin_dir_url( __FILE__ ) . '../assets/style.css' ); ?>
 </head>
 <body class="wp-app-body">
-<?php wp_app_body_open(); ?>
+	<?php wp_app_body_open(); ?>
 
-<h1>Welcome, <?php echo esc_html( $current_user->display_name ); ?>!</h1>
+	<h1>Welcome, <?php echo esc_html( $current_user->display_name ); ?>!</h1>
 
+	<p>Email: <?php echo esc_html( $current_user->user_email ); ?></p>
+
+	<?php wp_app_body_close(); ?>
 </body>
 </html>
 ```
 
-## Step 7: Adding REST API Endpoints
-
-Integrate with WordPress REST API:
-
-```php
-// In your main plugin file
-add_action( 'rest_api_init', function() {
-    register_rest_route( 'minimal-app/v1', '/user-stats', [
-        'methods' => 'GET',
-        'callback' => 'get_user_stats',
-        'permission_callback' => function() {
-            return is_user_logged_in();
-        }
-    ] );
-} );
-
-function get_user_stats() {
-    $current_user = wp_get_current_user();
-    // Return user statistics
-    return [
-        'user_id' => $current_user->ID,
-        'visits' => get_user_visit_count( $current_user->ID ),
-        'last_login' => get_user_last_login( $current_user->ID )
-    ];
-}
-```
-
 ## Complete Example: Community App
 
-For a full-featured example showcasing all these concepts, see `examples/community-app/`. This mid-complexity example demonstrates:
+For a full-featured example showcasing all these concepts, see `examples/community-app/`. This example demonstrates:
 
-- **User Authentication**: Login/logout integration with WordPress
-- **Database Usage**: Custom tables for user progress and posts
-- **Dynamic Routing**: User profiles, post viewing, dashboard
-- **Admin Bar Customization**: Context-aware menu items
-- **REST API Integration**: AJAX functionality using WordPress REST API
-- **Responsive Design**: Mobile-friendly interface
-- **User Progress Tracking**: Points system and achievements
+- **BaseApp Pattern** - Structured architecture with storage separation
+- **BaseStorage** - Schema management with `get_schema()` and `dbDelta`
+- **User Authentication** - Login/logout integration with WordPress
+- **Database Usage** - Custom tables for user progress and posts
+- **Dynamic Routing** - User profiles, post viewing, dashboard
+- **Admin Bar Customization** - Context-aware menu items
+- **REST API Integration** - AJAX functionality using WordPress REST API
+- **Responsive Design** - Mobile-friendly interface
+- **WordPress Coding Standards** - Follows WordPress best practices
 
-The community app shows how to build a complete social platform with user profiles, content creation, and gamification features - all integrated seamlessly with WordPress while maintaining clean separation from your site's theme.
+Run it with WordPress Playground:
+
+```bash
+cd examples/community-app
+npx @wp-playground/cli run .
+```
 
 ## Best Practices
 
-1. **Template Organization**: Group related templates in subdirectories
-2. **Security**: Always sanitize user input and check permissions
-3. **WordPress Integration**: Use WordPress functions for consistency
-4. **Database**: Let the framework handle table creation and updates
-5. **Styling**: Use `wp_app_enqueue_style()` for CSS files
-6. **URLs**: Keep URL paths short and meaningful
+1. **Use BaseApp Pattern** - For structured apps with database needs
+2. **Define Schema in Storage** - Keep database schema in `get_schema()` method
+3. **Call create_tables() on Activation** - Use `$this->storage->create_tables()` in activation hook
+4. **WordPress Functions** - Use WordPress functions for consistency (`esc_html()`, `wp_redirect()`, etc.)
+5. **Security** - Always sanitize user input and check permissions
+6. **Template Functions** - Use `wp_app_head()`, `wp_app_body_open()`, etc. in templates
+7. **Coding Standards** - Follow WordPress coding standards (use `composer phpcs`)
 
 ## Next Steps
 
 - Explore the `examples/community-app/` for advanced patterns
 - Add custom CSS and JavaScript to your templates
-- Integrate with WordPress plugins and themes
+- Integrate with WordPress plugins
+- Create REST API endpoints for dynamic functionality
 - Build user authentication flows
-- Create rich interactive experiences
+- Implement complex database relationships
 
-The wp-app framework gives you the flexibility to build anything from simple landing pages to complex web applications, all while leveraging WordPress's powerful ecosystem.
+The WpApp framework gives you the flexibility to build anything from simple landing pages to complex web applications, all while leveraging WordPress's powerful ecosystem.

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<ruleset name="WpApp Coding Standards">
+	<description>WordPress coding standards for WpApp framework</description>
+
+	<!-- Check the /src directory -->
+	<file>./src</file>
+
+	<!-- Exclude vendor directory if it exists -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<!-- Show progress and sniff codes -->
+	<arg value="ps"/>
+
+	<!-- Show colors in output -->
+	<arg name="colors"/>
+
+	<!-- Use WordPress-Extra ruleset -->
+	<rule ref="WordPress-Extra">
+		<!-- Allow short array syntax -->
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+
+		<!-- Disable file comment requirement -->
+		<exclude name="Squiz.Commenting.FileComment"/>
+	</rule>
+
+	<!-- Use WordPress-Docs for documentation standards -->
+	<rule ref="WordPress-Docs"/>
+
+	<!-- Use WordPress-Core for core standards -->
+	<rule ref="WordPress-Core"/>
+
+	<!-- Check for PHP cross-version compatibility -->
+	<config name="testVersion" value="7.4-"/>
+
+	<!-- Allow short array syntax [] instead of array() -->
+	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
+	<!-- Set minimum PHP version -->
+	<config name="minimum_supported_wp_version" value="5.0"/>
+</ruleset>
