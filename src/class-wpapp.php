@@ -2,21 +2,11 @@
 
 namespace WpApp;
 
-// Load BaseStorage (always needed)
-require_once __DIR__ . '/BaseStorage.php';
-
-// Load database abstraction classes only in standalone mode
-if ( ! defined( 'WPINC' ) ) {
-	require_once __DIR__ . '/wpdb-polyfill.php';
-	require_once __DIR__ . '/sqlite_wpdb.php';
-}
-
 /**
  * Main WpApp class that coordinates all components
  */
 class WpApp {
     private $router;
-    private $database_manager;
     private $masterbar;
     private $template_directory;
     private $initialized = false;
@@ -34,7 +24,6 @@ class WpApp {
 
         $this->template_directory = $template_directory;
         $this->router = new Router( $template_directory, $url_path );
-        $this->database_manager = new DatabaseManager();
         $this->masterbar = new Masterbar( $url_path, $this );
 
         // Apply configuration
@@ -110,21 +99,14 @@ class WpApp {
             return;
         }
 
-        // Load polyfills only if we're NOT in WordPress
-        // WPINC is defined very early in WordPress bootstrap
-        if ( ! defined( 'WPINC' ) ) {
-            require_once __DIR__ . '/polyfills.php';
-        }
+        // Disable emoji to img conversion (renders huge SVGs otherwise)
+        remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
 
         // Set up defaults automatically
         $this->setup_defaults();
 
-        // Run database migrations
-        $this->database_manager->migrate();
-
         // Enable masterbar by default
         $this->masterbar->auto_render();
-
 
         // Hook into WordPress activation
         add_action( 'wp_loaded', [ $this, 'on_wp_loaded' ] );
@@ -199,13 +181,6 @@ class WpApp {
      */
     public function get_router() {
         return $this->router;
-    }
-
-    /**
-     * Get the database manager instance
-     */
-    public function database() {
-        return $this->database_manager;
     }
 
     /**
@@ -382,13 +357,6 @@ class WpApp {
             }
         }
         return false;
-    }
-
-    /**
-     * Add a database table (convenience method)
-     */
-    public function add_table( $table_name, $columns, $version, $indexes = [] ) {
-        $this->database_manager->add_table( $table_name, $columns, $version, $indexes );
     }
 
     /**

@@ -75,10 +75,12 @@ class Router {
         // {id} -> (?P<id>\d+) for numeric IDs
         // {slug} -> (?P<slug>[^/]+) for slugs
         // {user_id} -> (?P<user_id>\d+) for user IDs
+        // {username}/{person} -> (?P<name>[\w\.\-]+) for usernames with dots, dashes, underscores
         // {*} -> (?P<name>[^/]+) for generic segments
 
         $pattern = preg_replace( '/\{(id|user_id|post_id|page_id)\}/', '(?P<$1>\\d+)', $pattern );
-        $pattern = preg_replace( '/\{(slug|name|username|title)\}/', '(?P<$1>[^/]+)', $pattern );
+        $pattern = preg_replace( '/\{(username|person)\}/', '(?P<$1>[\\w\\.\\-]+)', $pattern );
+        $pattern = preg_replace( '/\{(slug|name|title)\}/', '(?P<$1>[^/]+)', $pattern );
         $pattern = preg_replace( '/\{([^}]+)\}/', '(?P<$1>[^/]+)', $pattern ); // Generic fallback
 
         return $pattern;

@@ -3,99 +3,99 @@
  * Base Storage Class
  *
  * Abstract base class for database storage with common functionality.
- * Provides migration system, wpdb access, and utility methods.
+ * Provides wpdb access, schema management, and utility methods for WordPress applications.
+ *
+ * Child classes should implement get_schema() to define their database tables.
+ * Call create_tables() in your plugin activation hook to create/update tables.
+ *
+ * @package WpApp
  */
 
 namespace WpApp;
 
 abstract class BaseStorage {
+	/**
+	 * WordPress database instance
+	 *
+	 * @var \wpdb
+	 */
 	protected $wpdb;
 
-	public function __construct( $wpdb_instance ) {
+	/**
+	 * Constructor
+	 *
+	 * @param \wpdb|null $wpdb_instance WordPress database instance. If null, uses global $wpdb.
+	 */
+	public function __construct( $wpdb_instance = null ) {
 		global $wpdb;
-		$this->wpdb = $wpdb_instance;
 
-		if ( ! $wpdb ) {
-			$wpdb = $wpdb_instance;
+		if ( $wpdb_instance ) {
+			$this->wpdb = $wpdb_instance;
+		} else {
+			$this->wpdb = $wpdb;
 		}
-
-		$this->init_database();
 	}
 
 	/**
-	 * Initialize database - create tables and run migrations
+	 * Get database schema as SQL CREATE TABLE statements
+	 *
+	 * Child classes should override this method to return their schema.
+	 * Each SQL statement should be a complete CREATE TABLE statement.
+	 *
+	 * @return array Array of SQL CREATE TABLE statements.
 	 */
-	private function init_database() {
-		$this->init_migrations();
-
-		$this->run_migration( 'initial_table_creation', function() {
-			$this->create_tables();
-		} );
-
-		$this->run_migrations();
-	}
+	abstract protected function get_schema();
 
 	/**
-	 * Create database tables - to be implemented by child classes
+	 * Create or update database tables using dbDelta
+	 *
+	 * This method should be called in your plugin activation hook.
+	 * It will create tables if they don't exist, or update them if the schema changed.
+	 *
+	 * @return string[] Array of strings containing text info about the upgrade.
 	 */
-	abstract protected function create_tables();
-
-	/**
-	 * Run migrations - to be implemented by child classes
-	 */
-	abstract protected function run_migrations();
-
-	/**
-	 * Initialize migrations table if it doesn't exist
-	 */
-	protected function init_migrations() {
+	public function create_tables() {
+		$schema = $this->get_schema();
+		$queries = array();
 		$charset_collate = $this->wpdb->get_charset_collate();
-		$migrations_table = $this->get_migrations_table_name();
 
-		$sql = "CREATE TABLE {$migrations_table} (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			migration_name varchar(255) NOT NULL,
-			applied_at datetime DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY (id),
-			UNIQUE KEY unique_migration (migration_name)
-		) $charset_collate;";
-
-		$this->wpdb->query( $sql );
-	}
-
-	/**
-	 * Get migrations table name - can be overridden by child classes
-	 */
-	protected function get_migrations_table_name() {
-		return $this->wpdb->prefix . 'migrations';
-	}
-
-	/**
-	 * Run a specific migration
-	 */
-	protected function run_migration( $migration_name, $migration_callback ) {
-		$migrations_table = $this->get_migrations_table_name();
-
-		$migration_exists = $this->wpdb->get_var( $this->wpdb->prepare(
-			"SELECT COUNT(*) FROM {$migrations_table} WHERE migration_name = %s",
-			$migration_name
-		) );
-
-		if ( ! $migration_exists ) {
-			call_user_func( $migration_callback );
-
-			$this->wpdb->insert(
-				$migrations_table,
-				array( 'migration_name' => $migration_name ),
-				array( '%s' )
-			);
+		foreach ( $schema as $table_name => $columns ) {
+			$full_table_name = $this->wpdb->prefix . $table_name;
+			$queries[] = "CREATE TABLE $full_table_name (\n$columns\n) $charset_collate;";
 		}
+
+		return $this->dbdelta( $queries );
+	}
+
+	/**
+	 * Execute dbDelta to create or update tables
+	 *
+	 * @param string[] $queries SQL queries to execute.
+	 * @param bool            $execute Whether to execute the queries (default true).
+	 * @return string[] Array of strings containing text info about the upgrade.
+	 */
+	public function dbdelta( $queries, $execute = true ) {
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		return dbDelta( $queries, $execute );
 	}
 
 	/**
 	 * Get wpdb instance for custom queries
+	 *
+	 * @return \wpdb
 	 */
 	public function get_wpdb() {
 		return $this->wpdb;
+	}
+
+	/**
+	 * Get table name with WordPress prefix
+	 *
+	 * @param string $table_name Table name without prefix.
+	 * @return string Full table name with prefix.
+	 */
+	protected function get_table_name( $table_name ) {
+		return $this->wpdb->prefix . $table_name;
 	}
 }
