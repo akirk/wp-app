@@ -15,6 +15,13 @@ WordPress isn't just for blogs. It's a powerful foundation for web applications:
 
 **WpApp** makes it easy to build clean applications on WordPress while leveraging all these benefits.
 
+## Try it Now
+
+Try the examples instantly in your browser with WordPress Playground:
+
+- [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json) - The simplest possible WpApp
+- [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json) - Full-featured example with database, REST API, and admin integration
+
 ## Features
 
 - **URL Routing** - Pattern-based routing with WordPress rewrite rules
@@ -315,18 +322,16 @@ wp_app_enqueue_script( 'my-script', plugin_dir_url( __FILE__ ) . 'script.js' );
 ### Minimal Example
 See `examples/minimal-app/` - The simplest possible WpApp (3 lines of code)
 
+[Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json)
+
 ### Community App Example
 See `examples/community-app/` - Full BaseApp pattern demonstration with:
 - BaseStorage with schema management
 - User progress tracking
 - REST API endpoints
 - Admin integration
-- WordPress Playground support
 
-Run with WordPress Playground:
-```bash
-npx @wp-playground/cli run examples/community-app
-```
+[Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json)
 
 ## WordPress Coding Standards
 

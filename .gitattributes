@@ -1,0 +1,8 @@
+/blueprints export-ignore
+/.claude export-ignore
+/.gitignore export-ignore
+/examples export-ignore
+/phpcs.xml.dist export-ignore
+/phpunit.xml export-ignore
+/tests export-ignore
+/TUTORIAL.md export-ignore
