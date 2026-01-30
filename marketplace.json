@@ -1,0 +1,11 @@
+{
+  "name": "wp-app",
+  "plugins": [
+    {
+      "name": "wpapp",
+      "version": "1.0.0",
+      "description": "WpApp development assistance",
+      "source": "."
+    }
+  ]
+}

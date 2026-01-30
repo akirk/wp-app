@@ -4,14 +4,17 @@ Build modern web applications on WordPress with routing, admin bar integration, 
 
 ## Why WordPress for Web Applications?
 
-WordPress isn't just for blogs. It's a powerful foundation for web applications:
+WordPress isn't just for blogs. It's a powerful foundation for web applications.
 
-- **Built-in User Management** - Complete authentication with roles and permissions
-- **Universal Hosting** - Deploy anywhere WordPress runs
-- **Security & Updates** - Automatic security updates and proven practices
-- **Rich Ecosystem** - 60,000+ plugins for payments, email, analytics, and more
+**For developers:**
+- **Built-in User Management** - Authentication, roles, and permissions out of the box
 - **Admin Interface** - Professional backend without building from scratch
-- **Global Ready** - Built-in i18n, multisite, and SEO optimization
+- **Security & Updates** - Automatic security patches and proven practices
+- **Global Ready** - Built-in i18n and multisite support
+
+**For users:**
+- **Universal Hosting** - Deploy anywhere WordPress runs, from shared hosting to cloud
+- **Familiar Environment** - Manage your app alongside your existing WordPress site
 
 ## Try it Now
 
@@ -82,6 +85,15 @@ Your app is now available at `/minimal`!
 | [Access Control](docs/access-control.md) | Capabilities, roles, permissions |
 | [BaseApp Pattern](docs/baseapp.md) | Structured architecture for larger apps |
 | [Tutorial](TUTORIAL.md) | Step-by-step guide from minimal to full-featured |
+
+## Claude Code Integration
+
+Get AI assistance for WpApp development in [Claude Code](https://claude.ai/code):
+
+```bash
+/plugin marketplace add akirk/wp-app
+/plugin install wpapp@wp-app
+```
 
 ## Examples
 
