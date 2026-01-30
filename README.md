@@ -32,6 +32,47 @@ Try the examples instantly in your browser with WordPress Playground:
 - **BaseApp Pattern** - Structured architecture for complex applications
 - **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
 
+## Quick start
+
+You can use this command to scaffold your new plugin:
+
+```bash
+composer create-project akirk/create-wp-app my-app
+```
+
+Which gives you this little wizard:
+
+```
+Creating WpApp plugin: my-app
+----------------------------------------
+Plugin name [My App]: 
+Namespace [MyApp]: 
+Author []: 
+URL path [my-app]: 
+Setup type:
+  [1] Minimal - simple WpApp setup
+  [2] Full - with BaseApp structure
+Choose [1]: 
+✓ Updated plugin-name.php
+✓ Updated templates/index.php
+✓ Renamed plugin-name.php to my-app.php
+✓ Removed src/ directory (not needed for minimal setup)
+✓ Updated composer.json
+✓ Cleaned up setup scripts
+Done! Your plugin is ready.
+Next steps:
+  Option A: Run locally with WordPress Playground
+    npx @wp-playground/cli@latest server --auto-mount=my-app --login
+  Option B: Install in WordPress
+    1. Activate the plugin in WordPress
+    2. Visit /my-app/ to see your app
+```
+Which gives you something like this:
+
+<img width="788" height="681" alt="create-wp-app" src="https://github.com/user-attachments/assets/0a7cfabd-5cd9-40a4-bb2f-2b45d3c57e34" />
+
+Which you can then build on.
+
 ## Installation
 
 ```bash
