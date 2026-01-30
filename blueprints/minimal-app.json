@@ -7,6 +7,7 @@
 		"categories": ["starter", "webapp"]
 	},
 	"landingPage": "/minimal/",
+	"login": true,
 	"steps": [
 		{
 			"step": "installPlugin",
@@ -18,24 +19,32 @@
 				"path": "examples/minimal-app"
 			},
 			"options": {
-				"targetFolderName": "minimal-app"
+				"targetFolderName": "minimal-app",
+				"activate": false
 			}
 		},
 		{
-			"step": "writeFiles",
-			"writeToPath": "/wordpress/wp-content/plugins/minimal-app/vendor/akirk/wp-app",
-			"filesTree": {
+			"step": "installPlugin",
+			"pluginData": {
 				"resource": "git:directory",
 				"url": "https://github.com/akirk/wp-app",
 				"ref": "main",
 				"refType": "branch",
 				"path": "src"
+			},
+			"options": {
+				"targetFolderName": "minimal-app/vendor/akirk/wp-app",
+				"activate": false
 			}
 		},
 		{
 			"step": "writeFile",
 			"path": "/wordpress/wp-content/plugins/minimal-app/vendor/autoload.php",
 			"data": "<?php\n$wp_app_src = __DIR__ . '/akirk/wp-app/';\nrequire_once $wp_app_src . 'functions.php';\nrequire_once $wp_app_src . 'class-registry.php';\nrequire_once $wp_app_src . 'class-router.php';\nrequire_once $wp_app_src . 'class-masterbar.php';\nrequire_once $wp_app_src . 'abstract-baseapp.php';\nrequire_once $wp_app_src . 'BaseStorage.php';\nrequire_once $wp_app_src . 'class-wpapp.php';\n"
+		},
+		{
+			"step": "activatePlugin",
+			"pluginPath": "minimal-app/minimal-app.php"
 		}
 	]
 }
