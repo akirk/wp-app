@@ -74,6 +74,16 @@ Create `templates/index.php`:
 
 Your app is now available at `/minimal`!
 
+## Local Development
+
+Run your plugin locally without a full WordPress installation:
+
+```bash
+npx @wp-playground/cli@latest server --auto-mount --login
+```
+
+This starts a local WordPress instance with your plugin mounted and activated.
+
 ## Documentation
 
 | Topic | Description |

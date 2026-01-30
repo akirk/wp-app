@@ -78,6 +78,16 @@ Helper functions for use in templates:
 | `wp_app_enqueue_style( $handle, $src )` | Enqueue styles for app pages |
 | `wp_app_enqueue_script( $handle, $src )` | Enqueue scripts for app pages |
 
+## Testing with WordPress Playground
+
+You can run your plugin locally without a full WordPress installation using the Playground CLI:
+
+```bash
+npx @wp-playground/cli@latest server --auto-mount --login
+```
+
+Run this from your plugin directory. It will start a local WordPress instance with your plugin automatically mounted and activated.
+
 ## Requirements
 
 - PHP 7.4 or higher
