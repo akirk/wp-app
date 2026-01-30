@@ -14,6 +14,7 @@ class Masterbar {
     private $only_on_app_routes = false;
     private $show_for_anonymous = true;
     private $show_dark_mode_toggle = false;
+    private $add_app_node = true;
     private $app_url_path = null;
     private $wpapp = null;
 
@@ -151,6 +152,18 @@ class Masterbar {
      */
     public function show_dark_mode_toggle( $show = true ) {
         $this->show_dark_mode_toggle = $show;
+    }
+
+    /**
+     * Set whether to add the main app node to the admin bar
+     *
+     * Disable this if you already have a CPT or other mechanism that adds
+     * its own admin bar entry and you don't want wp-app to add a duplicate.
+     *
+     * @param bool $add True to add, false to skip
+     */
+    public function add_app_node( $add = true ) {
+        $this->add_app_node = $add;
     }
 
     /**
@@ -639,16 +652,18 @@ class Masterbar {
 
         // Only add items if user can access this app
         if ( $this->can_user_access_app() ) {
-            // Add main app node first
-            $app_node_id = 'wp-app-' . str_replace( '-', '_', $this->app_url_path );
-            $wp_admin_bar->add_node( [
-                'id'    => $app_node_id,
-                'title' => $this->get_app_name(),
-                'href'  => $this->get_app_home_url(),
-                'meta'  => [
-                    'class' => 'wp-app-main-menu-item'
-                ]
-            ] );
+            // Add main app node first (unless disabled)
+            if ( $this->add_app_node ) {
+                $app_node_id = 'wp-app-' . str_replace( '-', '_', $this->app_url_path );
+                $wp_admin_bar->add_node( [
+                    'id'    => $app_node_id,
+                    'title' => $this->get_app_name(),
+                    'href'  => $this->get_app_home_url(),
+                    'meta'  => [
+                        'class' => 'wp-app-main-menu-item'
+                    ]
+                ] );
+            }
 
             // Add custom menu items (as submenus by default, or top-level if parent is null)
             foreach ( $this->menu_items as $item ) {
@@ -702,8 +717,8 @@ class Masterbar {
      * Add items when in regular WordPress admin/frontend
      */
     private function add_admin_context_items( $wp_admin_bar ) {
-        // Only add link if user can access this app
-        if ( $this->can_user_access_app() ) {
+        // Only add link if user can access this app and app node is enabled
+        if ( $this->can_user_access_app() && $this->add_app_node ) {
             // Add a simple link to the app from regular WordPress admin
             $wp_admin_bar->add_node( [
                 'id'    => 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path ),

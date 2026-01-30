@@ -1,4 +1,4 @@
-# WpApp Framework
+# Getting Started
 
 Build modern web applications on WordPress with routing, admin bar integration, and theme isolation.
 
@@ -13,6 +13,8 @@ WordPress isn't just for blogs. It's a powerful foundation for web applications:
 - **Admin Interface** - Professional backend without building from scratch
 - **Global Ready** - Built-in i18n, multisite, and SEO optimization
 
+**WpApp** makes it easy to build clean applications on WordPress while leveraging all these benefits.
+
 ## Try it Now
 
 Try the examples instantly in your browser with WordPress Playground:
@@ -20,22 +22,13 @@ Try the examples instantly in your browser with WordPress Playground:
 - [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json) - The simplest possible WpApp
 - [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json) - Full-featured example with database, REST API, and admin integration
 
-## Features
-
-- **URL Routing** - Pattern-based routing with WordPress rewrite rules
-- **Theme Isolation** - Clean HTML output separate from your WordPress theme
-- **Admin Bar Integration** - WordPress-style navigation for your app
-- **Access Control** - WordPress capability-based authentication
-- **BaseApp Pattern** - Structured architecture for complex applications
-- **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
-
 ## Installation
 
 ```bash
 composer require akirk/wp-app
 ```
 
-## Quick Start
+## Quick Start (Minimal Example)
 
 The simplest possible WpApp requires just 3 lines:
 
@@ -71,47 +64,29 @@ Create `templates/index.php`:
 
 Your app is now available at `/minimal`!
 
-## Documentation
+## Template Functions
 
-| Topic | Description |
-|-------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation, quick start, template functions |
-| [Configuration](docs/configuration.md) | All configuration options |
-| [Routing](docs/routing.md) | URL patterns, parameters, templates |
-| [Masterbar](docs/masterbar.md) | Admin bar customization |
-| [Access Control](docs/access-control.md) | Capabilities, roles, permissions |
-| [BaseApp Pattern](docs/baseapp.md) | Structured architecture for larger apps |
-| [Tutorial](TUTORIAL.md) | Step-by-step guide from minimal to full-featured |
+Helper functions for use in templates:
 
-## Examples
-
-### Minimal Example
-See `examples/minimal-app/` - The simplest possible WpApp (3 lines of code)
-
-[Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json)
-
-### Community App Example
-See `examples/community-app/` - Full BaseApp pattern demonstration with:
-- BaseStorage with schema management
-- User progress tracking
-- REST API endpoints
-- Admin integration
-
-[Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json)
+| Function | Description |
+|----------|-------------|
+| `wp_app_head()` | HTML head with WordPress hooks |
+| `wp_app_body_open()` | Body open hook (renders admin bar) |
+| `wp_app_body_close()` | Body close hook |
+| `wp_app_title( 'Page' )` | Page title with site name |
+| `wp_app_language_attributes()` | Language attributes for `<html>` tag |
+| `wp_app_enqueue_style( $handle, $src )` | Enqueue styles for app pages |
+| `wp_app_enqueue_script( $handle, $src )` | Enqueue scripts for app pages |
 
 ## Requirements
 
 - PHP 7.4 or higher
 - WordPress 5.0 or higher
 
-## WordPress Coding Standards
+## Next Steps
 
-This package follows WordPress coding standards. Run PHPCS:
-
-```bash
-composer phpcs
-```
-
-## License
-
-GPL-2.0-or-later
+- [Configuration](configuration.md) - All configuration options
+- [Routing](routing.md) - URL patterns and parameters
+- [Masterbar](masterbar.md) - Admin bar customization
+- [Access Control](access-control.md) - Authentication and permissions
+- [BaseApp Pattern](baseapp.md) - Structured architecture for larger apps
