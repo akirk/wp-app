@@ -15,6 +15,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'require_login'                => false,
 	'require_capability'           => null,
 	'clear_admin_bar'              => false,
+	'my_apps'                      => true,
+	'my_apps_icon'                 => null,
 ] );
 ```
 
@@ -43,6 +45,15 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 |--------|------|---------|-------------|
 | `require_login` | bool | `false` | Require users to be logged in (shortcut for `require_capability => 'read'`) |
 | `require_capability` | string | `null` | WordPress capability required to access the app |
+
+### My Apps Plugin Integration
+
+Integrates with the [My Apps](https://wordpress.org/plugins/my-apps/) plugin to add your app to the launcher. Behind the scenes, this uses the `my_apps_plugins` filter.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `my_apps` | bool\|string | `true` | `false` to disable, `true` to enable with default name, or a string for custom name |
+| `my_apps_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) |
 
 ## Method Configuration
 
@@ -109,6 +120,25 @@ If your custom post type already registers an admin bar entry, disable the autom
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-cpt-app', [
 	'add_app_node' => false,
+] );
+```
+
+### App with My Apps Integration
+
+Register your app with the My Apps plugin launcher:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'my-app', [
+	'my_apps'      => 'My Custom App',  // or true for default name
+	'my_apps_icon' => plugins_url( 'assets/icon.png', __FILE__ ),
+] );
+```
+
+To disable My Apps integration:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'my-app', [
+	'my_apps' => false,
 ] );
 ```
 

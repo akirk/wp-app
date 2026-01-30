@@ -13,6 +13,8 @@ class WpApp {
     private $required_capability = null;
     private $custom_roles = [];
     private $app_name = null;
+    private $my_apps = true;
+    private $my_apps_icon = null;
 
     public function __construct( $template_directory = '', $url_path = 'app', $config = [] ) {
         // Handle legacy parameter style
@@ -81,6 +83,15 @@ class WpApp {
         if ( isset( $config['app_name'] ) ) {
             $this->app_name = $config['app_name'];
         }
+
+        // My Apps plugin integration
+        if ( isset( $config['my_apps'] ) ) {
+            $this->my_apps = $config['my_apps'];
+        }
+
+        if ( isset( $config['my_apps_icon'] ) ) {
+            $this->my_apps_icon = $config['my_apps_icon'];
+        }
     }
 
     /**
@@ -114,6 +125,11 @@ class WpApp {
 
         // Hook into WordPress activation
         add_action( 'wp_loaded', [ $this, 'on_wp_loaded' ] );
+
+        // Register with My Apps plugin if enabled
+        if ( $this->my_apps !== false ) {
+            add_filter( 'my_apps_plugins', [ $this, 'register_my_apps' ] );
+        }
 
         $this->initialized = true;
 
@@ -171,6 +187,29 @@ class WpApp {
             $this->router->flush_rules();
             delete_option( 'wp_app_flush_rewrite_rules' );
         }
+    }
+
+    /**
+     * Register this app with the My Apps plugin
+     *
+     * Uses the 'my_apps_plugins' filter provided by the My Apps plugin.
+     *
+     * @see https://wordpress.org/plugins/my-apps/
+     * @param array $apps Existing apps array
+     * @return array Modified apps array
+     */
+    public function register_my_apps( $apps ) {
+        $app_path = $this->router->get_app_path();
+
+        $name = is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name();
+
+        $apps[ $app_path ] = [
+            'name'     => $name,
+            'url'      => home_url( '/' . $app_path . '/' ),
+            'icon_url' => $this->my_apps_icon,
+        ];
+
+        return $apps;
     }
 
     /**
