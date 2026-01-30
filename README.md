@@ -68,7 +68,7 @@ Done! Your plugin is ready.
 Next steps:
 
   Option A: Run locally with WordPress Playground
-    npx @wp-playground/cli@latest server --auto-mount --login
+    npx @wp-playground/cli@latest server --auto-mount=my-app --login
 
   Option B: Install in WordPress
     1. Activate the plugin in WordPress
