@@ -19,6 +19,12 @@ class Registry {
         $url_path = $router->get_url_path();
         self::$apps[ $url_path ] = $router;
         self::maybe_initialize_hooks();
+
+        // If init already fired, register this app's rewrite rules immediately
+        // since add_all_rewrite_rules won't run again.
+        if ( self::$hooks_initialized && ( did_action( 'init' ) || doing_action( 'init' ) ) ) {
+            self::add_rewrite_rules_for_app( $url_path );
+        }
     }
 
     /**
@@ -58,7 +64,15 @@ class Registry {
             return;
         }
 
-        add_action( 'init', [ __CLASS__, 'add_all_rewrite_rules' ] );
+        // If init has already fired (or is currently firing), adding an init
+        // hook won't work — the action iterator has already passed priority 10.
+        // Register rewrite rules directly in that case.
+        if ( did_action( 'init' ) || doing_action( 'init' ) ) {
+            self::add_all_rewrite_rules();
+        } else {
+            add_action( 'init', [ __CLASS__, 'add_all_rewrite_rules' ] );
+        }
+
         add_filter( 'template_include', [ __CLASS__, 'handle_template_include' ] );
         add_filter( 'query_vars', [ __CLASS__, 'add_query_vars' ] );
 
