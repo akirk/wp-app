@@ -392,6 +392,11 @@ class Masterbar {
                 #wpadminbar li.wp-app-main-menu-item {
                     display: block;
                 }
+
+                /* WordPress zeroes padding on all root-default links at mobile; restore it */
+                #wpadminbar li.wp-app-main-menu-item > a.ab-item {
+                    padding: 0 8px;
+                }
             }
 
             /* Custom masterbar for anonymous users */
