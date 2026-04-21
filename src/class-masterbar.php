@@ -383,6 +383,11 @@ class Masterbar {
                 .wp-app-with-admin-bar #wpadminbar {
                     position: fixed;
                 }
+
+                /* WordPress hides root-default items on mobile; keep app items visible */
+                #wpadminbar li.wp-app-main-menu-item {
+                    display: block;
+                }
             }
 
             /* Custom masterbar for anonymous users */
