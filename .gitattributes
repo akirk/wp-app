@@ -1,4 +1,5 @@
 /blueprints export-ignore
+/docs export-ignore
 /.claude export-ignore
 /.claude-plugin export-ignore
 /.gitignore export-ignore
