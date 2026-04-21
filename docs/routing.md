@@ -140,6 +140,8 @@ public function activate() {
 
 You can also manually flush by visiting any page with `?wp_app_flush=1` as an administrator.
 
+> **⚠️ Set up WpApp at `plugins_loaded`, not `init`.** If you call `$app->route()` and `$app->init()` from inside an `add_action('init', ...)` callback, the rewrite-rule registration callback can land too late in the same `init` firing and silently never persist. Symptom: pretty URLs 404 even though `WpApp\Registry::get_apps()` shows your app is registered.
+
 ## Related Documentation
 
 - [Getting Started](getting-started.md) - Basic setup

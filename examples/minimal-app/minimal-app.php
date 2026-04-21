@@ -10,9 +10,11 @@
 require_once __DIR__ . '/vendor/autoload.php';
 use WpApp\WpApp;
 
-$app = new WpApp( __DIR__ . '/templates', 'minimal', [
-	'show_masterbar_for_anonymous' => true,
-	'show_wp_logo' => false,
-	'show_site_name' => true,
-] );
-$app->init();
+add_action( 'plugins_loaded', function() {
+	$app = new WpApp( __DIR__ . '/templates', 'minimal', [
+		'show_masterbar_for_anonymous' => true,
+		'show_wp_logo' => false,
+		'show_site_name' => true,
+	] );
+	$app->init();
+} );

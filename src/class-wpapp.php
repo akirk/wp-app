@@ -188,6 +188,13 @@ class WpApp {
 
         // Flush rewrite rules if needed
         if ( get_option( 'wp_app_flush_rewrite_rules', false ) ) {
+            global $wp_rewrite;
+            $url_path = $this->router->get_url_path();
+            $expected = '^' . preg_quote( $url_path, '/' ) . '/?$';
+            if ( ! isset( $wp_rewrite->extra_rules_top[ $expected ] ) ) {
+                // Registry::add_all_rewrite_rules hasn't run yet — defer flush to next request.
+                return;
+            }
             $this->router->flush_rules();
             delete_option( 'wp_app_flush_rewrite_rules' );
         }
