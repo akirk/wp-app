@@ -10,6 +10,10 @@
 
 namespace WpApp;
 
+if ( class_exists( 'WpApp\BaseApp' ) ) {
+    return;
+}
+
 abstract class BaseApp {
 	/**
 	 * WpApp instance

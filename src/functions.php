@@ -4,6 +4,10 @@
  * Global functions for WpApp framework
  */
 
+if ( ! defined( 'WP_APP_VERSION' ) ) {
+    define( 'WP_APP_VERSION', '1.0.0' );
+}
+
 if ( ! function_exists( 'wp_app_head' ) ) {
     /**
      * Generate HTML head content for app templates

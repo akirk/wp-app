@@ -2,6 +2,10 @@
 
 namespace WpApp;
 
+if ( class_exists( 'WpApp\WpApp' ) ) {
+    return;
+}
+
 /**
  * Main WpApp class that coordinates all components
  */

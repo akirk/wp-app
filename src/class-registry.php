@@ -2,6 +2,10 @@
 
 namespace WpApp;
 
+if ( class_exists( 'WpApp\Registry' ) ) {
+    return;
+}
+
 /**
  * Global registry for managing multiple WpApp instances
  */

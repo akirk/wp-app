@@ -2,6 +2,10 @@
 
 namespace WpApp;
 
+if ( class_exists( 'WpApp\Masterbar' ) ) {
+    return;
+}
+
 /**
  * WordPress-style Masterbar that mimics the WordPress admin bar
  */

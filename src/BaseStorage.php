@@ -13,6 +13,10 @@
 
 namespace WpApp;
 
+if ( class_exists( 'WpApp\BaseStorage' ) ) {
+    return;
+}
+
 abstract class BaseStorage {
 	/**
 	 * WordPress database instance

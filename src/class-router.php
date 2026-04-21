@@ -2,6 +2,10 @@
 
 namespace WpApp;
 
+if ( class_exists( 'WpApp\Router' ) ) {
+    return;
+}
+
 /**
  * Router class for handling URL pattern matching and template loading in WordPress
  */
