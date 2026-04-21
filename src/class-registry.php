@@ -74,7 +74,7 @@ class Registry {
         if ( did_action( 'init' ) || doing_action( 'init' ) ) {
             self::add_all_rewrite_rules();
         } else {
-            add_action( 'init', [ __CLASS__, 'add_all_rewrite_rules' ] );
+            add_action( 'init', [ __CLASS__, 'add_all_rewrite_rules' ], 99 );
         }
 
         add_filter( 'template_include', [ __CLASS__, 'handle_template_include' ] );
