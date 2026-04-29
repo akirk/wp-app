@@ -2,39 +2,9 @@
 
 Build modern web applications on WordPress with routing, admin bar integration, and theme isolation.
 
-## Why WordPress for Web Applications?
+## Quick Start
 
-WordPress isn't just for blogs. It's a powerful foundation for web applications.
-
-**For developers:**
-- **Built-in User Management** - Authentication, roles, and permissions out of the box
-- **Admin Interface** - Professional backend without building from scratch
-- **Security & Updates** - Automatic security patches and proven practices
-- **Global Ready** - Built-in i18n and multisite support
-
-**For users:**
-- **Universal Hosting** - Deploy anywhere WordPress runs, from shared hosting to cloud
-- **Familiar Environment** - Manage your app alongside your existing WordPress site
-
-## Try it Now
-
-Try the examples instantly in your browser with WordPress Playground:
-
-- [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json) - The simplest possible WpApp
-- [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json) - Full-featured example with database, REST API, and admin integration
-
-## Features
-
-- **URL Routing** - Pattern-based routing with WordPress rewrite rules
-- **Theme Isolation** - Clean HTML output separate from your WordPress theme
-- **Admin Bar Integration** - WordPress-style navigation for your app
-- **Access Control** - WordPress capability-based authentication
-- **BaseApp Pattern** - Structured architecture for complex applications
-- **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
-
-## Quick start
-
-You can use this command to scaffold your new plugin:
+Scaffold a new plugin with one command:
 
 ```bash
 composer create-project akirk/create-wp-app my-app
@@ -48,7 +18,8 @@ Creating WpApp plugin: my-app
 
 Plugin name [My App]: 
 Namespace [MyApp]: 
-Author []: 
+Packagist vendor (your username) []: 
+Author name []: 
 URL path [my-app]: 
 
 Setup type:
@@ -59,8 +30,11 @@ Choose [1]:
 ✓ Updated plugin-name.php
 ✓ Updated templates/index.php
 ✓ Renamed plugin-name.php to my-app.php
+✓ Created .gitignore
 ✓ Removed src/ directory (not needed for minimal setup)
 ✓ Updated composer.json
+✓ Regenerated autoloader
+✓ Updated README.md
 ✓ Cleaned up setup scripts
 
 Done! Your plugin is ready.
@@ -79,49 +53,35 @@ Which gives you something like this:
 
 <img width="788" height="681" alt="create-wp-app" src="https://github.com/user-attachments/assets/0a7cfabd-5cd9-40a4-bb2f-2b45d3c57e34" />
 
-Which you can then build on by adding your own routes, modify templates, etc.
+## Try it Now
 
-## Installation
+Try the examples instantly in your browser with WordPress Playground:
 
-```bash
-composer require akirk/wp-app
-```
+- [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json) - The simplest possible WpApp
+- [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json) - Full-featured example with database, REST API, and admin integration
 
-## Quick Start
+## Why WordPress for Web Applications?
 
-The simplest possible WpApp requires just 3 lines:
+WordPress isn't just for blogs. It's a powerful foundation for web applications.
 
-```php
-<?php
-/**
- * Plugin Name: Minimal App
- */
+**For developers:**
+- **Built-in User Management** - Authentication, roles, and permissions out of the box
+- **Admin Interface** - Professional backend without building from scratch
+- **Security & Updates** - Automatic security patches and proven practices
+- **Global Ready** - Built-in i18n and multisite support
 
-require_once __DIR__ . '/vendor/autoload.php';
-use WpApp\WpApp;
+**For users:**
+- **Universal Hosting** - Deploy anywhere WordPress runs, from shared hosting to cloud
+- **Familiar Environment** - Manage your app alongside your existing WordPress site
 
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
-$app->init();
-```
+## Features
 
-Create `templates/index.php`:
-
-```php
-<!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
-<head>
-	<title><?php echo wp_app_title( 'My App' ); ?></title>
-	<?php wp_app_head(); ?>
-</head>
-<body>
-	<?php wp_app_body_open(); ?>
-	<h1>Welcome to My App!</h1>
-	<?php wp_app_body_close(); ?>
-</body>
-</html>
-```
-
-Your app is now available at `/minimal`!
+- **URL Routing** - Pattern-based routing with WordPress rewrite rules
+- **Theme Isolation** - Clean HTML output separate from your WordPress theme
+- **Admin Bar Integration** - WordPress-style navigation for your app
+- **Access Control** - WordPress capability-based authentication
+- **BaseApp Pattern** - Structured architecture for complex applications
+- **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
 
 ## Local Development
 
@@ -169,6 +129,46 @@ See `examples/community-app/` - Full BaseApp pattern demonstration with:
 - Admin integration
 
 [Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/community-app.json)
+
+## Manual Installation
+
+```bash
+composer require akirk/wp-app
+```
+
+The simplest possible WpApp requires just 3 lines:
+
+```php
+<?php
+/**
+ * Plugin Name: Minimal App
+ */
+
+require_once __DIR__ . '/vendor/autoload.php';
+use WpApp\WpApp;
+
+$app = new WpApp( __DIR__ . '/templates', 'minimal' );
+$app->init();
+```
+
+Create `templates/index.php`:
+
+```php
+<!DOCTYPE html>
+<html <?php echo wp_app_language_attributes(); ?>>
+<head>
+	<title><?php echo wp_app_title( 'My App' ); ?></title>
+	<?php wp_app_head(); ?>
+</head>
+<body>
+	<?php wp_app_body_open(); ?>
+	<h1>Welcome to My App!</h1>
+	<?php wp_app_body_close(); ?>
+</body>
+</html>
+```
+
+Your app is now available at `/minimal`!
 
 ## Requirements
 
