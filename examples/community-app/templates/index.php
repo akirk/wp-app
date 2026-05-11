@@ -107,20 +107,20 @@ $current_user = wp_get_current_user();
 
 .app-header h1 {
     font-size: 2.5em;
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
     margin-bottom: 10px;
 }
 
 .app-tagline {
     font-size: 1.2em;
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
 }
 
 .user-welcome {
     display: flex;
     align-items: center;
     gap: 20px;
-    background: #f8f9fa;
+    background: var(--wp-app-color-surface-alt, #f8f9fa);
     padding: 30px;
     border-radius: 10px;
     margin-bottom: 40px;
@@ -128,7 +128,7 @@ $current_user = wp_get_current_user();
 
 .user-info h2 {
     margin: 0 0 10px 0;
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
 }
 
 .user-stats {
@@ -136,7 +136,7 @@ $current_user = wp_get_current_user();
 }
 
 .user-stats .level {
-    background: #3498db;
+    background: var(--wp-app-color-primary, #3498db);
     color: white;
     padding: 4px 12px;
     border-radius: 15px;
@@ -160,7 +160,7 @@ $current_user = wp_get_current_user();
 }
 
 .feature-card {
-    background: white;
+    background: var(--wp-app-color-surface, #fff);
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -168,18 +168,18 @@ $current_user = wp_get_current_user();
 }
 
 .feature-card h3 {
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
     margin-bottom: 15px;
 }
 
 .feature-card p {
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
     margin-bottom: 20px;
 }
 
 .guest-welcome {
     text-align: center;
-    background: #ecf0f1;
+    background: var(--wp-app-color-surface-alt, #ecf0f1);
     padding: 40px;
     border-radius: 10px;
     margin-bottom: 40px;
@@ -194,7 +194,7 @@ $current_user = wp_get_current_user();
 }
 
 .features-preview {
-    background: white;
+    background: var(--wp-app-color-surface, #fff);
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -207,7 +207,7 @@ $current_user = wp_get_current_user();
 
 .features-preview li {
     padding: 10px 0;
-    border-bottom: 1px solid #ecf0f1;
+    border-bottom: 1px solid var(--wp-app-color-border, #ecf0f1);
 }
 
 .features-preview li:before {
@@ -227,23 +227,23 @@ $current_user = wp_get_current_user();
 }
 
 .button-primary {
-    background: #3498db;
+    background: var(--wp-app-color-primary, #3498db);
     color: white;
 }
 
 .button-primary:hover {
-    background: #2980b9;
+    background: var(--wp-app-color-primary-hover, #2980b9);
     color: white;
 }
 
 .button:not(.button-primary) {
-    background: #ecf0f1;
-    color: #2c3e50;
+    background: var(--wp-app-color-surface-alt, #ecf0f1);
+    color: var(--wp-app-color-text, #2c3e50);
 }
 
 .button:not(.button-primary):hover {
-    background: #bdc3c7;
-    color: #2c3e50;
+    background: var(--wp-app-color-secondary-hover, #bdc3c7);
+    color: var(--wp-app-color-text, #2c3e50);
 }
 </style>
 

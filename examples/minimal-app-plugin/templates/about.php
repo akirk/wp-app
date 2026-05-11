@@ -13,10 +13,13 @@
         .back-link { margin: 20px 0; }
         .back-link a {
             padding: 10px 20px;
-            background: #ddd;
-            color: #333;
+            background: var(--wp-app-color-primary, #007cba);
+            color: white;
             text-decoration: none;
             border-radius: 5px;
+        }
+        .back-link a:hover {
+            background: var(--wp-app-color-primary-hover, #005a87);
         }
     </style>
 </head>

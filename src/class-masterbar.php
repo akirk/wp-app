@@ -354,8 +354,33 @@ class Masterbar {
     private function get_default_styles() {
         return '
             /* App-specific admin bar styling */
-            .wp-app-with-admin-bar #wpadminbar {
-                background: #23282d;
+            #wpadminbar {
+                background: var(--wp-app-masterbar-background, #23282d);
+            }
+
+            #wpadminbar .ab-top-menu > li.hover > .ab-item,
+            #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus,
+            #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item,
+            #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
+                background: var(--wp-app-admin-color-subtle, #32373c);
+                color: var(--wp-app-masterbar-highlight, #00a0d2);
+            }
+
+            #wpadminbar .menupop .ab-sub-wrapper,
+            #wpadminbar .shortlink-input {
+                background: var(--wp-app-masterbar-background, #23282d);
+            }
+
+            #wpadminbar .quicklinks .menupop ul.ab-sub-secondary,
+            #wpadminbar .quicklinks .menupop ul.ab-sub-secondary .ab-submenu {
+                background: var(--wp-app-admin-color-subtle, #32373c);
+            }
+
+            #wpadminbar .quicklinks .menupop ul li a:hover,
+            #wpadminbar .quicklinks .menupop ul li a:focus,
+            #wpadminbar .quicklinks .menupop.hover ul li a:hover,
+            #wpadminbar .quicklinks .menupop.hover ul li a:focus {
+                color: var(--wp-app-masterbar-highlight, #00a0d2);
             }
 
             /* App menu items spacing and positioning */
@@ -365,26 +390,26 @@ class Masterbar {
 
             .wp-app-menu-item:hover > .ab-item,
             .wp-app-menu-item.hover > .ab-item {
-                color: #00a0d2 !important;
+                color: var(--wp-app-masterbar-highlight, #00a0d2) !important;
             }
 
             /* Custom app user menu items styling */
             .wp-app-user-menu-item > .ab-item {
-                color: #00a0d2 !important;
+                color: var(--wp-app-masterbar-highlight, #00a0d2) !important;
             }
 
             /* App-specific body margin (WordPress admin bar is 32px) */
-            .wp-app-with-admin-bar body {
+            body.wp-app-body {
                 margin-top: 32px !important;
             }
 
             /* Responsive admin bar for mobile */
             @media screen and (max-width: 782px) {
-                .wp-app-with-admin-bar body {
+                body.wp-app-body {
                     margin-top: 46px !important;
                 }
 
-                .wp-app-with-admin-bar #wpadminbar {
+                #wpadminbar {
                     position: fixed;
                 }
 
@@ -401,7 +426,7 @@ class Masterbar {
 
             /* Custom masterbar for anonymous users */
             .wp-app-masterbar {
-                background: #23282d;
+                background: var(--wp-app-masterbar-background, #23282d);
                 height: 32px;
                 position: fixed;
                 top: 0;
@@ -411,7 +436,7 @@ class Masterbar {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 font-size: 13px;
                 line-height: 32px;
-                color: #eee;
+                color: var(--wp-app-masterbar-text, #eee);
             }
 
             .wp-app-masterbar .wp-app-masterbar-inner {
@@ -432,12 +457,12 @@ class Masterbar {
             }
 
             .wp-app-masterbar a {
-                color: #eee;
+                color: var(--wp-app-masterbar-text, #eee);
                 text-decoration: none;
             }
 
             .wp-app-masterbar a:hover {
-                color: #00a0d2;
+                color: var(--wp-app-masterbar-highlight, #00a0d2);
             }
 
             .wp-app-masterbar .wp-app-masterbar-item {
@@ -484,7 +509,7 @@ class Masterbar {
             #dark-mode-toggle {
                 background: none;
                 border: none;
-                color: #eee;
+                color: var(--wp-app-masterbar-text, #eee);
                 cursor: pointer;
                 padding: 4px;
                 display: flex;
@@ -496,7 +521,7 @@ class Masterbar {
 
             #dark-mode-toggle:hover {
                 background: rgba(255, 255, 255, 0.1);
-                color: #00a0d2;
+                color: var(--wp-app-masterbar-highlight, #00a0d2);
             }
 
             #dark-mode-toggle svg {
@@ -515,11 +540,11 @@ class Masterbar {
             }
 
             .wp-app-admin-bar-dark-mode-toggle #dark-mode-toggle {
-                color: #eee;
+                color: var(--wp-app-masterbar-text, #eee);
             }
 
             .wp-app-admin-bar-dark-mode-toggle #dark-mode-toggle:hover {
-                color: #00a0d2;
+                color: var(--wp-app-masterbar-highlight, #00a0d2);
                 background: rgba(255, 255, 255, 0.1);
             }
 

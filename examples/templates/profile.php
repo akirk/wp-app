@@ -62,7 +62,7 @@ if ( ! $user ) {
     gap: 20px;
     margin: 30px 0;
     padding: 20px;
-    background: #f9f9f9;
+    background: var(--wp-app-color-surface-alt, #f9f9f9);
     border-radius: 5px;
 }
 
@@ -79,14 +79,14 @@ if ( ! $user ) {
     display: inline-block;
     margin-right: 10px;
     padding: 10px 20px;
-    background: #0073aa;
+    background: var(--wp-app-color-primary, #0073aa);
     color: white;
     text-decoration: none;
     border-radius: 3px;
 }
 
 .button:hover {
-    background: #005a87;
+    background: var(--wp-app-color-primary-hover, #005a87);
     color: white;
 }
 </style>

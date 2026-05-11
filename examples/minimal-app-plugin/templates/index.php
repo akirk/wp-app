@@ -15,10 +15,13 @@
             display: inline-block;
             margin-right: 20px;
             padding: 10px 20px;
-            background: #007cba;
+            background: var(--wp-app-color-primary, #007cba);
             color: white;
             text-decoration: none;
             border-radius: 5px;
+        }
+        .app-nav a:hover {
+            background: var(--wp-app-color-primary-hover, #005a87);
         }
     </style>
 </head>
