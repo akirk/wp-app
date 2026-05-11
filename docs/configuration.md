@@ -39,6 +39,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 | `add_app_node` | bool | `true` | Add the main app entry to the admin bar. Set to `false` if your CPT or plugin already adds its own admin bar entry |
 | `clear_admin_bar` | bool | `false` | Remove all WordPress admin bar items, showing only app items |
 
+WpApp automatically exposes the current user's WordPress admin color scheme as CSS custom properties on app pages. Use those variables in app styles instead of hard-coding brand colors.
+
 ### Access Control
 
 | Option | Type | Default | Description |
@@ -121,6 +123,32 @@ If your custom post type already registers an admin bar entry, disable the autom
 $app = new WpApp( __DIR__ . '/templates', 'my-cpt-app', [
 	'add_app_node' => false,
 ] );
+```
+
+### App Styles Using Admin Colors
+
+Use semantic variables for app UI and masterbar variables for navigation-specific overrides:
+
+```css
+.button-primary {
+	background: var(--wp-app-color-primary);
+}
+
+.button-primary:hover {
+	background: var(--wp-app-color-primary-hover);
+}
+```
+
+To disable the automatic variable output, use the `wp_app_output_admin_color_scheme` filter:
+
+```php
+add_filter( 'wp_app_output_admin_color_scheme', '__return_false' );
+```
+
+WpApp also applies conservative defaults for app backgrounds, links, focus outlines, and standard `.button`/`.button-primary` elements. To keep the variables but disable those default styles:
+
+```php
+add_filter( 'wp_app_output_default_color_styles', '__return_false' );
 ```
 
 ### App with My Apps Integration

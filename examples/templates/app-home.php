@@ -42,14 +42,14 @@
     display: inline-block;
     margin-right: 10px;
     padding: 10px 20px;
-    background: #0073aa;
+    background: var(--wp-app-color-primary, #0073aa);
     color: white;
     text-decoration: none;
     border-radius: 3px;
 }
 
 .app-navigation .button:hover {
-    background: #005a87;
+    background: var(--wp-app-color-primary-hover, #005a87);
     color: white;
 }
 </style>

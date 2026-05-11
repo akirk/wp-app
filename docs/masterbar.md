@@ -55,6 +55,43 @@ When disabled:
 
 ## Display Options
 
+### Admin Color Scheme
+
+WpApp outputs CSS custom properties from the current user's WordPress admin color scheme and uses them for the WordPress admin bar and anonymous-user masterbar. This keeps app navigation aligned with each user's selected admin profile color.
+
+Use these variables in app CSS:
+
+| Variable | Purpose |
+|----------|---------|
+| `--wp-app-color-primary` | Primary app action color |
+| `--wp-app-color-primary-hover` | Hover/focus color for primary actions |
+| `--wp-app-color-background` | Default app page background |
+| `--wp-app-color-surface` | Card/panel background |
+| `--wp-app-color-surface-alt` | Subtle secondary background |
+| `--wp-app-color-text` | Primary text color |
+| `--wp-app-color-muted` | Secondary text color |
+| `--wp-app-color-border` | Border color |
+| `--wp-app-color-link` | Link color |
+| `--wp-app-color-link-hover` | Link hover/focus color |
+| `--wp-app-masterbar-background` | Masterbar/admin-bar background |
+| `--wp-app-masterbar-highlight` | Masterbar hover and accent color |
+| `--wp-app-masterbar-text` | Masterbar text color |
+
+```css
+.button-primary {
+	background: var(--wp-app-color-primary);
+	color: #fff;
+}
+
+.button-primary:hover {
+	background: var(--wp-app-color-primary-hover);
+}
+```
+
+For lower-level access, `wp_app_get_admin_color_scheme()` returns the normalized WordPress scheme and `wp_app_get_admin_color_scheme_css()` returns the generated custom-property block.
+
+WpApp also applies conservative defaults for `body.wp-app-body`, links, focus outlines, `.button-primary`, and `.button` so simple app templates pick up the admin color scheme automatically. Disable those defaults with the `wp_app_output_default_color_styles` filter if your app has a fully custom design system.
+
 ### WordPress Logo
 
 ```php

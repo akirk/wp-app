@@ -183,6 +183,247 @@ if ( ! function_exists( 'wp_app_add_inline_script' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_sanitize_css_color' ) ) {
+    /**
+     * Sanitize a CSS color value for inline custom properties.
+     */
+    function wp_app_sanitize_css_color( $color, $fallback ) {
+        if ( function_exists( 'sanitize_hex_color' ) ) {
+            $sanitized = sanitize_hex_color( $color );
+
+            if ( $sanitized ) {
+                return $sanitized;
+            }
+        } elseif ( is_string( $color ) && preg_match( '/^#([A-Fa-f0-9]{3}){1,2}$/', $color ) ) {
+            return $color;
+        }
+
+        return $fallback;
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_admin_color_scheme' ) ) {
+    /**
+     * Get the current user's WordPress admin color scheme as normalized tokens.
+     *
+     * @param int $user_id Optional user ID. Defaults to the current user.
+     * @return array Normalized admin color scheme data.
+     */
+    function wp_app_get_admin_color_scheme( $user_id = 0 ) {
+        $fallback = [
+            'slug'        => 'fresh',
+            'name'        => 'Default',
+            'colors'      => [ '#23282d', '#32373c', '#0073aa', '#00a0d2' ],
+            'icon_colors' => [
+                'base'    => '#a7aaad',
+                'focus'   => '#72aee6',
+                'current' => '#fff',
+            ],
+        ];
+
+        if ( ! function_exists( 'get_user_option' ) ) {
+            return $fallback;
+        }
+
+        $user_id = $user_id ? $user_id : ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
+        $slug    = get_user_option( 'admin_color', $user_id );
+
+        if ( ! $slug ) {
+            $slug = 'fresh';
+        }
+
+        global $_wp_admin_css_colors;
+
+        if ( empty( $_wp_admin_css_colors ) && defined( 'ABSPATH' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/misc.php';
+
+            if ( function_exists( 'register_admin_color_schemes' ) ) {
+                register_admin_color_schemes();
+            }
+        }
+
+        if ( empty( $_wp_admin_css_colors[ $slug ] ) ) {
+            $fallback['slug'] = $slug;
+            return function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_admin_color_scheme', $fallback, $user_id, $slug ) : $fallback;
+        }
+
+        $scheme      = $_wp_admin_css_colors[ $slug ];
+        $colors      = isset( $scheme->colors ) && is_array( $scheme->colors ) ? array_values( $scheme->colors ) : $fallback['colors'];
+        $icon_colors = isset( $scheme->icon_colors ) && is_array( $scheme->icon_colors ) ? $scheme->icon_colors : $fallback['icon_colors'];
+        $colors      = array_pad( $colors, 4, end( $colors ) );
+
+        $admin_color_scheme = [
+            'slug'        => $slug,
+            'name'        => isset( $scheme->name ) ? $scheme->name : $fallback['name'],
+            'colors'      => [
+                wp_app_sanitize_css_color( $colors[0], $fallback['colors'][0] ),
+                wp_app_sanitize_css_color( $colors[1], $fallback['colors'][1] ),
+                wp_app_sanitize_css_color( $colors[2], $fallback['colors'][2] ),
+                wp_app_sanitize_css_color( $colors[3], $fallback['colors'][3] ),
+            ],
+            'icon_colors' => [
+                'base'    => wp_app_sanitize_css_color( isset( $icon_colors['base'] ) ? $icon_colors['base'] : '', $fallback['icon_colors']['base'] ),
+                'focus'   => wp_app_sanitize_css_color( isset( $icon_colors['focus'] ) ? $icon_colors['focus'] : '', $fallback['icon_colors']['focus'] ),
+                'current' => wp_app_sanitize_css_color( isset( $icon_colors['current'] ) ? $icon_colors['current'] : '', $fallback['icon_colors']['current'] ),
+            ],
+        ];
+
+        return function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_admin_color_scheme', $admin_color_scheme, $user_id, $slug ) : $admin_color_scheme;
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_admin_color_scheme_css' ) ) {
+    /**
+     * Get CSS custom properties for the current user's admin color scheme.
+     *
+     * @param string $selector CSS selector for the variables.
+     * @param int    $user_id Optional user ID. Defaults to the current user.
+     * @return string CSS custom properties block.
+     */
+    function wp_app_get_admin_color_scheme_css( $selector = ':root, body.wp-app-body', $user_id = 0 ) {
+        $scheme   = wp_app_get_admin_color_scheme( $user_id );
+        $selector = trim( preg_replace( '/[^a-zA-Z0-9\-_#\.\:\[\]=~\*"\'\(\), >\+]/', '', $selector ) );
+
+        if ( '' === $selector ) {
+            $selector = ':root, body.wp-app-body';
+        }
+
+        return sprintf(
+            "%s {\n" .
+            "\t--wp-app-admin-color-background: %s;\n" .
+            "\t--wp-app-admin-color-subtle: %s;\n" .
+            "\t--wp-app-admin-color-primary: %s;\n" .
+            "\t--wp-app-admin-color-accent: %s;\n" .
+            "\t--wp-app-admin-icon-color-base: %s;\n" .
+            "\t--wp-app-admin-icon-color-focus: %s;\n" .
+            "\t--wp-app-admin-icon-color-current: %s;\n" .
+            "\t--wp-app-color-primary: var(--wp-app-admin-color-primary);\n" .
+            "\t--wp-app-color-primary-hover: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-color-accent: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-color-background: #f6f7f7;\n" .
+            "\t--wp-app-color-surface: #fff;\n" .
+            "\t--wp-app-color-surface-alt: #f0f0f1;\n" .
+            "\t--wp-app-color-text: #1d2327;\n" .
+            "\t--wp-app-color-muted: #646970;\n" .
+            "\t--wp-app-color-border: #dcdcde;\n" .
+            "\t--wp-app-color-link: var(--wp-app-admin-color-primary);\n" .
+            "\t--wp-app-color-link-hover: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-color-focus: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-color-secondary: var(--wp-app-color-surface-alt);\n" .
+            "\t--wp-app-color-secondary-hover: var(--wp-app-color-border);\n" .
+            "\t--wp-app-color-secondary-text: var(--wp-app-color-text);\n" .
+            "\t--wp-app-masterbar-background: var(--wp-app-admin-color-background);\n" .
+            "\t--wp-app-masterbar-highlight: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-masterbar-text: #eee;\n" .
+            "}\n",
+            $selector,
+            $scheme['colors'][0],
+            $scheme['colors'][1],
+            $scheme['colors'][2],
+            $scheme['colors'][3],
+            $scheme['icon_colors']['base'],
+            $scheme['icon_colors']['focus'],
+            $scheme['icon_colors']['current']
+        );
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_default_color_styles' ) ) {
+    /**
+     * Get default app styles that consume the admin color scheme tokens.
+     *
+     * @return string CSS defaults for app pages.
+     */
+    function wp_app_get_default_color_styles() {
+        return '
+body.wp-app-body {
+	background: var(--wp-app-color-background);
+	color: var(--wp-app-color-text);
+}
+
+body.wp-app-body a {
+	color: var(--wp-app-color-link);
+}
+
+body.wp-app-body a:hover,
+body.wp-app-body a:focus {
+	color: var(--wp-app-color-link-hover);
+}
+
+body.wp-app-body :focus-visible {
+	outline: 2px solid var(--wp-app-color-focus);
+	outline-offset: 2px;
+}
+
+body.wp-app-body ::selection {
+	background: var(--wp-app-color-primary);
+	color: #fff;
+}
+
+body.wp-app-body .button-primary,
+body.wp-app-body .button.button-primary,
+body.wp-app-body button.button-primary,
+body.wp-app-body input[type="submit"].button-primary {
+	background: var(--wp-app-color-primary);
+	border-color: var(--wp-app-color-primary);
+	color: #fff;
+}
+
+body.wp-app-body .button-primary:hover,
+body.wp-app-body .button-primary:focus,
+body.wp-app-body .button.button-primary:hover,
+body.wp-app-body .button.button-primary:focus,
+body.wp-app-body button.button-primary:hover,
+body.wp-app-body button.button-primary:focus,
+body.wp-app-body input[type="submit"].button-primary:hover,
+body.wp-app-body input[type="submit"].button-primary:focus {
+	background: var(--wp-app-color-primary-hover);
+	border-color: var(--wp-app-color-primary-hover);
+	color: #fff;
+}
+
+body.wp-app-body .button:not(.button-primary),
+body.wp-app-body .button-secondary {
+	background: var(--wp-app-color-secondary);
+	border-color: var(--wp-app-color-border);
+	color: var(--wp-app-color-secondary-text);
+}
+
+body.wp-app-body .button:not(.button-primary):hover,
+body.wp-app-body .button:not(.button-primary):focus,
+body.wp-app-body .button-secondary:hover,
+body.wp-app-body .button-secondary:focus {
+	background: var(--wp-app-color-secondary-hover);
+	color: var(--wp-app-color-secondary-text);
+}
+';
+    }
+}
+
+if ( ! function_exists( 'wp_app_output_admin_color_scheme' ) ) {
+    /**
+     * Output CSS custom properties for the current user's admin color scheme.
+     */
+    function wp_app_output_admin_color_scheme() {
+        $should_output = function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_output_admin_color_scheme', true ) : true;
+
+        if ( ! $should_output ) {
+            return;
+        }
+
+        echo '<style id="wp-app-admin-color-scheme">' . "\n";
+        echo wp_app_get_admin_color_scheme_css();
+
+        $should_output_default_styles = function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_output_default_color_styles', true ) : true;
+
+        if ( $should_output_default_styles ) {
+            echo wp_app_get_default_color_styles();
+        }
+
+        echo '</style>' . "\n";
+    }
+}
+
 if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
     /**
      * Remove theme styles and scripts from app pages
@@ -256,8 +497,9 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
     }
 }
 
-// Hook into wp_enqueue_scripts to dequeue theme assets on app pages
+// Hook app styles and asset isolation when WordPress hooks are available.
 if ( function_exists( 'add_action' ) ) {
+	add_action( 'wp_app_head', 'wp_app_output_admin_color_scheme', 5 );
 	add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
 }
 

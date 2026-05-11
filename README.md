@@ -79,6 +79,7 @@ WordPress isn't just for blogs. It's a powerful foundation for web applications.
 - **URL Routing** - Pattern-based routing with WordPress rewrite rules
 - **Theme Isolation** - Clean HTML output separate from your WordPress theme
 - **Admin Bar Integration** - WordPress-style navigation for your app
+- **Admin Color Scheme Tokens** - CSS variables from each user's WordPress admin color profile
 - **Access Control** - WordPress capability-based authentication
 - **BaseApp Pattern** - Structured architecture for complex applications
 - **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`

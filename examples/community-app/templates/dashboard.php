@@ -173,7 +173,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: white;
+    background: var(--wp-app-color-surface, #fff);
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -190,12 +190,12 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 
 .user-details h1 {
     margin: 0 0 5px 0;
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
 }
 
 .user-email {
     margin: 0;
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
 }
 
 .progress-summary {
@@ -210,7 +210,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
     min-width: 80px;
 }
 
-.stat-box.level { background: #3498db; color: white; }
+.stat-box.level { background: var(--wp-app-color-primary, #3498db); color: white; }
 .stat-box.points { background: #f39c12; color: white; }
 .stat-box.posts { background: #27ae60; color: white; }
 
@@ -232,7 +232,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 }
 
 .dashboard-section {
-    background: white;
+    background: var(--wp-app-color-surface, #fff);
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -240,7 +240,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 
 .dashboard-section h2 {
     margin: 0 0 20px 0;
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
 }
 
 .action-buttons {
@@ -263,22 +263,22 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 }
 
 .button-primary {
-    background: #3498db;
+    background: var(--wp-app-color-primary, #3498db);
     color: white;
 }
 
 .button-primary:hover {
-    background: #2980b9;
+    background: var(--wp-app-color-primary-hover, #2980b9);
     color: white;
 }
 
 .button:not(.button-primary) {
-    background: #ecf0f1;
-    color: #2c3e50;
+    background: var(--wp-app-color-surface-alt, #ecf0f1);
+    color: var(--wp-app-color-text, #2c3e50);
 }
 
 .button:not(.button-primary):hover {
-    background: #bdc3c7;
+    background: var(--wp-app-color-secondary-hover, #bdc3c7);
 }
 
 .posts-list {
@@ -288,7 +288,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 
 .post-item {
     padding: 20px;
-    border: 1px solid #ecf0f1;
+    border: 1px solid var(--wp-app-color-border, #ecf0f1);
     border-radius: 8px;
 }
 
@@ -297,12 +297,12 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 }
 
 .post-item h3 a {
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
     text-decoration: none;
 }
 
 .post-item h3 a:hover {
-    color: #3498db;
+    color: var(--wp-app-color-primary, #3498db);
 }
 
 .post-meta {
@@ -310,7 +310,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
     gap: 15px;
     margin: 0 0 10px 0;
     font-size: 0.9em;
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
 }
 
 .post-status {
@@ -325,19 +325,19 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 
 .post-excerpt {
     margin: 0;
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
 }
 
 .empty-state {
     text-align: center;
     padding: 40px;
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
 }
 
 .progress-bar {
     position: relative;
     height: 30px;
-    background: #ecf0f1;
+    background: var(--wp-app-color-surface-alt, #ecf0f1);
     border-radius: 15px;
     margin-bottom: 20px;
     overflow: hidden;
@@ -345,7 +345,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #3498db, #2980b9);
+    background: linear-gradient(90deg, var(--wp-app-color-primary, #3498db), var(--wp-app-color-primary-hover, #2980b9));
     transition: width 0.3s ease;
 }
 
@@ -356,7 +356,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
     transform: translate(-50%, -50%);
     font-size: 0.9em;
     font-weight: 500;
-    color: #2c3e50;
+    color: var(--wp-app-color-text, #2c3e50);
 }
 
 .achievement-badges {
@@ -374,7 +374,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 }
 
 .no-achievements {
-    color: #7f8c8d;
+    color: var(--wp-app-color-muted, #7f8c8d);
     font-style: italic;
 }
 
