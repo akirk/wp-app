@@ -17,8 +17,7 @@ class Masterbar {
     private $disable_wp_admin_bar = true;
     private $only_on_app_routes = false;
     private $show_for_anonymous = true;
-    private $show_dark_mode_toggle = false;
-    private $add_app_node = true;
+    private $admin_bar_app_link = true;
     private $app_url_path = null;
     private $wpapp = null;
 
@@ -44,7 +43,7 @@ class Masterbar {
     }
 
     /**
-     * Add a menu item as submenu under the main app node
+     * Add a menu item as submenu under the main app link
      *
      * @param string $id Menu item ID
      * @param string $title Menu item title
@@ -152,22 +151,15 @@ class Masterbar {
     }
 
     /**
-     * Set whether to show dark mode toggle
-     */
-    public function show_dark_mode_toggle( $show = true ) {
-        $this->show_dark_mode_toggle = $show;
-    }
-
-    /**
-     * Set whether to add the main app node to the admin bar
+     * Set whether to add the main app link to the admin bar
      *
      * Disable this if you already have a CPT or other mechanism that adds
      * its own admin bar entry and you don't want wp-app to add a duplicate.
      *
      * @param bool $add True to add, false to skip
      */
-    public function add_app_node( $add = true ) {
-        $this->add_app_node = $add;
+    public function admin_bar_app_link( $add = true ) {
+        $this->admin_bar_app_link = $add;
     }
 
     /**
@@ -244,12 +236,6 @@ class Masterbar {
                 </div>
 
                 <div class="wp-app-masterbar-right">
-                    <?php if ( $this->show_dark_mode_toggle ) : ?>
-                        <div class="wp-app-dark-mode-toggle">
-                            <?php $this->render_dark_mode_toggle(); ?>
-                        </div>
-                    <?php endif; ?>
-
                     <?php if ( $is_logged_in ) : ?>
                         <div class="wp-app-masterbar-user">
                             <a href="#" class="wp-app-user-toggle">
@@ -505,49 +491,6 @@ class Masterbar {
                 line-height: 1.6;
             }
 
-            /* Dark mode toggle styling */
-            #dark-mode-toggle {
-                background: none;
-                border: none;
-                color: var(--wp-app-masterbar-text, #eee);
-                cursor: pointer;
-                padding: 4px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 3px;
-                transition: all 0.2s ease;
-            }
-
-            #dark-mode-toggle:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: var(--wp-app-masterbar-highlight, #00a0d2);
-            }
-
-            #dark-mode-toggle svg {
-                width: 16px;
-                height: 16px;
-                display: none;
-            }
-
-            #dark-mode-toggle .sun-icon {
-                display: block;
-            }
-
-            /* Admin bar dark mode toggle */
-            .wp-app-admin-bar-dark-mode-toggle {
-                padding: 0 6px;
-            }
-
-            .wp-app-admin-bar-dark-mode-toggle #dark-mode-toggle {
-                color: var(--wp-app-masterbar-text, #eee);
-            }
-
-            .wp-app-admin-bar-dark-mode-toggle #dark-mode-toggle:hover {
-                color: var(--wp-app-masterbar-highlight, #00a0d2);
-                background: rgba(255, 255, 255, 0.1);
-            }
-
             /* Responsive custom masterbar */
             @media screen and (max-width: 782px) {
                 .wp-app-masterbar {
@@ -691,8 +634,8 @@ class Masterbar {
 
         // Only add items if user can access this app
         if ( $this->can_user_access_app() ) {
-            // Add main app node first (unless disabled)
-            if ( $this->add_app_node ) {
+            // Add main app link first (unless disabled)
+            if ( $this->admin_bar_app_link ) {
                 $app_node_id = 'wp-app-' . str_replace( '-', '_', $this->app_url_path );
                 $wp_admin_bar->add_node( [
                     'id'    => $app_node_id,
@@ -719,19 +662,6 @@ class Masterbar {
             }
         }
 
-
-        // Add dark mode toggle if enabled
-        if ( $this->show_dark_mode_toggle ) {
-            $wp_admin_bar->add_node( [
-                'id'    => 'wp-app-dark-mode-toggle',
-                'title' => '<div class="wp-app-admin-bar-dark-mode-toggle">' . $this->get_dark_mode_toggle_html() . '</div>',
-                'href'  => false,
-                'meta'  => [
-                    'class' => 'wp-app-dark-mode-toggle-wrapper'
-                ]
-            ] );
-        }
-
         // Add user menu items as submenu to existing user menu
         if ( is_user_logged_in() ) {
             foreach ( $this->user_menu_items as $item ) {
@@ -756,8 +686,8 @@ class Masterbar {
      * Add items when in regular WordPress admin/frontend
      */
     private function add_admin_context_items( $wp_admin_bar ) {
-        // Only add link if user can access this app and app node is enabled
-        if ( $this->can_user_access_app() && $this->add_app_node ) {
+        // Only add link if user can access this app and the app link is enabled
+        if ( $this->can_user_access_app() && $this->admin_bar_app_link ) {
             // Add a simple link to the app from regular WordPress admin
             $wp_admin_bar->add_node( [
                 'id'    => 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path ),
@@ -873,50 +803,5 @@ class Masterbar {
         if ( ! did_action( 'wp_body_open' ) ) {
             echo '<script>document.addEventListener("DOMContentLoaded", function() { document.body.insertAdjacentHTML("afterbegin", ' . wp_json_encode( $this->render() ) . '); });</script>';
         }
-    }
-
-
-    public function render_dark_mode_toggle( $aria_label = 'Toggle dark mode' ) {
-        echo $this->get_dark_mode_toggle_html( $aria_label );
-    }
-
-    /**
-     * Get dark mode toggle HTML
-     */
-    private function get_dark_mode_toggle_html( $aria_label = 'Toggle dark mode' ) {
-        return '<button id="dark-mode-toggle" type="button" aria-label="' . htmlspecialchars( $aria_label ) . '">
-            <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-            <svg class="sun-forced-icon" width="28" height="16" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                <rect x="26" y="17" width="6" height="5" rx="1"></rect>
-                <path d="M27 17v-2a2 2 0 0 1 2-2 2 2 0 0 1 2 2v2"></path>
-            </svg>
-            <svg class="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-            <svg class="moon-forced-icon" width="28" height="16" viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                <rect x="26" y="17" width="6" height="5" rx="1"></rect>
-                <path d="M27 17v-2a2 2 0 0 1 2-2 2 2 0 0 1 2 2v2"></path>
-            </svg>
-        </button>';
     }
 }

@@ -129,7 +129,7 @@ Call `$storage->create_tables()` on plugin activation.
 | `show_masterbar_for_anonymous` | `true` | Show nav for logged-out users |
 | `show_wp_logo` | `true` | Show WordPress logo |
 | `clear_admin_bar` | `false` | Remove all WP admin bar items |
-| `add_app_node` | `true` | Add app entry to admin bar |
+| `admin_bar_app_link` | `true` | Add app entry to admin bar |
 | `my_apps` | `true` | Register with My Apps plugin |
 
 ## Menu Methods

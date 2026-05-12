@@ -57,12 +57,8 @@ class WpApp {
             $this->masterbar->show_site_name( $config['show_site_name'] );
         }
 
-        if ( isset( $config['show_dark_mode_toggle'] ) ) {
-            $this->masterbar->show_dark_mode_toggle( $config['show_dark_mode_toggle'] );
-        }
-
-        if ( isset( $config['add_app_node'] ) ) {
-            $this->masterbar->add_app_node( $config['add_app_node'] );
+        if ( isset( $config['admin_bar_app_link'] ) ) {
+            $this->masterbar->admin_bar_app_link( $config['admin_bar_app_link'] );
         }
 
         // Access control configuration
@@ -511,24 +507,15 @@ class WpApp {
     }
 
     /**
-     * Set whether to show dark mode toggle in masterbar
-     *
-     * @param bool $show True to show, false to hide dark mode toggle
-     */
-    public function show_dark_mode_toggle( $show = true ) {
-        $this->masterbar->show_dark_mode_toggle( $show );
-    }
-
-    /**
-     * Set whether to add the main app node to the admin bar
+     * Set whether to add the main app link to the admin bar
      *
      * Disable this if you already have a CPT or other mechanism that adds
      * its own admin bar entry and you don't want wp-app to add a duplicate.
      *
      * @param bool $add True to add, false to skip
      */
-    public function add_app_node( $add = true ) {
-        $this->masterbar->add_app_node( $add );
+    public function admin_bar_app_link( $add = true ) {
+        $this->masterbar->admin_bar_app_link( $add );
     }
 
 
