@@ -10,8 +10,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'show_masterbar_for_anonymous' => true,
 	'show_wp_logo'                 => false,
 	'show_site_name'               => true,
-	'show_dark_mode_toggle'        => false,
-	'add_app_node'                 => true,
+	'admin_bar_app_link'           => true,
 	'require_login'                => false,
 	'require_capability'           => null,
 	'clear_admin_bar'              => false,
@@ -35,8 +34,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 | `show_masterbar_for_anonymous` | bool | `true` | Show navigation bar for logged-out users |
 | `show_wp_logo` | bool | `true` | Show WordPress logo in the masterbar |
 | `show_site_name` | bool | `true` | Show site name in the masterbar |
-| `show_dark_mode_toggle` | bool | `false` | Show dark mode toggle button |
-| `add_app_node` | bool | `true` | Add the main app entry to the admin bar. Set to `false` if your CPT or plugin already adds its own admin bar entry |
+| `admin_bar_app_link` | bool | `true` | Add the main app entry to the admin bar. Set to `false` if your CPT or plugin already adds its own admin bar entry |
 | `clear_admin_bar` | bool | `false` | Remove all WordPress admin bar items, showing only app items |
 
 WpApp automatically exposes the current user's WordPress admin color scheme as CSS custom properties on app pages. Use those variables in app styles instead of hard-coding brand colors.
@@ -66,8 +64,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app' );
 
 // Masterbar settings
 $app->show_masterbar_for_anonymous( true );
-$app->show_dark_mode_toggle( true );
-$app->add_app_node( false );  // Disable if CPT adds its own entry
+$app->admin_bar_app_link( false );  // Disable if CPT adds its own entry
 $app->clear_admin_bar();
 
 // Access control
@@ -121,7 +118,7 @@ If your custom post type already registers an admin bar entry, disable the autom
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-cpt-app', [
-	'add_app_node' => false,
+	'admin_bar_app_link' => false,
 ] );
 ```
 

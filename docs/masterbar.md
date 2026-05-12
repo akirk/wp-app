@@ -31,21 +31,21 @@ $app->add_user_menu_item( 'profile', 'My Profile', home_url( '/my-app/profile' )
 $app->add_user_menu_item( 'preferences', 'Preferences', home_url( '/my-app/preferences' ) );
 ```
 
-## Disabling the App Node
+## Disabling the App Link
 
 By default, WpApp adds a main entry for your app in the admin bar. If you already have a custom post type or other mechanism that adds its own admin bar entry, you can disable the automatic one:
 
 ```php
 // Via config
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'add_app_node' => false,
+	'admin_bar_app_link' => false,
 ] );
 
 // Or via method
-$app->add_app_node( false );
+$app->admin_bar_app_link( false );
 
 // Or via masterbar instance
-$app->masterbar()->add_app_node( false );
+$app->masterbar()->admin_bar_app_link( false );
 ```
 
 When disabled:
@@ -114,18 +114,6 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 
 // Or via method
 $app->masterbar()->show_site_name( false );
-```
-
-### Dark Mode Toggle
-
-```php
-// Via config
-$app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'show_dark_mode_toggle' => true,
-] );
-
-// Or via method
-$app->show_dark_mode_toggle( true );
 ```
 
 ### Anonymous Users
