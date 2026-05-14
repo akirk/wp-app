@@ -18,20 +18,19 @@ Creating WpApp plugin: my-app
 
 Plugin name [My App]: 
 Namespace [MyApp]: 
-Packagist vendor (your username) []: 
 Author name []: 
 URL path [my-app]: 
 
 Setup type:
-  [1] Minimal - simple WpApp setup
-  [2] Full - with BaseApp structure
-Choose [1]: 
+  [m] Minimal - simple WpApp setup
+  [f] Full - with BaseApp structure
+Choose [f]: 
 
 ✓ Updated plugin-name.php
 ✓ Updated templates/index.php
+✓ Updated src/App.php
 ✓ Renamed plugin-name.php to my-app.php
 ✓ Created .gitignore
-✓ Removed src/ directory (not needed for minimal setup)
 ✓ Updated composer.json
 ✓ Regenerated autoloader
 ✓ Updated README.md
@@ -45,13 +44,14 @@ Next steps:
     npx @wp-playground/cli@latest server --auto-mount=my-app --login
 
   Option B: Install in WordPress
-    1. Activate the plugin in WordPress
-    2. Visit /my-app/ to see your app
+    1. Move this folder to wp-content/plugins/
+    2. Activate the plugin in WordPress
+    3. Visit /my-app/ to see your app
 ```
 
 Which gives you something like this:
 
-<img width="788" height="681" alt="create-wp-app" src="https://github.com/user-attachments/assets/0a7cfabd-5cd9-40a4-bb2f-2b45d3c57e34" />
+<img width="788" height="681" alt="create-wp-app" src="https://github.com/user-attachments/assets/f0180015-96e9-4ae1-af64-1cec0bae9de1" />
 
 ## Try it Now
 
@@ -176,11 +176,12 @@ Your app is now available at `/minimal`!
 - PHP 7.4 or higher
 - WordPress 5.0 or higher
 
-## WordPress Coding Standards
+## Tests and Coding Standards
 
-This package follows WordPress coding standards. Run PHPCS:
+Run the test suite and WordPress coding standards checks:
 
 ```bash
+composer test
 composer phpcs
 ```
 
