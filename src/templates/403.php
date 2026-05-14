@@ -12,12 +12,12 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .wp-app-403 h1 {
-            color: #dc3545;
+            color: var(--wp-app-color-error);
             font-size: 2.5em;
             margin-bottom: 20px;
         }
         .wp-app-403 p {
-            color: #6c757d;
+            color: var(--wp-app-color-muted);
             font-size: 1.1em;
             line-height: 1.6;
             margin-bottom: 30px;
@@ -25,28 +25,28 @@
         .wp-app-403 .login-link {
             display: inline-block;
             padding: 12px 24px;
-            background: #007cba;
-            color: white;
+            background: var(--wp-app-color-primary);
+            color: var(--wp-app-color-on-primary);
             text-decoration: none;
             border-radius: 5px;
             font-weight: 500;
         }
         .wp-app-403 .login-link:hover {
-            background: #005a87;
-            color: white;
+            background: var(--wp-app-color-primary-hover);
+            color: var(--wp-app-color-on-primary);
         }
         .wp-app-403 .debug-info {
             margin-top: 40px;
             padding: 20px;
-            background: #f8f9fa;
+            background: var(--wp-app-color-surface-alt);
             border-radius: 5px;
             text-align: left;
             font-size: 0.9em;
-            color: #495057;
+            color: var(--wp-app-color-text);
         }
         .wp-app-403 .debug-info h3 {
             margin-top: 0;
-            color: #343a40;
+            color: var(--wp-app-color-text);
         }
     </style>
 </head>

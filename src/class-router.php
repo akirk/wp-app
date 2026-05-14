@@ -300,10 +300,11 @@ class Router {
 				'template' => '404.php',
 				'params'   => array_merge(
                     [
+						'app_path'     => $this->url_path,
 						'request_path' => $request_path,
 						'error_type'   => $error_type,
 					],
-					$additional_data
+                    $additional_data
                 ),
 			]
         );
@@ -438,6 +439,7 @@ class Router {
 				'pattern'  => '403',
 				'template' => '403.php',
 				'params'   => [
+					'app_path'            => $this->url_path,
 					'request_path'        => $request_path,
 					'required_capability' => $this->required_capability,
 					'user_capabilities'   => wp_get_current_user()->allcaps ?? [],

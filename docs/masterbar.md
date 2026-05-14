@@ -65,6 +65,8 @@ Use these variables in app CSS:
 |----------|---------|
 | `--wp-app-color-primary` | Primary app action color |
 | `--wp-app-color-primary-hover` | Hover/focus color for primary actions |
+| `--wp-app-color-on-primary` | Text/icon color on primary actions |
+| `--wp-app-color-error` | Error/emphasis color derived from the admin accent |
 | `--wp-app-color-background` | Default app page background |
 | `--wp-app-color-surface` | Card/panel background |
 | `--wp-app-color-surface-alt` | Subtle secondary background |
@@ -80,7 +82,7 @@ Use these variables in app CSS:
 ```css
 .button-primary {
 	background: var(--wp-app-color-primary);
-	color: #fff;
+	color: var(--wp-app-color-on-primary);
 }
 
 .button-primary:hover {

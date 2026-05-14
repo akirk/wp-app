@@ -312,6 +312,8 @@ if ( ! function_exists( 'wp_app_get_admin_color_scheme_css' ) ) {
             "\t--wp-app-color-primary: var(--wp-app-admin-color-primary);\n" .
             "\t--wp-app-color-primary-hover: var(--wp-app-admin-color-accent);\n" .
             "\t--wp-app-color-accent: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-color-error: var(--wp-app-admin-color-accent);\n" .
+            "\t--wp-app-color-on-primary: var(--wp-app-admin-icon-color-current);\n" .
             "\t--wp-app-color-background: #f6f7f7;\n" .
             "\t--wp-app-color-surface: #fff;\n" .
             "\t--wp-app-color-surface-alt: #f0f0f1;\n" .
@@ -326,7 +328,7 @@ if ( ! function_exists( 'wp_app_get_admin_color_scheme_css' ) ) {
             "\t--wp-app-color-secondary-text: var(--wp-app-color-text);\n" .
             "\t--wp-app-masterbar-background: var(--wp-app-admin-color-background);\n" .
             "\t--wp-app-masterbar-highlight: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-masterbar-text: #eee;\n" .
+            "\t--wp-app-masterbar-text: var(--wp-app-admin-icon-color-current);\n" .
             "}\n",
             $selector,
             $scheme['colors'][0],
@@ -369,7 +371,7 @@ body.wp-app-body :focus-visible {
 
 body.wp-app-body ::selection {
 	background: var(--wp-app-color-primary);
-	color: #fff;
+	color: var(--wp-app-color-on-primary);
 }
 
 body.wp-app-body .button-primary,
@@ -378,7 +380,7 @@ body.wp-app-body button.button-primary,
 body.wp-app-body input[type="submit"].button-primary {
 	background: var(--wp-app-color-primary);
 	border-color: var(--wp-app-color-primary);
-	color: #fff;
+	color: var(--wp-app-color-on-primary);
 }
 
 body.wp-app-body .button-primary:hover,
@@ -391,7 +393,7 @@ body.wp-app-body input[type="submit"].button-primary:hover,
 body.wp-app-body input[type="submit"].button-primary:focus {
 	background: var(--wp-app-color-primary-hover);
 	border-color: var(--wp-app-color-primary-hover);
-	color: #fff;
+	color: var(--wp-app-color-on-primary);
 }
 
 body.wp-app-body .button:not(.button-primary),

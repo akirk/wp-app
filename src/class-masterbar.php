@@ -353,32 +353,32 @@ class Masterbar {
         return '
             /* App-specific admin bar styling */
             #wpadminbar {
-                background: var(--wp-app-masterbar-background, #23282d);
+                background: var(--wp-app-masterbar-background);
             }
 
             #wpadminbar .ab-top-menu > li.hover > .ab-item,
             #wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus,
             #wpadminbar:not(.mobile) .ab-top-menu > li:hover > .ab-item,
             #wpadminbar:not(.mobile) .ab-top-menu > li > .ab-item:focus {
-                background: var(--wp-app-admin-color-subtle, #32373c);
-                color: var(--wp-app-masterbar-highlight, #00a0d2);
+                background: var(--wp-app-admin-color-subtle);
+                color: var(--wp-app-masterbar-highlight);
             }
 
             #wpadminbar .menupop .ab-sub-wrapper,
             #wpadminbar .shortlink-input {
-                background: var(--wp-app-masterbar-background, #23282d);
+                background: var(--wp-app-masterbar-background);
             }
 
             #wpadminbar .quicklinks .menupop ul.ab-sub-secondary,
             #wpadminbar .quicklinks .menupop ul.ab-sub-secondary .ab-submenu {
-                background: var(--wp-app-admin-color-subtle, #32373c);
+                background: var(--wp-app-admin-color-subtle);
             }
 
             #wpadminbar .quicklinks .menupop ul li a:hover,
             #wpadminbar .quicklinks .menupop ul li a:focus,
             #wpadminbar .quicklinks .menupop.hover ul li a:hover,
             #wpadminbar .quicklinks .menupop.hover ul li a:focus {
-                color: var(--wp-app-masterbar-highlight, #00a0d2);
+                color: var(--wp-app-masterbar-highlight);
             }
 
             /* App menu items spacing and positioning */
@@ -388,12 +388,12 @@ class Masterbar {
 
             .wp-app-menu-item:hover > .ab-item,
             .wp-app-menu-item.hover > .ab-item {
-                color: var(--wp-app-masterbar-highlight, #00a0d2) !important;
+                color: var(--wp-app-masterbar-highlight) !important;
             }
 
             /* Custom app user menu items styling */
             .wp-app-user-menu-item > .ab-item {
-                color: var(--wp-app-masterbar-highlight, #00a0d2) !important;
+                color: var(--wp-app-masterbar-highlight) !important;
             }
 
             /* App-specific body margin (WordPress admin bar is 32px) */
@@ -424,7 +424,7 @@ class Masterbar {
 
             /* Custom masterbar for anonymous users */
             .wp-app-masterbar {
-                background: var(--wp-app-masterbar-background, #23282d);
+                background: var(--wp-app-masterbar-background);
                 height: 32px;
                 position: fixed;
                 top: 0;
@@ -434,7 +434,7 @@ class Masterbar {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 font-size: 13px;
                 line-height: 32px;
-                color: var(--wp-app-masterbar-text, #eee);
+                color: var(--wp-app-masterbar-text);
             }
 
             .wp-app-masterbar .wp-app-masterbar-inner {
@@ -455,12 +455,12 @@ class Masterbar {
             }
 
             .wp-app-masterbar a {
-                color: var(--wp-app-masterbar-text, #eee);
+                color: var(--wp-app-masterbar-text);
                 text-decoration: none;
             }
 
             .wp-app-masterbar a:hover {
-                color: var(--wp-app-masterbar-highlight, #00a0d2);
+                color: var(--wp-app-masterbar-highlight);
             }
 
             .wp-app-masterbar .wp-app-masterbar-item {
@@ -472,7 +472,7 @@ class Masterbar {
             }
 
             .wp-app-masterbar .wp-app-masterbar-login {
-                background: #0073aa;
+                background: var(--wp-app-color-primary);
                 padding: 4px 10px;
                 border-radius: 3px;
                 white-space: nowrap;
@@ -480,15 +480,15 @@ class Masterbar {
             }
 
             .wp-app-masterbar .wp-app-masterbar-login:hover {
-                background: #005177;
+                background: var(--wp-app-color-primary-hover);
             }
 
             .wp-app-masterbar .wp-app-masterbar-login a {
-                color: #fff !important;
+                color: var(--wp-app-color-on-primary) !important;
             }
 
             .wp-app-masterbar .wp-app-masterbar-login a:hover {
-                color: #fff !important;
+                color: var(--wp-app-color-on-primary) !important;
             }
 
             /* Body margin when custom masterbar is shown */
