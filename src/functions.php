@@ -5,7 +5,7 @@
  */
 
 if ( ! defined( 'WP_APP_VERSION' ) ) {
-    define( 'WP_APP_VERSION', '1.2.0' );
+    define( 'WP_APP_VERSION', '1.2.1' );
 }
 
 if ( ! function_exists( 'wp_app_head' ) ) {
@@ -124,15 +124,18 @@ if ( ! function_exists( 'wp_app_enqueue_style' ) ) {
      * Enqueue a style for app pages
      */
     function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false ) {
-        add_action( 'wp_app_head_styles', function() use ( $handle, $src, $deps, $ver ) {
-            if ( $src ) {
-                $url = $src;
-                if ( $ver ) {
-                    $url .= '?ver=' . esc_attr( $ver );
-                }
-                echo '<link rel="stylesheet" id="' . esc_attr( $handle ) . '-css" href="' . esc_url( $url ) . '" type="text/css" media="all">' . "\n";
-            }
-        } );
+        add_action(
+            'wp_app_head_styles',
+            function () use ( $handle, $src, $deps, $ver ) {
+				if ( $src ) {
+					$url = $src;
+					if ( $ver ) {
+						$url .= '?ver=' . esc_attr( $ver );
+					}
+					echo '<link rel="stylesheet" id="' . esc_attr( $handle ) . '-css" href="' . esc_url( $url ) . '" type="text/css" media="all">' . "\n";
+				}
+			}
+        );
     }
 }
 
@@ -143,15 +146,18 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
     function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true ) {
         $hook = $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts';
 
-        add_action( $hook, function() use ( $handle, $src, $deps, $ver ) {
-            if ( $src ) {
-                $url = $src;
-                if ( $ver ) {
-                    $url .= '?ver=' . esc_attr( $ver );
-                }
-                echo '<script id="' . esc_attr( $handle ) . '-js" src="' . esc_url( $url ) . '"></script>' . "\n";
-            }
-        } );
+        add_action(
+            $hook,
+            function () use ( $handle, $src, $deps, $ver ) {
+				if ( $src ) {
+					$url = $src;
+					if ( $ver ) {
+						$url .= '?ver=' . esc_attr( $ver );
+					}
+					echo '<script id="' . esc_attr( $handle ) . '-js" src="' . esc_url( $url ) . '"></script>' . "\n";
+				}
+			}
+        );
     }
 }
 
@@ -160,11 +166,14 @@ if ( ! function_exists( 'wp_app_add_inline_style' ) ) {
      * Add inline CSS for app pages
      */
     function wp_app_add_inline_style( $handle, $css ) {
-        add_action( 'wp_app_head_styles', function() use ( $handle, $css ) {
-            echo '<style id="' . esc_attr( $handle ) . '-inline-css">' . "\n";
-            echo $css . "\n";
-            echo '</style>' . "\n";
-        } );
+        add_action(
+            'wp_app_head_styles',
+            function () use ( $handle, $css ) {
+				echo '<style id="' . esc_attr( $handle ) . '-inline-css">' . "\n";
+				echo $css . "\n";
+				echo '</style>' . "\n";
+			}
+        );
     }
 }
 
@@ -175,11 +184,14 @@ if ( ! function_exists( 'wp_app_add_inline_script' ) ) {
     function wp_app_add_inline_script( $handle, $js, $in_footer = true ) {
         $hook = $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts';
 
-        add_action( $hook, function() use ( $handle, $js ) {
-            echo '<script id="' . esc_attr( $handle ) . '-inline-js">' . "\n";
-            echo $js . "\n";
-            echo '</script>' . "\n";
-        } );
+        add_action(
+            $hook,
+            function () use ( $handle, $js ) {
+				echo '<script id="' . esc_attr( $handle ) . '-inline-js">' . "\n";
+				echo $js . "\n";
+				echo '</script>' . "\n";
+			}
+        );
     }
 }
 

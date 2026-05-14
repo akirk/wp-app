@@ -10,15 +10,14 @@ if ( class_exists( 'WpApp\Router' ) ) {
  * Router class for handling URL pattern matching and template loading in WordPress
  */
 class Router {
-    private $routes = [];
-    private $template_directory = '';
-    private $url_path = 'app';
+    private $routes              = [];
+    private $template_directory  = '';
+    private $url_path            = 'app';
     private $required_capability = null;
 
     public function __construct( $template_directory = '', $url_path = 'app' ) {
         $this->template_directory = $template_directory;
-        $this->url_path = trim( $url_path, '/' );
-
+        $this->url_path           = trim( $url_path, '/' );
 
         // Register this router with the global registry instead of adding hooks directly
         Registry::register_app( $this );
@@ -50,13 +49,12 @@ class Router {
         }
 
         $this->routes[ $pattern ] = [
-            'pattern' => $pattern,
-            'template' => $template,
-            'vars' => $vars,
-            'regex' => $this->build_wordpress_regex( $pattern ),
-            'capability' => $capability
+            'pattern'    => $pattern,
+            'template'   => $template,
+            'vars'       => $vars,
+            'regex'      => $this->build_wordpress_regex( $pattern ),
+            'capability' => $capability,
         ];
-
     }
 
     /**
@@ -208,20 +206,23 @@ class Router {
 
             // Security check: Ensure template exists and is within WordPress plugins directory
             $real_template_path = realpath( $template_path );
-            $wp_content_dir = realpath( WP_CONTENT_DIR );
+            $wp_content_dir     = realpath( WP_CONTENT_DIR );
 
             if ( ! $real_template_path ) {
                 // Template file doesn't exist - this will be handled by the file_exists check below
             } elseif ( strpos( $real_template_path, $wp_content_dir ) !== 0 ) {
                 // Template is outside WordPress content directory - potential security risk
                 error_log( 'WP-App Security Warning: Template path outside WordPress content directory: ' . $matched_route['template'] );
-                $this->handle_app_404( $request_path, 'security_violation', [
-                    'attempted_template' => $matched_route['template'],
-                    'reason' => 'Template must be within WordPress content directory'
-                ] );
+                $this->handle_app_404(
+                    $request_path,
+                    'security_violation',
+                    [
+						'attempted_template' => $matched_route['template'],
+						'reason'             => 'Template must be within WordPress content directory',
+					]
+                );
                 return;
             }
-
 
             if ( file_exists( $template_path ) ) {
                 $this->render_app_template( $template_path, $matched_route );
@@ -229,10 +230,14 @@ class Router {
             }
 
             // Route found but template missing
-            $this->handle_app_404( $request_path, 'template_missing', [
-                'matched_route' => $matched_route,
-                'template_path' => $template_path
-            ] );
+            $this->handle_app_404(
+                $request_path,
+                'template_missing',
+                [
+					'matched_route' => $matched_route,
+					'template_path' => $template_path,
+				]
+            );
             return;
         }
 
@@ -268,7 +273,6 @@ class Router {
             }
         }
 
-
         return null;
     }
 
@@ -289,14 +293,20 @@ class Router {
             $template_to_use = __DIR__ . '/templates/404.php';
         }
 
-        $this->render_app_template( $template_to_use, [
-            'pattern' => '404',
-            'template' => '404.php',
-            'params' => array_merge( [
-                'request_path' => $request_path,
-                'error_type' => $error_type
-            ], $additional_data )
-        ] );
+        $this->render_app_template(
+            $template_to_use,
+            [
+				'pattern'  => '404',
+				'template' => '404.php',
+				'params'   => array_merge(
+                    [
+						'request_path' => $request_path,
+						'error_type'   => $error_type,
+					],
+					$additional_data
+                ),
+			]
+        );
     }
 
     /**
@@ -307,7 +317,7 @@ class Router {
         global $wp_query, $wp, $app, $wp_app_route;
 
         // Make route data available in templates
-        $app = null; // App instance no longer available globally to avoid conflicts
+        $app          = null; // App instance no longer available globally to avoid conflicts
         $wp_app_route = $route_data;
 
         // Load only essential WordPress functionality
@@ -422,15 +432,18 @@ class Router {
             $template_to_use = __DIR__ . '/templates/403.php';
         }
 
-        $this->render_app_template( $template_to_use, [
-            'pattern' => '403',
-            'template' => '403.php',
-            'params' => [
-                'request_path' => $request_path,
-                'required_capability' => $this->required_capability,
-                'user_capabilities' => wp_get_current_user()->allcaps ?? []
-            ]
-        ] );
+        $this->render_app_template(
+            $template_to_use,
+            [
+				'pattern'  => '403',
+				'template' => '403.php',
+				'params'   => [
+					'request_path'        => $request_path,
+					'required_capability' => $this->required_capability,
+					'user_capabilities'   => wp_get_current_user()->allcaps ?? [],
+				],
+			]
+        );
 
         exit;
     }

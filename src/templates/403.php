@@ -76,7 +76,8 @@
             <strong>User Login Status:</strong> <?php echo is_user_logged_in() ? 'Logged in' : 'Not logged in'; ?><br>
             <?php if ( is_user_logged_in() ) : ?>
                 <strong>User ID:</strong> <?php echo get_current_user_id(); ?><br>
-                <strong>User Capabilities:</strong> <?php
+                <strong>User Capabilities:</strong> 
+                <?php
                 $user = wp_get_current_user();
                 if ( ! empty( $user->allcaps ) ) {
                     echo esc_html( implode( ', ', array_keys( array_filter( $user->allcaps ) ) ) );

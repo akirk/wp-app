@@ -11,7 +11,7 @@
 namespace WpApp;
 
 if ( class_exists( 'WpApp\BaseApp' ) ) {
-    return;
+	return;
 }
 
 abstract class BaseApp {

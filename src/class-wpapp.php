@@ -13,24 +13,23 @@ class WpApp {
     private $router;
     private $masterbar;
     private $template_directory;
-    private $initialized = false;
+    private $initialized         = false;
     private $required_capability = null;
-    private $custom_roles = [];
-    private $app_name = null;
-    private $my_apps = true;
-    private $my_apps_icon = null;
+    private $custom_roles        = [];
+    private $app_name            = null;
+    private $my_apps             = true;
+    private $my_apps_icon        = null;
 
     public function __construct( $template_directory = '', $url_path = 'app', $config = [] ) {
         // Handle legacy parameter style
         if ( is_array( $url_path ) ) {
-            $config = $url_path;
+            $config   = $url_path;
             $url_path = $config['url_path'] ?? 'app';
         }
 
-
         $this->template_directory = $template_directory;
-        $this->router = new Router( $template_directory, $url_path );
-        $this->masterbar = new Masterbar( $url_path, $this );
+        $this->router             = new Router( $template_directory, $url_path );
+        $this->masterbar          = new Masterbar( $url_path, $this );
 
         // Apply configuration
         $this->apply_config( $config );
@@ -171,11 +170,13 @@ class WpApp {
         if ( isset( $_GET['wp_app_flush'] ) && current_user_can( 'manage_options' ) ) {
             $this->router->flush_rules();
 
-
             // Show success message
-            add_action( 'wp_head', function() {
-                echo '<script>console.log("WpApp: Rewrite rules flushed successfully!");</script>';
-            } );
+            add_action(
+                'wp_head',
+                function () {
+					echo '<script>console.log("WpApp: Rewrite rules flushed successfully!");</script>';
+				}
+            );
 
             // Redirect to clean URL
             wp_redirect( remove_query_arg( 'wp_app_flush' ) );
@@ -286,10 +287,10 @@ class WpApp {
 
         // Store role information
         $this->custom_roles[ $role_key ] = [
-            'key' => $prefixed_role_key,
+            'key'          => $prefixed_role_key,
             'display_name' => $display_name,
             'capabilities' => $capabilities,
-            'original_key' => $role_key
+            'original_key' => $role_key,
         ];
 
         // Register the role with WordPress
@@ -349,9 +350,9 @@ class WpApp {
                         <?php foreach ( $this->custom_roles as $role_data ) : ?>
                             <label>
                                 <input type="checkbox"
-                                       name="wp_app_roles[]"
-                                       value="<?php echo esc_attr( $role_data['key'] ); ?>"
-                                       <?php checked( in_array( $role_data['key'], $user->roles ) ); ?> />
+                                        name="wp_app_roles[]"
+                                        value="<?php echo esc_attr( $role_data['key'] ); ?>"
+                                        <?php checked( in_array( $role_data['key'], $user->roles ) ); ?> />
                                 <?php echo esc_html( $role_data['display_name'] ); ?>
                                 <?php if ( ! empty( $role_data['capabilities'] ) ) : ?>
                                     <span class="description">(<?php echo esc_html( implode( ', ', array_keys( $role_data['capabilities'] ) ) ); ?>)</span>
@@ -378,7 +379,7 @@ class WpApp {
             return;
         }
 
-        $user = new WP_User( $user_id );
+        $user           = new WP_User( $user_id );
         $selected_roles = isset( $_POST['wp_app_roles'] ) ? array_map( 'sanitize_text_field', $_POST['wp_app_roles'] ) : [];
 
         // Remove existing app roles
@@ -460,7 +461,7 @@ class WpApp {
      */
     public function set_template_directory( $directory ) {
         $this->template_directory = $directory;
-        $this->router = new Router( $directory );
+        $this->router             = new Router( $directory );
     }
 
     /**
@@ -524,7 +525,7 @@ class WpApp {
      */
     public function get_config( $key = null, $default = null ) {
         $option_name = 'wp_app_config_' . str_replace( [ '/', '-' ], '_', $this->router->get_url_path() );
-        $config = get_option( $option_name, [] );
+        $config      = get_option( $option_name, [] );
 
         if ( $key === null ) {
             return $config;
@@ -538,7 +539,7 @@ class WpApp {
      */
     public function set_config( $key, $value = null ) {
         $option_name = 'wp_app_config_' . str_replace( [ '/', '-' ], '_', $this->router->get_url_path() );
-        $config = get_option( $option_name, [] );
+        $config      = get_option( $option_name, [] );
 
         if ( is_array( $key ) ) {
             $config = array_merge( $config, $key );
