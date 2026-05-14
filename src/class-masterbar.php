@@ -10,20 +10,20 @@ if ( class_exists( 'WpApp\Masterbar' ) ) {
  * WordPress-style Masterbar that mimics the WordPress admin bar
  */
 class Masterbar {
-    private $menu_items = [];
-    private $user_menu_items = [];
-    private $show_wp_logo = true;
-    private $show_site_name = true;
+    private $menu_items           = [];
+    private $user_menu_items      = [];
+    private $show_wp_logo         = true;
+    private $show_site_name       = true;
     private $disable_wp_admin_bar = true;
-    private $only_on_app_routes = false;
-    private $show_for_anonymous = true;
-    private $admin_bar_app_link = true;
-    private $app_url_path = null;
-    private $wpapp = null;
+    private $only_on_app_routes   = false;
+    private $show_for_anonymous   = true;
+    private $admin_bar_app_link   = true;
+    private $app_url_path         = null;
+    private $wpapp                = null;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
         $this->app_url_path = $app_url_path;
-        $this->wpapp = $wpapp;
+        $this->wpapp        = $wpapp;
 
         // Hook into our custom app head action to enqueue styles
         add_action( 'wp_app_head', [ $this, 'output_styles' ] );
@@ -51,14 +51,17 @@ class Masterbar {
      * @param array $args Additional arguments
      */
     public function add_menu_item( $id, $title, $href = '', $args = [] ) {
-        $this->menu_items[ $id ] = array_merge( [
-            'id' => $id,
-            'title' => $title,
-            'href' => $href,
-            'class' => '',
-            'target' => '',
-            'parent' => 'wp-app-' . str_replace( '-', '_', $this->app_url_path ) // Default to submenu
-        ], $args );
+        $this->menu_items[ $id ] = array_merge(
+            [
+				'id'     => $id,
+				'title'  => $title,
+				'href'   => $href,
+				'class'  => '',
+				'target' => '',
+				'parent' => 'wp-app-' . str_replace( '-', '_', $this->app_url_path ), // Default to submenu
+			],
+			$args
+        );
     }
 
     /**
@@ -70,14 +73,17 @@ class Masterbar {
      * @param array $args Additional arguments
      */
     public function add_top_level_menu_item( $id, $title, $href = '', $args = [] ) {
-        $this->menu_items[ $id ] = array_merge( [
-            'id' => $id,
-            'title' => $title,
-            'href' => $href,
-            'class' => '',
-            'target' => '',
-            'parent' => null // Top-level item
-        ], $args );
+        $this->menu_items[ $id ] = array_merge(
+            [
+				'id'     => $id,
+				'title'  => $title,
+				'href'   => $href,
+				'class'  => '',
+				'target' => '',
+				'parent' => null, // Top-level item
+			],
+			$args
+        );
     }
 
     /**
@@ -89,13 +95,16 @@ class Masterbar {
      * @param array $args Additional arguments
      */
     public function add_user_menu_item( $id, $title, $href = '', $args = [] ) {
-        $this->user_menu_items[ $id ] = array_merge( [
-            'id' => $id,
-            'title' => $title,
-            'href' => $href,
-            'class' => '',
-            'target' => ''
-        ], $args );
+        $this->user_menu_items[ $id ] = array_merge(
+            [
+				'id'     => $id,
+				'title'  => $title,
+				'href'   => $href,
+				'class'  => '',
+				'target' => '',
+			],
+			$args
+        );
     }
 
     /**
@@ -116,7 +125,7 @@ class Masterbar {
      * Clear all menu items
      */
     public function clear_all_menu_items() {
-        $this->menu_items = [];
+        $this->menu_items      = [];
         $this->user_menu_items = [];
     }
 
@@ -195,10 +204,13 @@ class Masterbar {
         }
 
         // Add body class for custom masterbar styling
-        add_filter( 'body_class', function( $classes ) {
-            $classes[] = 'wp-app-has-custom-masterbar';
-            return $classes;
-        } );
+        add_filter(
+            'body_class',
+            function ( $classes ) {
+				$classes[] = 'wp-app-has-custom-masterbar';
+				return $classes;
+			}
+        );
 
         // Render our custom masterbar
         echo $this->render_custom_masterbar();
@@ -279,7 +291,7 @@ class Masterbar {
         }
 
         foreach ( $this->menu_items as $item ) {
-            $class = ! empty( $item['class'] ) ? ' class="' . esc_attr( $item['class'] ) . '"' : '';
+            $class  = ! empty( $item['class'] ) ? ' class="' . esc_attr( $item['class'] ) . '"' : '';
             $target = ! empty( $item['target'] ) ? ' target="' . esc_attr( $item['target'] ) . '"' : '';
 
             echo '<div class="wp-app-masterbar-item">';
@@ -297,7 +309,7 @@ class Masterbar {
      */
     private function render_user_menu_items() {
         foreach ( $this->user_menu_items as $item ) {
-            $class = ! empty( $item['class'] ) ? ' class="' . esc_attr( $item['class'] ) . '"' : '';
+            $class  = ! empty( $item['class'] ) ? ' class="' . esc_attr( $item['class'] ) . '"' : '';
             $target = ! empty( $item['target'] ) ? ' target="' . esc_attr( $item['target'] ) . '"' : '';
 
             if ( ! empty( $item['href'] ) ) {
@@ -564,10 +576,13 @@ class Masterbar {
      */
     public function setup_for_app_request() {
         // Add app-specific CSS classes to body
-        add_filter( 'body_class', function( $classes ) {
-            $classes[] = 'wp-app-with-admin-bar';
-            return $classes;
-        } );
+        add_filter(
+            'body_class',
+            function ( $classes ) {
+				$classes[] = 'wp-app-with-admin-bar';
+				return $classes;
+			}
+        );
 
         // Enqueue WordPress admin bar styles - handled in wp_app_head() function now
     }
@@ -607,7 +622,7 @@ class Masterbar {
             'site-editor',          // Site Editor
             'view-site',            // View Site
             'archive',              // Archive
-            'dashboard'             // Dashboard
+            'dashboard',             // Dashboard
         ];
 
         foreach ( $all_wp_items as $item_id ) {
@@ -621,12 +636,15 @@ class Masterbar {
     private function add_app_context_items( $wp_admin_bar ) {
 
         // Remove WordPress default items that aren't needed in app context
-        $items_to_remove = apply_filters( 'wp_app_admin_bar_remove_items', [
-            'new-content',          // "New" menu
-            'comments',             // Comments
-            'updates',              // Updates notification
-            'site-editor',          // Site Editor (if using block theme)
-        ] );
+        $items_to_remove = apply_filters(
+            'wp_app_admin_bar_remove_items',
+            [
+				'new-content',          // "New" menu
+				'comments',             // Comments
+				'updates',              // Updates notification
+				'site-editor',          // Site Editor (if using block theme)
+			]
+        );
 
         foreach ( $items_to_remove as $item_id ) {
             $wp_admin_bar->remove_node( $item_id );
@@ -637,44 +655,50 @@ class Masterbar {
             // Add main app link first (unless disabled)
             if ( $this->admin_bar_app_link ) {
                 $app_node_id = 'wp-app-' . str_replace( '-', '_', $this->app_url_path );
-                $wp_admin_bar->add_node( [
-                    'id'    => $app_node_id,
-                    'title' => $this->get_app_name(),
-                    'href'  => $this->get_app_home_url(),
-                    'meta'  => [
-                        'class' => 'wp-app-main-menu-item'
-                    ]
-                ] );
+                $wp_admin_bar->add_node(
+                    [
+						'id'    => $app_node_id,
+						'title' => $this->get_app_name(),
+						'href'  => $this->get_app_home_url(),
+						'meta'  => [
+							'class' => 'wp-app-main-menu-item',
+						],
+					]
+                );
             }
 
             // Add custom menu items (as submenus by default, or top-level if parent is null)
             foreach ( $this->menu_items as $item ) {
-                $wp_admin_bar->add_node( [
-                    'id'     => $item['id'],
-                    'parent' => $item['parent'],
-                    'title'  => $item['title'],
-                    'href'   => $item['href'],
-                    'meta'   => [
-                        'class' => 'wp-app-menu-item ' . $item['class'],
-                        'target' => $item['target']
-                    ]
-                ] );
+                $wp_admin_bar->add_node(
+                    [
+						'id'     => $item['id'],
+						'parent' => $item['parent'],
+						'title'  => $item['title'],
+						'href'   => $item['href'],
+						'meta'   => [
+							'class'  => 'wp-app-menu-item ' . $item['class'],
+							'target' => $item['target'],
+						],
+					]
+                );
             }
         }
 
         // Add user menu items as submenu to existing user menu
         if ( is_user_logged_in() ) {
             foreach ( $this->user_menu_items as $item ) {
-                $wp_admin_bar->add_node( [
-                    'id'     => $item['id'],
-                    'parent' => 'user-actions',
-                    'title'  => $item['title'],
-                    'href'   => $item['href'],
-                    'meta'   => [
-                        'class' => 'wp-app-user-menu-item ' . $item['class'],
-                        'target' => $item['target']
-                    ]
-                ] );
+                $wp_admin_bar->add_node(
+                    [
+						'id'     => $item['id'],
+						'parent' => 'user-actions',
+						'title'  => $item['title'],
+						'href'   => $item['href'],
+						'meta'   => [
+							'class'  => 'wp-app-user-menu-item ' . $item['class'],
+							'target' => $item['target'],
+						],
+					]
+                );
             }
         }
 
@@ -689,14 +713,16 @@ class Masterbar {
         // Only add link if user can access this app and the app link is enabled
         if ( $this->can_user_access_app() && $this->admin_bar_app_link ) {
             // Add a simple link to the app from regular WordPress admin
-            $wp_admin_bar->add_node( [
-                'id'    => 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path ),
-                'title' => $this->get_app_name(),
-                'href'  => $this->get_app_home_url(),
-                'meta'  => [
-                    'class' => 'wp-app-admin-link'
-                ]
-            ] );
+            $wp_admin_bar->add_node(
+                [
+					'id'    => 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path ),
+					'title' => $this->get_app_name(),
+					'href'  => $this->get_app_home_url(),
+					'meta'  => [
+						'class' => 'wp-app-admin-link',
+					],
+				]
+            );
         }
     }
 
@@ -753,7 +779,7 @@ class Masterbar {
      */
     public function disable_wp_admin_bar( $disable = true, $only_on_app_routes = false ) {
         $this->disable_wp_admin_bar = $disable;
-        $this->only_on_app_routes = $only_on_app_routes;
+        $this->only_on_app_routes   = $only_on_app_routes;
 
         if ( $disable ) {
             remove_filter( 'show_admin_bar', '__return_true' );
@@ -767,9 +793,12 @@ class Masterbar {
      * @param array $items_to_remove Array of admin bar item IDs to remove
      */
     public function set_removed_admin_bar_items( $items_to_remove ) {
-        add_filter( 'wp_app_admin_bar_remove_items', function() use ( $items_to_remove ) {
-            return $items_to_remove;
-        } );
+        add_filter(
+            'wp_app_admin_bar_remove_items',
+            function () use ( $items_to_remove ) {
+				return $items_to_remove;
+			}
+        );
     }
 
     /**

@@ -59,13 +59,13 @@ abstract class BaseStorage {
 	 * @return string[] Array of strings containing text info about the upgrade.
 	 */
 	public function create_tables() {
-		$schema = $this->get_schema();
-		$queries = array();
+		$schema          = $this->get_schema();
+		$queries         = [];
 		$charset_collate = $this->wpdb->get_charset_collate();
 
 		foreach ( $schema as $table_name => $columns ) {
 			$full_table_name = $this->wpdb->prefix . $table_name;
-			$queries[] = "CREATE TABLE $full_table_name (\n$columns\n) $charset_collate;";
+			$queries[]       = "CREATE TABLE $full_table_name (\n$columns\n) $charset_collate;";
 		}
 
 		return $this->dbdelta( $queries );

@@ -10,9 +10,9 @@ if ( class_exists( 'WpApp\Registry' ) ) {
  * Global registry for managing multiple WpApp instances
  */
 class Registry {
-    private static $apps = [];
+    private static $apps              = [];
     private static $hooks_initialized = false;
-    private static $app_capabilities = [];
+    private static $app_capabilities  = [];
 
     /**
      * Register a WpApp instance
@@ -20,7 +20,7 @@ class Registry {
      * @param Router $router Router instance
      */
     public static function register_app( $router ) {
-        $url_path = $router->get_url_path();
+        $url_path                = $router->get_url_path();
         self::$apps[ $url_path ] = $router;
         self::maybe_initialize_hooks();
 
@@ -108,7 +108,6 @@ class Registry {
         $sub_rewrite_rule = '^' . $escaped_url_path . '/([^.]+)/?$';
         $sub_query_string = 'index.php?wp_app_request=$matches[1]&wp_app_path=' . $url_path;
 
-
         add_rewrite_rule( $root_rewrite_rule, $root_query_string, 'top' );
         add_rewrite_rule( $sub_rewrite_rule, $sub_query_string, 'top' );
     }
@@ -139,9 +138,8 @@ class Registry {
             return $template;
         }
 
-        $app_path = get_query_var( 'wp_app_path' );
+        $app_path     = get_query_var( 'wp_app_path' );
         $request_path = get_query_var( 'wp_app_request' );
-
 
         // Find the router for this app path
         if ( isset( self::$apps[ $app_path ] ) ) {
@@ -149,7 +147,6 @@ class Registry {
             $router->handle_app_request_directly( $request_path );
             exit;
         }
-
 
         return $template;
     }

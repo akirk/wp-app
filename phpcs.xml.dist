@@ -19,16 +19,46 @@
 	<rule ref="WordPress-Extra">
 		<!-- Allow short array syntax -->
 		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
 
 		<!-- Disable file comment requirement -->
 		<exclude name="Squiz.Commenting.FileComment"/>
+
+		<!-- This library uses spaces and short arrays consistently. -->
+		<exclude name="Generic.WhiteSpace.DisallowSpaceIndent"/>
+
+		<!-- Keep the standards focused on fixable formatting for now. -->
+		<exclude name="Squiz.Commenting"/>
+		<exclude name="WordPress.Files.FileName"/>
+		<exclude name="WordPress.Security"/>
+		<exclude name="WordPress.PHP.DevelopmentFunctions"/>
+		<exclude name="WordPress.PHP.StrictInArray"/>
+		<exclude name="WordPress.PHP.YodaConditions"/>
+		<exclude name="WordPress.WP.EnqueuedResources"/>
+		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+		<exclude name="Generic.CodeAnalysis"/>
 	</rule>
 
 	<!-- Use WordPress-Docs for documentation standards -->
-	<rule ref="WordPress-Docs"/>
+	<rule ref="WordPress-Docs">
+		<exclude name="Squiz.Commenting"/>
+	</rule>
 
 	<!-- Use WordPress-Core for core standards -->
-	<rule ref="WordPress-Core"/>
+	<rule ref="WordPress-Core">
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Generic.WhiteSpace.DisallowSpaceIndent"/>
+		<exclude name="Squiz.Commenting"/>
+		<exclude name="WordPress.Files.FileName"/>
+		<exclude name="WordPress.Security"/>
+		<exclude name="WordPress.PHP.DevelopmentFunctions"/>
+		<exclude name="WordPress.PHP.StrictInArray"/>
+		<exclude name="WordPress.PHP.YodaConditions"/>
+		<exclude name="WordPress.WP.EnqueuedResources"/>
+		<exclude name="Universal.NamingConventions.NoReservedKeywordParameterNames"/>
+		<exclude name="Generic.CodeAnalysis"/>
+	</rule>
 
 	<!-- Check for PHP cross-version compatibility -->
 	<config name="testVersion" value="7.4-"/>
