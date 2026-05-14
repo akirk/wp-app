@@ -9,6 +9,7 @@ $request_path  = isset( $wp_app_route['params']['request_path'] ) ? $wp_app_rout
 $error_type    = isset( $wp_app_route['params']['error_type'] ) ? $wp_app_route['params']['error_type'] : 'route_not_found';
 $matched_route = isset( $wp_app_route['params']['matched_route'] ) ? $wp_app_route['params']['matched_route'] : null;
 $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_route['params']['template_path'] : null;
+$app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['params']['app_path'] : '';
 ?>
 <!DOCTYPE html>
 <html <?php echo wp_app_language_attributes(); ?>>
@@ -22,9 +23,10 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
 			max-width: 600px;
 			margin: 100px auto;
 			padding: 40px;
-			background: white;
+			background: var(--wp-app-color-surface);
 			border-radius: 10px;
-			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+			border: 1px solid var(--wp-app-color-border);
+			box-shadow: 0 2px 10px var(--wp-app-color-border);
 			text-align: center;
 			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 		}
@@ -32,28 +34,28 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
 		.wp-app-404-code {
 			font-size: 72px;
 			font-weight: bold;
-			color: #e74c3c;
+			color: var(--wp-app-color-error);
 			margin-bottom: 20px;
 		}
 
 		.wp-app-404-title {
 			font-size: 32px;
-			color: #2c3e50;
+			color: var(--wp-app-color-text);
 			margin-bottom: 20px;
 		}
 
 		.wp-app-404-message {
 			font-size: 18px;
-			color: #7f8c8d;
+			color: var(--wp-app-color-muted);
 			margin-bottom: 30px;
 		}
 
 		.wp-app-404-path {
-			background: #ecf0f1;
+			background: var(--wp-app-color-surface-alt);
 			padding: 10px;
 			border-radius: 5px;
 			font-family: monospace;
-			color: #34495e;
+			color: var(--wp-app-color-text);
 			margin-bottom: 30px;
 			word-break: break-all;
 		}
@@ -75,31 +77,31 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
 		}
 
 		.wp-app-404-button-primary {
-			background: #3498db;
-			color: white;
+			background: var(--wp-app-color-primary);
+			color: var(--wp-app-color-on-primary);
 		}
 
 		.wp-app-404-button-primary:hover {
-			background: #2980b9;
-			color: white;
+			background: var(--wp-app-color-primary-hover);
+			color: var(--wp-app-color-on-primary);
 		}
 
 		.wp-app-404-button-secondary {
-			background: #95a5a6;
-			color: white;
+			background: var(--wp-app-color-secondary);
+			color: var(--wp-app-color-secondary-text);
 		}
 
 		.wp-app-404-button-secondary:hover {
-			background: #7f8c8d;
-			color: white;
+			background: var(--wp-app-color-secondary-hover);
+			color: var(--wp-app-color-secondary-text);
 		}
 
 		.wp-app-404-footer {
 			margin-top: 40px;
 			padding-top: 20px;
-			border-top: 1px solid #ecf0f1;
+			border-top: 1px solid var(--wp-app-color-border);
 			font-size: 14px;
-			color: #95a5a6;
+			color: var(--wp-app-color-muted);
 		}
 
 		@media (max-width: 600px) {
@@ -166,7 +168,7 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
 	<?php endif; ?>
 
 	<?php if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) : ?>
-		<div class="wp-app-404-path" style="margin-top: 20px; text-align: left; font-size: 12px; background: #f8f9fa; padding: 15px;">
+		<div class="wp-app-404-path" style="margin-top: 20px; text-align: left; font-size: 12px; background: var(--wp-app-color-surface-alt); padding: 15px;">
 			<strong>Debug Information:</strong><br>
 			Error Type: <code><?php echo esc_html( var_export( $error_type, true ) ); ?></code><br>
 			Request Path: <code><?php echo esc_html( var_export( $request_path, true ) ); ?></code><br>
@@ -178,15 +180,20 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
 
 	<div class="wp-app-404-buttons">
 		<?php
-		// Try to determine app home URL
-		$app_home_url = home_url( '/app' );
+		// Route data provides the mounted app path even though the app instance is not global.
 		if ( isset( $app ) && method_exists( $app, 'router' ) ) {
 			$router = $app->router();
 			if ( method_exists( $router, 'get_app_path' ) ) {
-				$app_path     = $router->get_app_path();
-				$app_home_url = home_url( '/' . $app_path );
+				$app_path = $router->get_app_path();
 			}
 		}
+
+		if ( ! $app_path && function_exists( 'get_query_var' ) ) {
+			$app_path = get_query_var( 'wp_app_path' );
+		}
+
+		$app_path     = trim( (string) $app_path, '/' );
+		$app_home_url = $app_path ? home_url( '/' . $app_path . '/' ) : home_url( '/' );
 		?>
 
 		<a href="<?php echo esc_url( $app_home_url ); ?>" class="wp-app-404-button wp-app-404-button-primary">
