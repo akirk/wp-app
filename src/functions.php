@@ -300,45 +300,110 @@ if ( ! function_exists( 'wp_app_get_admin_color_scheme_css' ) ) {
             $selector = ':root, body.wp-app-body';
         }
 
-        return sprintf(
-            "%s {\n" .
-            "\t--wp-app-admin-color-background: %s;\n" .
-            "\t--wp-app-admin-color-subtle: %s;\n" .
-            "\t--wp-app-admin-color-primary: %s;\n" .
-            "\t--wp-app-admin-color-accent: %s;\n" .
-            "\t--wp-app-admin-icon-color-base: %s;\n" .
-            "\t--wp-app-admin-icon-color-focus: %s;\n" .
-            "\t--wp-app-admin-icon-color-current: %s;\n" .
-            "\t--wp-app-color-primary: var(--wp-app-admin-color-primary);\n" .
-            "\t--wp-app-color-primary-hover: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-color-accent: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-color-error: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-color-on-primary: var(--wp-app-admin-icon-color-current);\n" .
-            "\t--wp-app-color-background: #f6f7f7;\n" .
-            "\t--wp-app-color-surface: #fff;\n" .
-            "\t--wp-app-color-surface-alt: #f0f0f1;\n" .
-            "\t--wp-app-color-text: #1d2327;\n" .
-            "\t--wp-app-color-muted: #646970;\n" .
-            "\t--wp-app-color-border: #dcdcde;\n" .
-            "\t--wp-app-color-link: var(--wp-app-admin-color-primary);\n" .
-            "\t--wp-app-color-link-hover: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-color-focus: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-color-secondary: var(--wp-app-color-surface-alt);\n" .
-            "\t--wp-app-color-secondary-hover: var(--wp-app-color-border);\n" .
-            "\t--wp-app-color-secondary-text: var(--wp-app-color-text);\n" .
-            "\t--wp-app-masterbar-background: var(--wp-app-admin-color-background);\n" .
-            "\t--wp-app-masterbar-highlight: var(--wp-app-admin-color-accent);\n" .
-            "\t--wp-app-masterbar-text: var(--wp-app-admin-icon-color-current);\n" .
-            "}\n",
-            $selector,
-            $scheme['colors'][0],
-            $scheme['colors'][1],
-            $scheme['colors'][2],
-            $scheme['colors'][3],
-            $scheme['icon_colors']['base'],
-            $scheme['icon_colors']['focus'],
-            $scheme['icon_colors']['current']
+        $mode = function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_color_mode', 'auto', $user_id, $scheme ) : 'auto';
+
+        if ( ! in_array( $mode, [ 'auto', 'light', 'dark' ], true ) ) {
+            $mode = 'auto';
+        }
+
+        if ( 'dark' === $mode ) {
+            return wp_app_get_color_scheme_css_block( $selector, wp_app_get_color_scheme_variables( $scheme, 'dark' ) );
+        }
+
+        $css = wp_app_get_color_scheme_css_block( $selector, wp_app_get_color_scheme_variables( $scheme, 'light' ) );
+
+        if ( 'auto' === $mode ) {
+            $css .= "@media (prefers-color-scheme: dark) {\n";
+            $css .= wp_app_get_color_scheme_css_block( $selector, wp_app_get_color_scheme_variables( $scheme, 'dark' ), "\t" );
+            $css .= "}\n";
+        }
+
+        return $css;
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_color_scheme_variables' ) ) {
+    /**
+     * Get CSS custom property values for a light or dark app color scheme.
+     *
+     * @param array  $scheme WordPress admin color scheme data.
+     * @param string $mode   App color mode. Accepts 'light' or 'dark'.
+     * @return array CSS custom properties and values.
+     */
+    function wp_app_get_color_scheme_variables( $scheme, $mode = 'light' ) {
+        $variables = [
+            '--wp-app-admin-color-background'   => $scheme['colors'][0],
+            '--wp-app-admin-color-subtle'       => $scheme['colors'][1],
+            '--wp-app-admin-color-primary'      => $scheme['colors'][2],
+            '--wp-app-admin-color-accent'       => $scheme['colors'][3],
+            '--wp-app-admin-icon-color-base'    => $scheme['icon_colors']['base'],
+            '--wp-app-admin-icon-color-focus'   => $scheme['icon_colors']['focus'],
+            '--wp-app-admin-icon-color-current' => $scheme['icon_colors']['current'],
+            '--wp-app-color-primary'            => 'var(--wp-app-admin-color-primary)',
+            '--wp-app-color-primary-hover'      => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-accent'             => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-error'              => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-on-primary'         => 'var(--wp-app-admin-icon-color-current)',
+            '--wp-app-color-link'               => 'var(--wp-app-admin-color-primary)',
+            '--wp-app-color-link-hover'         => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-focus'              => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-secondary'          => 'var(--wp-app-color-surface-alt)',
+            '--wp-app-color-secondary-hover'    => 'var(--wp-app-color-border)',
+            '--wp-app-color-secondary-text'     => 'var(--wp-app-color-text)',
+            '--wp-app-masterbar-background'     => 'var(--wp-app-admin-color-background)',
+            '--wp-app-masterbar-highlight'      => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-masterbar-text'           => 'var(--wp-app-admin-icon-color-current)',
+        ];
+
+        if ( 'dark' === $mode ) {
+            return array_merge(
+                $variables,
+                [
+                    '--wp-app-color-scheme'      => 'dark',
+                    '--wp-app-color-background'  => '#101517',
+                    '--wp-app-color-surface'     => '#1d2327',
+                    '--wp-app-color-surface-alt' => '#2c3338',
+                    '--wp-app-color-text'        => '#f0f0f1',
+                    '--wp-app-color-muted'       => '#a7aaad',
+                    '--wp-app-color-border'      => '#3c434a',
+                ]
+            );
+        }
+
+        return array_merge(
+            $variables,
+            [
+                '--wp-app-color-scheme'      => 'light',
+                '--wp-app-color-background'  => '#f6f7f7',
+                '--wp-app-color-surface'     => '#fff',
+                '--wp-app-color-surface-alt' => '#f0f0f1',
+                '--wp-app-color-text'        => '#1d2327',
+                '--wp-app-color-muted'       => '#646970',
+                '--wp-app-color-border'      => '#dcdcde',
+            ]
         );
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_color_scheme_css_block' ) ) {
+    /**
+     * Render CSS custom properties in a selector block.
+     *
+     * @param string $selector  CSS selector.
+     * @param array  $variables CSS custom properties and values.
+     * @param string $indent    Optional block indentation.
+     * @return string CSS block.
+     */
+    function wp_app_get_color_scheme_css_block( $selector, $variables, $indent = '' ) {
+        $css = $indent . $selector . " {\n";
+
+        foreach ( $variables as $property => $value ) {
+            $css .= $indent . "\t" . $property . ': ' . $value . ";\n";
+        }
+
+        $css .= $indent . "}\n";
+
+        return $css;
     }
 }
 
@@ -352,6 +417,7 @@ if ( ! function_exists( 'wp_app_get_default_color_styles' ) ) {
         return '
 body.wp-app-body {
 	background: var(--wp-app-color-background);
+	color-scheme: var(--wp-app-color-scheme);
 	color: var(--wp-app-color-text);
 }
 
