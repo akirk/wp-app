@@ -129,6 +129,7 @@ Use semantic variables for app UI and masterbar variables for navigation-specifi
 ```css
 .button-primary {
 	background: var(--wp-app-color-primary);
+	color: var(--wp-app-color-on-primary);
 }
 
 .button-primary:hover {
@@ -136,10 +137,20 @@ Use semantic variables for app UI and masterbar variables for navigation-specifi
 }
 ```
 
+Pair background and text tokens instead of mixing tokens with hard-coded colors. For example, use `--wp-app-color-surface` with `--wp-app-color-text`, `--wp-app-color-surface-alt` with `--wp-app-color-muted`, and `--wp-app-color-primary` with `--wp-app-color-on-primary`. A hard-coded value such as `#fff`, `#222`, or `white` can break automatic light/dark switching because only the tokenized side changes.
+
 To disable the automatic variable output, use the `wp_app_output_admin_color_scheme` filter:
 
 ```php
 add_filter( 'wp_app_output_admin_color_scheme', '__return_false' );
+```
+
+WpApp emits light tokens plus a `prefers-color-scheme: dark` override by default. To force a mode instead of following the browser preference:
+
+```php
+add_filter( 'wp_app_color_mode', function() {
+	return 'light'; // Accepts 'auto', 'light', or 'dark'.
+} );
 ```
 
 WpApp also applies conservative defaults for app backgrounds, links, focus outlines, and standard `.button`/`.button-primary` elements. To keep the variables but disable those default styles:

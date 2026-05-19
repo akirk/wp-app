@@ -194,6 +194,16 @@ Use admin color variables in app CSS instead of hard-coding WordPress admin colo
 }
 ```
 
+Pair background and text tokens so light/dark mode can switch both sides together:
+
+- `--wp-app-color-background` with `--wp-app-color-text`
+- `--wp-app-color-surface` with `--wp-app-color-text`
+- `--wp-app-color-surface-alt` with `--wp-app-color-muted` or `--wp-app-color-text`
+- `--wp-app-color-primary` with `--wp-app-color-on-primary`
+- `--wp-app-color-secondary` with `--wp-app-color-secondary-text`
+
+Avoid mixing tokenized colors with hard-coded colors such as `#fff`, `#222`, or `white`, because the hard-coded side will not adapt when the app switches between light and dark mode.
+
 ## Menu Methods
 
 ```php
