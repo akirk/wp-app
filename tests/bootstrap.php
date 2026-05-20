@@ -24,6 +24,25 @@ if ( ! function_exists( 'add_filter' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( $url, $component = -1 ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url
+		return parse_url( $url, $component );
+	}
+}
+
+if ( ! function_exists( 'get_stylesheet_directory_uri' ) ) {
+	function get_stylesheet_directory_uri() {
+		return 'https://example.org/wp-content/themes/child-theme';
+	}
+}
+
+if ( ! function_exists( 'get_template_directory_uri' ) ) {
+	function get_template_directory_uri() {
+		return 'https://example.org/wp-content/themes/parent-theme';
+	}
+}
+
 if ( ! function_exists( 'add_rewrite_rule' ) ) {
 	function add_rewrite_rule( $regex, $query, $after = 'bottom' ) {
 		return true;
