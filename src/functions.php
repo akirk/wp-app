@@ -8,12 +8,31 @@ if ( ! defined( 'WP_APP_VERSION' ) ) {
     define( 'WP_APP_VERSION', '1.2.2' );
 }
 
+if ( ! function_exists( 'wp_app_is_app_request' ) ) {
+    /**
+     * Determine whether the current request is being handled by WpApp.
+     */
+    function wp_app_is_app_request() {
+        global $wp_query;
+
+        if ( $wp_query && isset( $wp_query->query_vars['wp_app_request'], $wp_query->query_vars['wp_app_path'] ) ) {
+            return true;
+        }
+
+        return function_exists( 'get_query_var' ) && null !== get_query_var( 'wp_app_path', null );
+    }
+}
+
 if ( ! function_exists( 'wp_app_head' ) ) {
     /**
      * Generate HTML head content for app templates
      * Similar to wp_head() but clean and without theme/plugin interference
      */
     function wp_app_head() {
+        if ( function_exists( 'wp_app_dequeue_theme_assets' ) ) {
+            wp_app_dequeue_theme_assets();
+        }
+
         if ( function_exists( 'wp_head' ) ) {
             wp_head();
         } else {
@@ -61,6 +80,10 @@ if ( ! function_exists( 'wp_app_body_close' ) ) {
      * Generate body close content for app templates
      */
     function wp_app_body_close() {
+        if ( function_exists( 'wp_app_dequeue_theme_assets' ) ) {
+            wp_app_dequeue_theme_assets();
+        }
+
         if ( function_exists( 'wp_footer' ) ) {
             wp_footer();
         }
@@ -504,6 +527,149 @@ if ( ! function_exists( 'wp_app_output_admin_color_scheme' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_asset_handle_matches' ) ) {
+    /**
+     * Check whether an asset handle matches a list of exact or prefix handles.
+     */
+    function wp_app_asset_handle_matches( $handle, $handles ) {
+        foreach ( $handles as $match ) {
+            if ( $handle === $match || strpos( $handle, $match ) === 0 ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_asset_url_path' ) ) {
+    /**
+     * Get a comparable URL path for an asset source.
+     */
+    function wp_app_get_asset_url_path( $src ) {
+        if ( ! is_string( $src ) || '' === $src ) {
+            return '';
+        }
+
+        if ( 0 === strpos( $src, '//' ) ) {
+            $src = 'https:' . $src;
+        }
+
+        $path = wp_parse_url( $src, PHP_URL_PATH );
+
+        if ( ! $path ) {
+            $path = strtok( $src, '?' );
+        }
+
+        return is_string( $path ) ? rtrim( $path, '/' ) : '';
+    }
+}
+
+if ( ! function_exists( 'wp_app_is_theme_asset_src' ) ) {
+    /**
+     * Determine whether an asset source belongs to the active parent or child theme.
+     */
+    function wp_app_is_theme_asset_src( $src ) {
+        $src_path = wp_app_get_asset_url_path( $src );
+
+        if ( '' === $src_path ) {
+            return false;
+        }
+
+        $theme_uris = [];
+
+        if ( function_exists( 'get_stylesheet_directory_uri' ) ) {
+            $theme_uris[] = get_stylesheet_directory_uri();
+        }
+
+        if ( function_exists( 'get_template_directory_uri' ) ) {
+            $theme_uris[] = get_template_directory_uri();
+        }
+
+        /**
+         * Filters theme asset URI bases that should be dequeued on app pages.
+         *
+         * @param array $theme_uris Theme asset URI bases.
+         */
+        $theme_uris = function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_theme_asset_uris', array_filter( array_unique( $theme_uris ) ) ) : $theme_uris;
+
+        foreach ( $theme_uris as $theme_uri ) {
+            $theme_path = wp_app_get_asset_url_path( $theme_uri );
+
+            if ( '' !== $theme_path && 0 === strpos( $src_path . '/', rtrim( $theme_path, '/' ) . '/' ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if ( ! function_exists( 'wp_app_should_dequeue_asset' ) ) {
+    /**
+     * Determine whether an enqueued asset should be removed from an app page.
+     */
+    function wp_app_should_dequeue_asset( $handle, $registry, $type ) {
+        $keep_handles = 'style' === $type
+            ? [
+				'admin-bar',
+				'dashicons',
+				'debug-bar',
+				'query-monitor',
+				'qm-',
+			]
+            : [
+				'admin-bar',
+				'query-monitor',
+				'qm-',
+			];
+
+        /**
+         * Filters asset handles that should always remain queued on app pages.
+         *
+         * Prefixes are supported, so `qm-` keeps all Query Monitor handles.
+         *
+         * @param array  $keep_handles Asset handles or prefixes to keep.
+         * @param string $type         Asset type, either `style` or `script`.
+         */
+        $keep_handles = function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_keep_asset_handles', $keep_handles, $type ) : $keep_handles;
+
+        if ( wp_app_asset_handle_matches( $handle, $keep_handles ) ) {
+            return false;
+        }
+
+        $dequeue_handles = 'style' === $type
+            ? [
+				'global-styles',
+				'classic-theme-styles',
+				'wp-block-library-theme',
+			]
+            : [];
+
+        /**
+         * Filters asset handles that should be removed from app pages.
+         *
+         * Prefixes are supported.
+         *
+         * @param array  $dequeue_handles Asset handles or prefixes to remove.
+         * @param string $type            Asset type, either `style` or `script`.
+         */
+        $dequeue_handles = function_exists( 'apply_filters' ) ? apply_filters( 'wp_app_dequeue_asset_handles', $dequeue_handles, $type ) : $dequeue_handles;
+
+        if ( wp_app_asset_handle_matches( $handle, $dequeue_handles ) ) {
+            return true;
+        }
+
+        if ( ! isset( $registry->registered[ $handle ] ) || ! is_object( $registry->registered[ $handle ] ) ) {
+            return false;
+        }
+
+        $src = isset( $registry->registered[ $handle ]->src ) ? $registry->registered[ $handle ]->src : '';
+
+        return wp_app_is_theme_asset_src( $src );
+    }
+}
+
 if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
     /**
      * Remove theme styles and scripts from app pages
@@ -512,40 +678,18 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
         global $wp_styles, $wp_scripts;
 
         // Only run on app pages
-        if ( ! get_query_var( 'wp_app_request' ) ) {
+        if ( ! wp_app_is_app_request() ) {
             return;
         }
 
-        if ( ! $wp_styles ) {
-            return;
-        }
+        if ( $wp_styles ) {
+            // Get all enqueued styles
+            $enqueued_styles = $wp_styles->queue;
 
-        // Get all enqueued styles
-        $enqueued_styles = $wp_styles->queue;
-
-        // Whitelist of styles to keep (WordPress core and essential plugins)
-        $keep_styles = [
-            'admin-bar',
-            'dashicons',
-            'debug-bar',
-            'query-monitor',
-            'qm-',
-        ];
-
-        foreach ( $enqueued_styles as $handle ) {
-            $should_keep = false;
-
-            // Check if this style should be kept
-            foreach ( $keep_styles as $keep ) {
-                if ( $handle === $keep || strpos( $handle, $keep ) === 0 ) {
-                    $should_keep = true;
-                    break;
+            foreach ( $enqueued_styles as $handle ) {
+                if ( wp_app_should_dequeue_asset( $handle, $wp_styles, 'style' ) ) {
+                    wp_dequeue_style( $handle );
                 }
-            }
-
-            // Dequeue if not in whitelist
-            if ( ! $should_keep ) {
-                wp_dequeue_style( $handle );
             }
         }
 
@@ -553,23 +697,8 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
         if ( $wp_scripts ) {
             $enqueued_scripts = $wp_scripts->queue;
 
-            $keep_scripts = [
-                'admin-bar',
-                'query-monitor',
-                'qm-',
-            ];
-
             foreach ( $enqueued_scripts as $handle ) {
-                $should_keep = false;
-
-                foreach ( $keep_scripts as $keep ) {
-                    if ( $handle === $keep || strpos( $handle, $keep ) === 0 ) {
-                        $should_keep = true;
-                        break;
-                    }
-                }
-
-                if ( ! $should_keep ) {
+                if ( wp_app_should_dequeue_asset( $handle, $wp_scripts, 'script' ) ) {
                     wp_dequeue_script( $handle );
                 }
             }
@@ -581,6 +710,8 @@ if ( ! function_exists( 'wp_app_dequeue_theme_assets' ) ) {
 if ( function_exists( 'add_action' ) ) {
 	add_action( 'wp_app_head', 'wp_app_output_admin_color_scheme', 5 );
 	add_action( 'wp_enqueue_scripts', 'wp_app_dequeue_theme_assets', 999 );
+	add_action( 'wp_head', 'wp_app_dequeue_theme_assets', 7 );
+	add_action( 'wp_footer', 'wp_app_dequeue_theme_assets', 0 );
 }
 
 if ( ! function_exists( 'wp_app_get_route_var' ) ) {
