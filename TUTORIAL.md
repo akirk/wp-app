@@ -16,7 +16,7 @@ The WpApp framework lets you build modern applications while getting all these b
 
 ## Getting Started: The Minimal Example
 
-The simplest possible WpApp requires just 3 lines of PHP. Check out `examples/minimal-app/`:
+The simplest possible WpApp plugin sets up the app from `plugins_loaded`. Check out `examples/minimal-app/`:
 
 ```php
 <?php
@@ -27,8 +27,10 @@ The simplest possible WpApp requires just 3 lines of PHP. Check out `examples/mi
 require_once __DIR__ . '/vendor/autoload.php';
 use WpApp\WpApp;
 
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
-$app->init();
+add_action( 'plugins_loaded', function() {
+	$app = new WpApp( __DIR__ . '/templates', 'minimal' );
+	$app->init();
+} );
 ```
 
 ### With Configuration
@@ -36,13 +38,15 @@ $app->init();
 For more control, pass a configuration array:
 
 ```php
-$app = new WpApp( __DIR__ . '/templates', 'minimal', [
-	'show_masterbar_for_anonymous' => true,  // Show navigation for logged-out users
-	'show_wp_logo'                 => false, // Hide WordPress logo
-	'show_site_name'               => true,  // Show your site name
-	'require_login'                => true,  // Require login (alias for require_capability => 'read')
-] );
-$app->init();
+add_action( 'plugins_loaded', function() {
+	$app = new WpApp( __DIR__ . '/templates', 'minimal', [
+		'show_masterbar_for_anonymous' => true,  // Show navigation for logged-out users
+		'show_wp_logo'                 => false, // Hide WordPress logo
+		'show_site_name'               => true,  // Show your site name
+		'require_login'                => true,  // Require login (alias for require_capability => 'read')
+	] );
+	$app->init();
+} );
 ```
 
 This automatically gives you:
@@ -56,18 +60,20 @@ This automatically gives you:
 Add routes for additional pages:
 
 ```php
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
+add_action( 'plugins_loaded', function() {
+	$app = new WpApp( __DIR__ . '/templates', 'minimal' );
 
-// Main page -> templates/index.php
-$app->route( '' );
+	// Main page -> templates/index.php
+	$app->route( '' );
 
-// About page -> templates/about.php
-$app->route( 'about' );
+	// About page -> templates/about.php
+	$app->route( 'about' );
 
-// Contact page -> templates/contact.php
-$app->route( 'contact' );
+	// Contact page -> templates/contact.php
+	$app->route( 'contact' );
 
-$app->init();
+	$app->init();
+} );
 ```
 
 The framework automatically discovers template files based on route names.
@@ -198,8 +204,8 @@ class MyApp extends BaseApp {
 	}
 
 	protected function setup_menu() {
-		$this->app->add_menu_item( 'dashboard', 'Dashboard', home_url( '/my-app/dashboard' ) );
-		$this->app->add_menu_item( 'history', 'History', home_url( '/my-app/history' ) );
+		$this->app->add_menu_item( 'dashboard', __( 'Dashboard', 'my-app' ), home_url( '/my-app/dashboard' ) );
+		$this->app->add_menu_item( 'history', __( 'History', 'my-app' ), home_url( '/my-app/history' ) );
 	}
 
 	public function activate() {

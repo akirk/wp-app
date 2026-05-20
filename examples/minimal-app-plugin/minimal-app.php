@@ -27,27 +27,37 @@ class MinimalApp {
     private $app;
 
     public function __construct() {
-        // Initialize WpApp - should have sensible defaults
-        $this->app = new WpApp( plugin_dir_path( __FILE__ ) . 'templates', 'my-minimal-app' );
-
         add_action( 'plugins_loaded', [ $this, 'init' ] );
         register_activation_hook( __FILE__, [ $this, 'activate' ] );
     }
 
-    public function init() {
-        // The framework should automatically:
-        // 1. Create a route for '' -> index.php
-        // 2. Add a masterbar menu item for the app home
-        // 3. Enable the masterbar
+    private function setup_app() {
+        if ( $this->app ) {
+            return;
+        }
 
-        $this->app->init();
+        // Initialize WpApp - should have sensible defaults
+        $this->app = new WpApp( plugin_dir_path( __FILE__ ) . 'templates', 'my-minimal-app' );
 
         // Only add custom routes if needed
         $this->app->route( 'about' );           // -> templates/about.php
         $this->app->route( 'contact' );         // -> templates/contact.php
     }
 
+    public function init() {
+        $this->setup_app();
+
+        // The framework should automatically:
+        // 1. Create a route for '' -> index.php
+        // 2. Add a masterbar menu item for the app home
+        // 3. Enable the masterbar
+
+        $this->app->init();
+    }
+
     public function activate() {
+        $this->setup_app();
+
         // Minimal activation - just flush rewrite rules
         flush_rewrite_rules();
     }

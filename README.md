@@ -118,7 +118,7 @@ Get AI assistance for WpApp development in [Claude Code](https://claude.ai/code)
 ## Examples
 
 ### Minimal Example
-See `examples/minimal-app/` - The simplest possible WpApp (3 lines of code)
+See `examples/minimal-app/` - The simplest possible WpApp plugin
 
 [Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app/main/blueprints/minimal-app.json)
 
@@ -137,7 +137,7 @@ See `examples/community-app/` - Full BaseApp pattern demonstration with:
 composer require akirk/wp-app
 ```
 
-The simplest possible WpApp requires just 3 lines:
+Set up WpApp from `plugins_loaded`:
 
 ```php
 <?php
@@ -148,8 +148,10 @@ The simplest possible WpApp requires just 3 lines:
 require_once __DIR__ . '/vendor/autoload.php';
 use WpApp\WpApp;
 
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
-$app->init();
+add_action( 'plugins_loaded', function() {
+	$app = new WpApp( __DIR__ . '/templates', 'minimal' );
+	$app->init();
+} );
 ```
 
 Create `templates/index.php`:

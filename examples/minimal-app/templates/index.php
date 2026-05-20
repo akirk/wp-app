@@ -8,7 +8,7 @@
 <?php wp_app_body_open(); ?>
 
 <h1>Hello from Minimal App!</h1>
-<p>This should work with just 3 lines of PHP.</p>
+<p>This page is rendered through WpApp.</p>
 
 </body>
 </html>

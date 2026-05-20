@@ -12,11 +12,11 @@ class MinimalApp {
     private $app;
 
     public function __construct() {
-        $this->app = new WpApp( __DIR__ . '/templates', 'minimal' );
         add_action( 'plugins_loaded', [ $this, 'init' ] );
     }
 
     public function init() {
+        $this->app = new WpApp( __DIR__ . '/templates', 'minimal' );
         $this->app->init();
     }
 }

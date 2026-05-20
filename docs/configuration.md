@@ -27,6 +27,14 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 |--------|------|---------|-------------|
 | `app_name` | string | Auto-generated from URL path | Display name for your app in the admin bar |
 
+Keep `app_name` as a plain, untranslated string. WpApp uses it during early app registration, so wrapping it in `__(...)` can trigger WordPress's just-in-time textdomain loading notice before `init`. Translate menu labels and other UI text instead:
+
+```php
+add_action( 'init', function() use ( $app ) {
+	$app->add_menu_item( 'dashboard', __( 'Dashboard', 'my-app' ), home_url( '/my-app/dashboard' ) );
+}, 0 );
+```
+
 ### Masterbar Display
 
 | Option | Type | Default | Description |

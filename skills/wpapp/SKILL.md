@@ -57,6 +57,7 @@ my-app/
 - Register custom post types and taxonomies on the WordPress `init` hook.
 - Register dashboard widgets on the WordPress `wp_dashboard_setup` hook.
 - Define WpApp routes in `setup_routes()` and WpApp menu/masterbar entries in `setup_menu()`.
+- Keep `app_name` as a plain, untranslated string. Do not wrap it in `__()`, `esc_html__()`, or related i18n helpers; translate menu labels and visible page text instead.
 - Run activation-only work, including custom table creation and rewrite flushing, from the plugin activation hook.
 
 ## Quick Patterns

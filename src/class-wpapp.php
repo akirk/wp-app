@@ -163,6 +163,20 @@ class WpApp {
     }
 
     /**
+     * Set the display name for the app.
+     *
+     * This can be called later if the display name is not known at construction time.
+     *
+     * @param string $app_name Display name.
+     * @return $this
+     */
+    public function set_app_name( $app_name ) {
+        $this->app_name = $app_name;
+
+        return $this;
+    }
+
+    /**
      * Called when WordPress is fully loaded
      */
     public function on_wp_loaded() {

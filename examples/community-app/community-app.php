@@ -113,6 +113,16 @@ class CommunityAppStorage extends BaseStorage {
 class CommunityApp extends BaseApp {
 
 	public function __construct() {
+		add_action( 'plugins_loaded', array( $this, 'init' ) );
+		register_activation_hook( __FILE__, array( $this, 'activate' ) );
+		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
+	}
+
+	private function setup_app() {
+		if ( $this->app ) {
+			return;
+		}
+
 		$this->storage = new CommunityAppStorage();
 
 		$this->app = new WpApp(
@@ -125,10 +135,11 @@ class CommunityApp extends BaseApp {
 				'app_name'        => 'Community App',
 			)
 		);
+	}
 
-		add_action( 'plugins_loaded', array( $this, 'init' ) );
-		register_activation_hook( __FILE__, array( $this, 'activate' ) );
-		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
+	public function init() {
+		$this->setup_app();
+		parent::init();
 	}
 
 	protected function setup_database() {
@@ -324,6 +335,7 @@ class CommunityApp extends BaseApp {
 	}
 
 	public function activate() {
+		$this->setup_app();
 		$this->storage->create_tables();
 		$this->setup_routes();
 		flush_rewrite_rules();

@@ -140,7 +140,7 @@ public function activate() {
 
 You can also manually flush by visiting any page with `?wp_app_flush=1` as an administrator.
 
-> **⚠️ Set up WpApp at `plugins_loaded`, not `init`.** If you call `$app->route()` and `$app->init()` from inside an `add_action('init', ...)` callback, the rewrite-rule registration callback can land too late in the same `init` firing and silently never persist. Symptom: pretty URLs 404 even though `WpApp\Registry::get_apps()` shows your app is registered.
+> **Set up routes on `plugins_loaded`; set translated UI labels on `init`.** BaseApp handles this split for you: `setup_routes()` runs immediately, while `setup_menu()` is deferred until WordPress `init`. Keep `app_name` as a plain, untranslated string, and avoid calling `__(...)` or other translated label helpers in the `plugins_loaded` callback.
 
 ## Related Documentation
 

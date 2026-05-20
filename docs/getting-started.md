@@ -30,7 +30,7 @@ composer require akirk/wp-app
 
 ## Quick Start (Minimal Example)
 
-The simplest possible WpApp requires just 3 lines:
+Set up WpApp from `plugins_loaded`:
 
 ```php
 <?php
@@ -41,8 +41,10 @@ The simplest possible WpApp requires just 3 lines:
 require_once __DIR__ . '/vendor/autoload.php';
 use WpApp\WpApp;
 
-$app = new WpApp( __DIR__ . '/templates', 'minimal' );
-$app->init();
+add_action( 'plugins_loaded', function() {
+	$app = new WpApp( __DIR__ . '/templates', 'minimal' );
+	$app->init();
+} );
 ```
 
 Create `templates/index.php`:

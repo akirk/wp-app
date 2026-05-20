@@ -30,16 +30,82 @@ abstract class BaseApp {
 	protected $storage;
 
 	/**
+	 * Whether route/core setup has run.
+	 *
+	 * @var bool
+	 */
+	private $core_initialized = false;
+
+	/**
+	 * Whether localized UI setup has run.
+	 *
+	 * @var bool
+	 */
+	private $ui_initialized = false;
+
+	/**
+	 * Whether the full initialization action has fired.
+	 *
+	 * @var bool
+	 */
+	private $initialized = false;
+
+	/**
 	 * Initialize the application
 	 *
-	 * Call this method to set up routes, menu, database, and initialize WpApp.
+	 * Call this method on plugins_loaded. Route and rewrite setup happens
+	 * immediately; menu labels are deferred until init so translated strings
+	 * do not trigger just-in-time textdomain loading notices.
 	 */
 	public function init() {
+		$this->setup_core();
+
+		if ( did_action( 'init' ) || doing_action( 'init' ) ) {
+			$this->setup_localized_ui();
+			return;
+		}
+
+		add_action( 'init', [ $this, 'setup_localized_ui' ], 0 );
+	}
+
+	/**
+	 * Set up route/core behavior that is safe before init.
+	 */
+	protected function setup_core() {
+		if ( $this->core_initialized ) {
+			return;
+		}
+
 		$this->setup_database();
 		$this->setup_routes();
+		$this->app->init();
+
+		$this->core_initialized = true;
+	}
+
+	/**
+	 * Set up translated labels and other UI that must wait until init.
+	 */
+	public function setup_localized_ui() {
+		if ( $this->ui_initialized ) {
+			return;
+		}
+
 		$this->setup_menu();
 
-		$this->app->init();
+		$this->ui_initialized = true;
+		$this->maybe_finish_initialization();
+	}
+
+	/**
+	 * Fire the initialized action once both phases have run.
+	 */
+	private function maybe_finish_initialization() {
+		if ( $this->initialized || ! $this->core_initialized || ! $this->ui_initialized ) {
+			return;
+		}
+
+		$this->initialized = true;
 
 		do_action( 'base_app_initialized', $this );
 	}

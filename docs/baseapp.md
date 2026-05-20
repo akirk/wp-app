@@ -39,7 +39,7 @@ class MyApp extends BaseApp {
 	}
 
 	protected function setup_menu() {
-		$this->app->add_menu_item( 'dashboard', 'Dashboard', home_url( '/my-app/dashboard' ) );
+		$this->app->add_menu_item( 'dashboard', __( 'Dashboard', 'my-app' ), home_url( '/my-app/dashboard' ) );
 	}
 
 	public function activate() {
@@ -59,8 +59,10 @@ BaseApp requires you to implement three methods:
 | Method | Purpose |
 |--------|---------|
 | `setup_database()` | Database initialization (often empty if using BaseStorage) |
-| `setup_routes()` | Register all routes |
-| `setup_menu()` | Add menu items to the masterbar |
+| `setup_routes()` | Register all routes; runs immediately when `init()` is called |
+| `setup_menu()` | Add translated menu items; BaseApp defers this until WordPress `init` |
+
+Call your BaseApp's `init()` method from `plugins_loaded`. BaseApp registers routes immediately so rewrite rules are available, then defers `setup_menu()` until `init` so translated menu labels do not trigger WordPress's just-in-time textdomain loading notice. Keep `app_name` as a plain, untranslated string because it is part of early app registration.
 
 ## BaseStorage Pattern
 
