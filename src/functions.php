@@ -237,6 +237,37 @@ if ( ! function_exists( 'wp_app_sanitize_css_color' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_darken_css_color' ) ) {
+    /**
+     * Darken a sanitized hex color by mixing it toward black.
+     */
+    function wp_app_darken_css_color( $color, $percentage ) {
+        if ( ! is_string( $color ) || ! preg_match( '/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $color ) ) {
+            return $color;
+        }
+
+        $hex = ltrim( $color, '#' );
+
+        if ( 3 === strlen( $hex ) ) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+
+        $percentage = max( 0, min( 100, (int) $percentage ) );
+        $factor     = ( 100 - $percentage ) / 100;
+        $channels   = [
+            hexdec( substr( $hex, 0, 2 ) ),
+            hexdec( substr( $hex, 2, 2 ) ),
+            hexdec( substr( $hex, 4, 2 ) ),
+        ];
+
+        foreach ( $channels as $index => $channel ) {
+            $channels[ $index ] = max( 0, min( 255, (int) round( $channel * $factor ) ) );
+        }
+
+        return sprintf( '#%02x%02x%02x', $channels[0], $channels[1], $channels[2] );
+    }
+}
+
 if ( ! function_exists( 'wp_app_get_admin_color_scheme' ) ) {
     /**
      * Get the current user's WordPress admin color scheme as normalized tokens.
@@ -363,12 +394,12 @@ if ( ! function_exists( 'wp_app_get_color_scheme_variables' ) ) {
             '--wp-app-admin-icon-color-focus'   => $scheme['icon_colors']['focus'],
             '--wp-app-admin-icon-color-current' => $scheme['icon_colors']['current'],
             '--wp-app-color-primary'            => 'var(--wp-app-admin-color-primary)',
-            '--wp-app-color-primary-hover'      => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-primary-hover'      => wp_app_darken_css_color( $scheme['colors'][2], 10 ),
             '--wp-app-color-accent'             => 'var(--wp-app-admin-color-accent)',
             '--wp-app-color-error'              => 'var(--wp-app-admin-color-accent)',
             '--wp-app-color-on-primary'         => 'var(--wp-app-admin-icon-color-current)',
             '--wp-app-color-link'               => 'var(--wp-app-admin-color-primary)',
-            '--wp-app-color-link-hover'         => 'var(--wp-app-admin-color-accent)',
+            '--wp-app-color-link-hover'         => wp_app_darken_css_color( $scheme['colors'][2], 10 ),
             '--wp-app-color-focus'              => 'var(--wp-app-admin-color-accent)',
             '--wp-app-color-secondary'          => 'var(--wp-app-color-surface-alt)',
             '--wp-app-color-secondary-hover'    => 'var(--wp-app-color-border)',
