@@ -20,7 +20,10 @@ class ColorSchemeTest extends TestCase {
         $variables = wp_app_get_color_scheme_variables( $scheme, 'dark' );
 
         $this->assertSame( $scheme['colors'][0], $variables['--wp-app-admin-color-background'] );
+        $this->assertSame( $scheme['colors'][2], $variables['--wp-app-admin-color-primary'] );
         $this->assertSame( 'var(--wp-app-admin-color-primary)', $variables['--wp-app-color-primary'] );
+        $this->assertSame( wp_app_darken_css_color( $scheme['colors'][2], 10 ), $variables['--wp-app-color-primary-hover'] );
+        $this->assertSame( wp_app_darken_css_color( $scheme['colors'][2], 10 ), $variables['--wp-app-color-link-hover'] );
         $this->assertSame( 'dark', $variables['--wp-app-color-scheme'] );
         $this->assertSame( '#f0f0f1', $variables['--wp-app-color-text'] );
     }
