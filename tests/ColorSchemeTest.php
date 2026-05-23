@@ -27,4 +27,47 @@ class ColorSchemeTest extends TestCase {
         $this->assertSame( 'dark', $variables['--wp-app-color-scheme'] );
         $this->assertSame( '#f0f0f1', $variables['--wp-app-color-text'] );
     }
+
+    public function test_admin_color_scheme_with_three_colors_maps_primary_and_accent() {
+        global $_wp_admin_css_colors, $__wp_app_test_user_options;
+
+        $previous_admin_css_colors = $_wp_admin_css_colors ?? null;
+        $previous_user_options     = $__wp_app_test_user_options ?? null;
+
+        try {
+            // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test fixture for WordPress admin color registry.
+            $_wp_admin_css_colors = [
+                'three-color-scheme' => (object) [
+                    'name'        => 'Three Color Scheme',
+                    'colors'      => [ '#1e1e1e', '#3858e9', '#7b90ff' ],
+                    'icon_colors' => [
+                        'base'    => '#cccccc',
+                        'focus'   => '#72aee6',
+                        'current' => '#ffffff',
+                    ],
+                ],
+            ];
+
+            $__wp_app_test_user_options = [
+                'admin_color' => 'three-color-scheme',
+            ];
+
+            $scheme = wp_app_get_admin_color_scheme();
+        } finally {
+            if ( null === $previous_admin_css_colors ) {
+                unset( $_wp_admin_css_colors );
+            } else {
+                // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore test fixture state.
+                $_wp_admin_css_colors = $previous_admin_css_colors;
+            }
+
+            if ( null === $previous_user_options ) {
+                unset( $__wp_app_test_user_options );
+            } else {
+                $__wp_app_test_user_options = $previous_user_options;
+            }
+        }
+
+        $this->assertSame( [ '#1e1e1e', '#1e1e1e', '#3858e9', '#7b90ff' ], $scheme['colors'] );
+    }
 }

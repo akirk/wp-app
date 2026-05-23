@@ -24,6 +24,18 @@ if ( ! function_exists( 'add_filter' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_user_option' ) ) {
+	function get_user_option( $option, $user = 0 ) {
+		global $__wp_app_test_user_options;
+
+		if ( isset( $__wp_app_test_user_options[ $option ] ) ) {
+			return $__wp_app_test_user_options[ $option ];
+		}
+
+		return false;
+	}
+}
+
 if ( ! function_exists( 'wp_parse_url' ) ) {
 	function wp_parse_url( $url, $component = -1 ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url
