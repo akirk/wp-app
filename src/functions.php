@@ -268,6 +268,35 @@ if ( ! function_exists( 'wp_app_darken_css_color' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_normalize_admin_scheme_colors' ) ) {
+    /**
+     * Normalize an admin color palette into background, subtle, primary, and accent colors.
+     */
+    function wp_app_normalize_admin_scheme_colors( $colors, $fallback ) {
+        $colors = is_array( $colors ) ? array_values( $colors ) : [];
+
+        if ( 3 === count( $colors ) ) {
+            $background = wp_app_sanitize_css_color( $colors[0], $fallback[0] );
+
+            return [
+                $background,
+                $background,
+                wp_app_sanitize_css_color( $colors[1], $fallback[2] ),
+                wp_app_sanitize_css_color( $colors[2], $fallback[3] ),
+            ];
+        }
+
+        $colors = array_pad( $colors, 4, end( $colors ) );
+
+        return [
+            wp_app_sanitize_css_color( $colors[0], $fallback[0] ),
+            wp_app_sanitize_css_color( $colors[1], $fallback[1] ),
+            wp_app_sanitize_css_color( $colors[2], $fallback[2] ),
+            wp_app_sanitize_css_color( $colors[3], $fallback[3] ),
+        ];
+    }
+}
+
 if ( ! function_exists( 'wp_app_get_admin_color_scheme' ) ) {
     /**
      * Get the current user's WordPress admin color scheme as normalized tokens.
@@ -316,16 +345,16 @@ if ( ! function_exists( 'wp_app_get_admin_color_scheme' ) ) {
         $scheme      = $_wp_admin_css_colors[ $slug ];
         $colors      = isset( $scheme->colors ) && is_array( $scheme->colors ) ? array_values( $scheme->colors ) : $fallback['colors'];
         $icon_colors = isset( $scheme->icon_colors ) && is_array( $scheme->icon_colors ) ? $scheme->icon_colors : $fallback['icon_colors'];
-        $colors      = array_pad( $colors, 4, end( $colors ) );
+        $colors      = wp_app_normalize_admin_scheme_colors( $colors, $fallback['colors'] );
 
         $admin_color_scheme = [
             'slug'        => $slug,
             'name'        => isset( $scheme->name ) ? $scheme->name : $fallback['name'],
             'colors'      => [
-                wp_app_sanitize_css_color( $colors[0], $fallback['colors'][0] ),
-                wp_app_sanitize_css_color( $colors[1], $fallback['colors'][1] ),
-                wp_app_sanitize_css_color( $colors[2], $fallback['colors'][2] ),
-                wp_app_sanitize_css_color( $colors[3], $fallback['colors'][3] ),
+                $colors[0],
+                $colors[1],
+                $colors[2],
+                $colors[3],
             ],
             'icon_colors' => [
                 'base'    => wp_app_sanitize_css_color( isset( $icon_colors['base'] ) ? $icon_colors['base'] : '', $fallback['icon_colors']['base'] ),
