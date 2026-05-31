@@ -10,20 +10,26 @@ if ( class_exists( 'WpApp\Masterbar' ) ) {
  * WordPress-style Masterbar that mimics the WordPress admin bar
  */
 class Masterbar {
-    private $menu_items           = [];
-    private $user_menu_items      = [];
-    private $show_wp_logo         = true;
-    private $show_site_name       = true;
-    private $disable_wp_admin_bar = true;
-    private $only_on_app_routes   = false;
-    private $show_for_anonymous   = true;
-    private $admin_bar_app_link   = true;
-    private $app_url_path         = null;
-    private $wpapp                = null;
+	private $menu_items                                  = [];
+	private $user_menu_items                             = [];
+	private $show_wp_logo                                = true;
+	private $show_site_name                              = true;
+	private $disable_wp_admin_bar                        = true;
+	private $only_on_app_routes                          = false;
+	private $show_for_anonymous                          = true;
+	private $admin_bar_app_link                          = true;
+	private $app_url_path                                = null;
+	private $wpapp                                       = null;
+	private $custom_masterbar_rendered                   = false;
+	private static $instances                            = [];
+	private static $admin_bar_overflow_hooks_initialized = false;
+	private static $admin_bar_overflow_styles_output     = false;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
         $this->app_url_path = $app_url_path;
         $this->wpapp        = $wpapp;
+		self::$instances[ $app_url_path ? $app_url_path : spl_object_hash( $this ) ] = $this;
+        self::maybe_initialize_admin_bar_overflow_hooks();
 
         // Hook into our custom app head action to enqueue styles
         add_action( 'wp_app_head', [ $this, 'output_styles' ] );
@@ -32,8 +38,9 @@ class Masterbar {
         // Control admin bar display
         add_filter( 'show_admin_bar', [ $this, 'should_show_admin_bar' ] );
 
-        // Hook into admin bar to add our custom items
-        add_action( 'admin_bar_menu', [ $this, 'add_wp_admin_bar_items' ], 999 );
+        // Add active app items before cross-app links so active submenus stay accessible on mobile.
+        add_action( 'admin_bar_menu', [ $this, 'add_wp_admin_bar_app_context_items' ], 998 );
+        add_action( 'admin_bar_menu', [ $this, 'add_wp_admin_bar_admin_context_items' ], 999 );
 
         // Only show on app requests to avoid interfering with regular WordPress
         add_action( 'wp_app_before_render', [ $this, 'setup_for_app_request' ] );
@@ -198,6 +205,10 @@ class Masterbar {
             return;
         }
 
+        if ( $this->custom_masterbar_rendered ) {
+            return;
+        }
+
         // If admin bar is showing or we shouldn't show for anonymous, don't render custom
         if ( is_admin_bar_showing() || ( ! is_user_logged_in() && ! $this->show_for_anonymous ) ) {
             return;
@@ -213,7 +224,199 @@ class Masterbar {
         );
 
         // Render our custom masterbar
+        $this->custom_masterbar_rendered = true;
         echo $this->render_custom_masterbar();
+    }
+
+    /**
+     * Initialize mobile admin bar overflow hooks once for all WpApp instances.
+     */
+    private static function maybe_initialize_admin_bar_overflow_hooks() {
+        if ( self::$admin_bar_overflow_hooks_initialized ) {
+            return;
+        }
+
+        add_action( 'admin_bar_menu', [ __CLASS__, 'add_admin_bar_overflow_menu' ], 1000 );
+        add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
+        add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
+        add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
+
+        self::$admin_bar_overflow_hooks_initialized = true;
+    }
+
+    /**
+     * Add a single mobile overflow menu for app links emitted outside app context.
+     */
+    public static function add_admin_bar_overflow_menu( $wp_admin_bar ) {
+        $links = self::get_admin_bar_overflow_links();
+
+        if ( empty( $links ) ) {
+            return;
+        }
+
+        $wp_admin_bar->add_node(
+            [
+                'id'    => 'wp-app-admin-overflow',
+                'title' => '<span class="ab-icon"></span><span class="screen-reader-text">' . esc_html__( 'Apps' ) . '</span>',
+                'meta'  => [
+                    'class' => 'wp-app-admin-overflow',
+                    'title' => __( 'Apps' ),
+                ],
+            ]
+        );
+
+        foreach ( $links as $link ) {
+            $wp_admin_bar->add_node(
+                [
+                    'id'     => $link['id'],
+                    'parent' => 'wp-app-admin-overflow',
+                    'title'  => $link['title'],
+                    'href'   => $link['href'],
+                    'meta'   => [
+                        'class' => 'wp-app-admin-overflow-link',
+                    ],
+                ]
+            );
+        }
+    }
+
+    /**
+     * Output CSS that collapses app admin links into the overflow menu on mobile.
+     */
+    public static function output_admin_bar_overflow_styles() {
+        if ( self::$admin_bar_overflow_styles_output ) {
+            return;
+        }
+
+        if ( function_exists( 'is_admin_bar_showing' ) && ! is_admin_bar_showing() ) {
+            return;
+        }
+
+        if ( empty( self::get_admin_bar_overflow_links() ) ) {
+            return;
+        }
+
+        self::$admin_bar_overflow_styles_output = true;
+
+        echo '<style id="wp-app-admin-bar-overflow-styles">';
+        echo self::get_admin_bar_overflow_styles();
+        echo '</style>';
+    }
+
+    /**
+     * Get the app links that should be collapsed into the mobile overflow menu.
+     */
+    private static function get_admin_bar_overflow_links() {
+        $links = [];
+
+        foreach ( self::$instances as $masterbar ) {
+            if ( ! $masterbar instanceof self ) {
+                continue;
+            }
+
+            if ( ! $masterbar->admin_bar_app_link || ! $masterbar->app_url_path ) {
+                continue;
+            }
+
+            if ( $masterbar->is_app_request() || ! $masterbar->can_user_access_app() ) {
+                continue;
+            }
+
+            $id_base = preg_replace( '/[^A-Za-z0-9_-]/', '_', $masterbar->app_url_path );
+
+            $links[ $masterbar->app_url_path ] = [
+                'id'    => 'wp-app-admin-overflow-' . $id_base,
+                'title' => $masterbar->get_app_name(),
+                'href'  => $masterbar->get_app_home_url(),
+            ];
+        }
+
+        return apply_filters( 'wp_app_admin_bar_overflow_links', $links );
+    }
+
+    /**
+     * Get mobile overflow CSS for WordPress admin bar app links.
+     */
+    private static function get_admin_bar_overflow_styles() {
+        return '
+            #wpadminbar {
+                z-index: 100100;
+            }
+
+            #wpadminbar .ab-sub-wrapper {
+                z-index: 100101;
+            }
+
+            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow {
+                display: none;
+            }
+
+            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon:before {
+                content: "\f347";
+            }
+
+            @media screen and (max-width: 782px) {
+                #wpadminbar li.wp-app-admin-link {
+                    display: none !important;
+                }
+
+                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow {
+                    display: block !important;
+                }
+
+                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item {
+                    color: #a7aaad;
+                    overflow: hidden;
+                    padding: 0;
+                    position: relative;
+                    text-indent: 100%;
+                    white-space: nowrap;
+                    width: 52px;
+                }
+
+                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon {
+                    height: 46px;
+                    margin: 0;
+                    padding: 0;
+                    width: 52px;
+                }
+
+                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon:before {
+                    display: block;
+                    font: normal 32px/1 dashicons;
+                    height: 46px;
+                    line-height: 46px;
+                    text-align: center;
+                    text-indent: 0;
+                    top: 0;
+                    width: 52px;
+                }
+
+                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow .ab-sub-wrapper {
+                    left: auto;
+                    max-height: calc(100vh - 54px);
+                    max-width: calc(100vw - 16px);
+                    overflow-y: auto;
+                    right: 0;
+                    width: max-content;
+                }
+
+                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow .ab-submenu .ab-item {
+                    box-sizing: border-box;
+                    display: block;
+                    height: auto !important;
+                    line-height: 22px !important;
+                    max-width: calc(100vw - 16px);
+                    min-height: 44px;
+                    overflow: visible;
+                    padding-bottom: 10px;
+                    padding-top: 10px;
+                    text-overflow: ellipsis;
+                    white-space: normal;
+                    word-break: break-word;
+                }
+            }
+        ';
     }
 
     /**
@@ -354,6 +557,11 @@ class Masterbar {
             /* App-specific admin bar styling */
             #wpadminbar {
                 background: var(--wp-app-masterbar-background);
+                z-index: 100100;
+            }
+
+            #wpadminbar .ab-sub-wrapper {
+                z-index: 100101;
             }
 
             #wpadminbar .ab-top-menu > li.hover > .ab-item,
@@ -412,12 +620,41 @@ class Masterbar {
                 }
 
                 /* WordPress hides root-default items on mobile; keep app items visible */
-                #wpadminbar li.wp-app-main-menu-item {
+                #wpadminbar li.wp-app-main-menu-item,
+                #wpadminbar li.wp-app-menu-item {
                     display: block;
                 }
 
+                #wpadminbar li.wp-app-main-menu-item .ab-sub-wrapper,
+                #wpadminbar li.wp-app-menu-item .ab-sub-wrapper {
+                    left: auto;
+                    max-height: calc(100vh - 54px);
+                    max-width: calc(100vw - 16px);
+                    overflow-y: auto;
+                    right: 0;
+                    width: max-content;
+                }
+
+                #wpadminbar li.wp-app-main-menu-item .ab-submenu .ab-item,
+                #wpadminbar li.wp-app-menu-item .ab-submenu .ab-item {
+                    box-sizing: border-box;
+                    display: block;
+                    height: auto !important;
+                    line-height: 22px !important;
+                    max-width: calc(100vw - 16px);
+                    min-height: 44px;
+                    overflow: visible;
+                    padding-bottom: 10px;
+                    padding-top: 10px;
+                    text-overflow: ellipsis;
+                    white-space: normal;
+                    word-break: break-word;
+                }
+
                 /* WordPress zeroes padding on all root-default links at mobile; restore it */
-                #wpadminbar li.wp-app-main-menu-item > a.ab-item {
+                #wpadminbar li.wp-app-main-menu-item > a.ab-item,
+                #wpadminbar li.wp-app-menu-item > a.ab-item {
+                    margin-left: 0;
                     padding: 0 8px;
                 }
             }
@@ -430,7 +667,7 @@ class Masterbar {
                 top: 0;
                 left: 0;
                 right: 0;
-                z-index: 99999;
+                z-index: 100100;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 font-size: 13px;
                 line-height: 32px;
@@ -508,6 +745,7 @@ class Masterbar {
                 .wp-app-masterbar {
                     height: 46px;
                     line-height: 46px;
+                    overflow: hidden;
                 }
 
                 body.wp-app-has-custom-masterbar {
@@ -515,10 +753,48 @@ class Masterbar {
                 }
 
                 .wp-app-masterbar .wp-app-masterbar-inner {
-                    flex-direction: column;
-                    height: auto;
-                    padding: 8px 15px;
                     gap: 8px;
+                    height: 100%;
+                    max-width: none;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    padding: 0 8px;
+                    scrollbar-width: none;
+                }
+
+                .wp-app-masterbar .wp-app-masterbar-inner::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .wp-app-masterbar .wp-app-masterbar-left {
+                    flex: 1 1 auto;
+                    gap: 8px;
+                    min-width: 0;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    scrollbar-width: none;
+                }
+
+                .wp-app-masterbar .wp-app-masterbar-left::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .wp-app-masterbar .wp-app-masterbar-menu {
+                    display: flex;
+                    gap: 8px;
+                    white-space: nowrap;
+                }
+
+                .wp-app-masterbar .wp-app-masterbar-right {
+                    flex: 0 0 auto;
+                    gap: 8px;
+                }
+
+                .wp-app-masterbar .wp-app-masterbar-site {
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
                 }
             }
         ';
@@ -566,9 +842,16 @@ class Masterbar {
      * Render fallback masterbar if WordPress admin bar is not shown
      */
     public function maybe_render_fallback() {
-        if ( ! is_admin_bar_showing() ) {
-            echo $this->render();
+        if ( ! $this->is_app_request() || $this->custom_masterbar_rendered ) {
+            return;
         }
+
+        if ( is_admin_bar_showing() || ( ! is_user_logged_in() && ! $this->show_for_anonymous ) ) {
+            return;
+        }
+
+        $this->custom_masterbar_rendered = true;
+        echo $this->render();
     }
 
     /**
@@ -595,6 +878,24 @@ class Masterbar {
         if ( $this->is_app_request() ) {
             $this->add_app_context_items( $wp_admin_bar );
         } else {
+            $this->add_admin_context_items( $wp_admin_bar );
+        }
+    }
+
+    /**
+     * Add the active app's items before global app links.
+     */
+    public function add_wp_admin_bar_app_context_items( $wp_admin_bar ) {
+        if ( $this->is_app_request() ) {
+            $this->add_app_context_items( $wp_admin_bar );
+        }
+    }
+
+    /**
+     * Add app links outside their active app context.
+     */
+    public function add_wp_admin_bar_admin_context_items( $wp_admin_bar ) {
+        if ( ! $this->is_app_request() ) {
             $this->add_admin_context_items( $wp_admin_bar );
         }
     }
