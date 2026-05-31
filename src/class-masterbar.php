@@ -10,25 +10,25 @@ if ( class_exists( 'WpApp\Masterbar' ) ) {
  * WordPress-style Masterbar that mimics the WordPress admin bar
  */
 class Masterbar {
-    private $menu_items           = [];
-    private $user_menu_items      = [];
-    private $show_wp_logo         = true;
-    private $show_site_name       = true;
-    private $disable_wp_admin_bar = true;
-    private $only_on_app_routes   = false;
-    private $show_for_anonymous         = true;
-    private $admin_bar_app_link         = true;
-    private $app_url_path               = null;
-    private $wpapp                      = null;
-    private $custom_masterbar_rendered  = false;
-    private static $instances           = [];
-    private static $admin_bar_overflow_hooks_initialized = false;
-    private static $admin_bar_overflow_styles_output     = false;
+	private $menu_items                                  = [];
+	private $user_menu_items                             = [];
+	private $show_wp_logo                                = true;
+	private $show_site_name                              = true;
+	private $disable_wp_admin_bar                        = true;
+	private $only_on_app_routes                          = false;
+	private $show_for_anonymous                          = true;
+	private $admin_bar_app_link                          = true;
+	private $app_url_path                                = null;
+	private $wpapp                                       = null;
+	private $custom_masterbar_rendered                   = false;
+	private static $instances                            = [];
+	private static $admin_bar_overflow_hooks_initialized = false;
+	private static $admin_bar_overflow_styles_output     = false;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
         $this->app_url_path = $app_url_path;
         $this->wpapp        = $wpapp;
-        self::$instances[ $app_url_path ?: spl_object_hash( $this ) ] = $this;
+		self::$instances[ $app_url_path ? $app_url_path : spl_object_hash( $this ) ] = $this;
         self::maybe_initialize_admin_bar_overflow_hooks();
 
         // Hook into our custom app head action to enqueue styles
