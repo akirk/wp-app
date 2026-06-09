@@ -171,6 +171,18 @@ Create `templates/index.php`:
 
 Your app is now available at `/minimal`!
 
+### App-scoped assets
+
+When `wp_app_enqueue_style()`, `wp_app_enqueue_script()`, `wp_app_add_inline_style()`, or `wp_app_add_inline_script()` are called while an app is rendering, the asset is automatically attached to that app's scoped hook. This prevents assets from one WpApp from printing in another WpApp.
+
+You can also pass an explicit app scope when registering assets before render time:
+
+```php
+wp_app_enqueue_script( 'minimal-app', $script_url, [], '1.0.0', true, [ 'app' => 'minimal' ] );
+```
+
+Use `[ 'app' => 'global' ]` for framework-level assets that should print for every WpApp.
+
 ## Requirements
 
 - PHP 7.4 or higher

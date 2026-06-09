@@ -319,15 +319,20 @@ class Router {
 
         // Make route data available in templates
         $app          = null; // App instance no longer available globally to avoid conflicts
-        $wp_app_route = $route_data;
+        $wp_app_route = array_merge(
+            [
+                'app_path' => $this->url_path,
+            ],
+            $route_data
+        );
 
         // Load only essential WordPress functionality
-        do_action( 'wp_app_before_render', $template_path, $route_data );
+        do_action( 'wp_app_before_render', $template_path, $wp_app_route );
 
         // Include the template
         include $template_path;
 
-        do_action( 'wp_app_after_render', $template_path, $route_data );
+        do_action( 'wp_app_after_render', $template_path, $wp_app_route );
     }
 
     /**
