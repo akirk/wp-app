@@ -130,6 +130,15 @@ class WpApp {
             add_filter( 'my_apps_plugins', [ $this, 'register_my_apps' ] );
         }
 
+        \WpApp\Registry::register_app_metadata(
+            $this->router->get_app_path(),
+            [
+                'name'     => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
+                'url'      => home_url( '/' . $this->router->get_app_path() . '/' ),
+                'icon_url' => $this->my_apps_icon,
+            ]
+        );
+
         $this->initialized = true;
 
         do_action( 'wp_app_initialized', $this );

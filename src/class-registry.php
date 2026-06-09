@@ -13,6 +13,7 @@ class Registry {
     private static $apps              = [];
     private static $hooks_initialized = false;
     private static $app_capabilities  = [];
+    private static $app_metadata      = [];
 
     /**
      * Register a WpApp instance
@@ -22,6 +23,14 @@ class Registry {
     public static function register_app( $router ) {
         $url_path                = $router->get_url_path();
         self::$apps[ $url_path ] = $router;
+        self::register_app_metadata(
+            $url_path,
+            [
+                'name'     => ucwords( str_replace( [ '-', '_' ], ' ', $url_path ) ),
+                'url'      => function_exists( 'home_url' ) ? home_url( '/' . $url_path . '/' ) : '/' . $url_path . '/',
+                'icon_url' => null,
+            ]
+        );
         self::maybe_initialize_hooks();
 
         // If init already fired, register this app's rewrite rules immediately
@@ -79,6 +88,10 @@ class Registry {
 
         add_filter( 'template_include', [ __CLASS__, 'handle_template_include' ] );
         add_filter( 'query_vars', [ __CLASS__, 'add_query_vars' ] );
+
+        if ( class_exists( __NAMESPACE__ . '\Settings' ) ) {
+            Settings::init();
+        }
 
         self::$hooks_initialized = true;
     }
@@ -158,6 +171,35 @@ class Registry {
      */
     public static function get_apps() {
         return self::$apps;
+    }
+
+    /**
+     * Register display metadata for an app.
+     *
+     * @param string $url_path URL path for the app.
+     * @param array  $metadata App metadata.
+     */
+    public static function register_app_metadata( $url_path, $metadata ) {
+        $existing = isset( self::$app_metadata[ $url_path ] ) ? self::$app_metadata[ $url_path ] : [];
+
+        self::$app_metadata[ $url_path ] = array_merge(
+            [
+                'name'     => ucwords( str_replace( [ '-', '_' ], ' ', $url_path ) ),
+                'url'      => function_exists( 'home_url' ) ? home_url( '/' . $url_path . '/' ) : '/' . $url_path . '/',
+                'icon_url' => null,
+            ],
+            $existing,
+            $metadata
+        );
+    }
+
+    /**
+     * Get metadata for all registered apps.
+     *
+     * @return array Array of app metadata keyed by URL path.
+     */
+    public static function get_app_metadata() {
+        return self::$app_metadata;
     }
 
     /**
