@@ -2,6 +2,8 @@
 
 namespace WpApp;
 
+require_once __DIR__ . '/class-settings.php';
+
 if ( class_exists( 'WpApp\Masterbar' ) ) {
     return;
 }
@@ -24,6 +26,7 @@ class Masterbar {
 	private static $instances                            = [];
 	private static $admin_bar_overflow_hooks_initialized = false;
 	private static $admin_bar_overflow_styles_output     = false;
+	private static $admin_bar_app_link_styles_output     = false;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
         $this->app_url_path = $app_url_path;
@@ -137,6 +140,34 @@ class Masterbar {
     }
 
     /**
+     * Get menu items for admin settings previews.
+     *
+     * @return array Menu items.
+     */
+    public function get_preview_menu_items() {
+        return $this->menu_items;
+    }
+
+    /**
+     * Check whether this app's automatic admin bar link is enabled.
+     *
+     * @return bool True if the automatic app link is enabled.
+     */
+    public function is_admin_bar_app_link_enabled() {
+        return $this->admin_bar_app_link;
+    }
+
+    /**
+     * Get a masterbar instance for an app path.
+     *
+     * @param string $app_path App URL path.
+     * @return self|null Masterbar instance.
+     */
+    public static function get_instance_for_app( $app_path ) {
+        return isset( self::$instances[ $app_path ] ) && self::$instances[ $app_path ] instanceof self ? self::$instances[ $app_path ] : null;
+    }
+
+    /**
      * Remove all WordPress admin bar items and show only app items
      */
     public function remove_all_wp_admin_bar_items() {
@@ -240,6 +271,9 @@ class Masterbar {
         add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
         add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
         add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
+        add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
+        add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
+        add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
 
         self::$admin_bar_overflow_hooks_initialized = true;
     }
@@ -304,6 +338,25 @@ class Masterbar {
     }
 
     /**
+     * Output shared CSS for app links in the real WordPress admin bar.
+     */
+    public static function output_admin_bar_app_link_styles() {
+        if ( self::$admin_bar_app_link_styles_output ) {
+            return;
+        }
+
+        if ( function_exists( 'is_admin_bar_showing' ) && ! is_admin_bar_showing() ) {
+            return;
+        }
+
+        self::$admin_bar_app_link_styles_output = true;
+
+        echo '<style id="wp-app-admin-bar-app-link-styles">';
+        echo self::get_app_link_styles( '#wpadminbar' );
+        echo '</style>';
+    }
+
+    /**
      * Get the app links that should be collapsed into the mobile overflow menu.
      */
     private static function get_admin_bar_overflow_links() {
@@ -318,7 +371,7 @@ class Masterbar {
                 continue;
             }
 
-            if ( $masterbar->is_app_request() || ! $masterbar->can_user_access_app() ) {
+            if ( $masterbar->is_app_request() || ! $masterbar->can_user_access_app() || ! $masterbar->should_show_global_app_link() || ! $masterbar->should_show_app_link_content() ) {
                 continue;
             }
 
@@ -326,7 +379,7 @@ class Masterbar {
 
             $links[ $masterbar->app_url_path ] = [
                 'id'    => 'wp-app-admin-overflow-' . $id_base,
-                'title' => $masterbar->get_app_name(),
+                'title' => $masterbar->get_app_link_title(),
                 'href'  => $masterbar->get_app_home_url(),
             ];
         }
@@ -801,6 +854,61 @@ class Masterbar {
     }
 
     /**
+     * Get shared app-link title/icon CSS.
+     *
+     * @param string $selector Root selector.
+     * @return string CSS.
+     */
+    public static function get_app_link_styles( $selector = '#wpadminbar' ) {
+        $selector = preg_replace( '/[^a-zA-Z0-9\-_#\.\:\[\]=~\*"\'\(\), >\+]/', '', $selector );
+
+        if ( '' === trim( $selector ) ) {
+            $selector = '#wpadminbar';
+        }
+
+        return '
+            ' . $selector . ' .wp-app-link-title {
+                align-items: center;
+                display: inline-flex;
+                gap: 6px;
+                height: 100%;
+                line-height: inherit;
+                vertical-align: baseline;
+            }
+
+            ' . $selector . ' .wp-app-link-icon {
+                align-items: center;
+                background: var(--wp-app-admin-color-subtle);
+                border-radius: 3px;
+                color: var(--wp-app-masterbar-text);
+                display: inline-flex;
+                font-size: 11px;
+                font-weight: 600;
+                height: 18px;
+                justify-content: center;
+                line-height: 18px;
+                overflow: hidden;
+                text-transform: uppercase;
+                width: 18px;
+            }
+
+            ' . $selector . ' .wp-app-link-icon img {
+                display: block;
+                height: 18px;
+                object-fit: cover;
+                width: 18px;
+            }
+
+            ' . $selector . ' .wp-app-link-icon .dashicons {
+                font-size: 16px;
+                height: 16px;
+                line-height: 16px;
+                width: 16px;
+            }
+        ';
+    }
+
+    /**
      * Get default JavaScript for the masterbar
      */
     private function get_default_scripts() {
@@ -954,12 +1062,12 @@ class Masterbar {
         // Only add items if user can access this app
         if ( $this->can_user_access_app() ) {
             // Add main app link first (unless disabled)
-            if ( $this->admin_bar_app_link ) {
+            if ( $this->admin_bar_app_link && $this->should_show_app_link_content() ) {
                 $app_node_id = 'wp-app-' . str_replace( '-', '_', $this->app_url_path );
                 $wp_admin_bar->add_node(
                     [
 						'id'    => $app_node_id,
-						'title' => $this->get_app_name(),
+						'title' => $this->get_app_link_title(),
 						'href'  => $this->get_app_home_url(),
 						'meta'  => [
 							'class' => 'wp-app-main-menu-item',
@@ -1012,12 +1120,12 @@ class Masterbar {
      */
     private function add_admin_context_items( $wp_admin_bar ) {
         // Only add link if user can access this app and the app link is enabled
-        if ( $this->can_user_access_app() && $this->admin_bar_app_link ) {
+        if ( $this->can_user_access_app() && $this->admin_bar_app_link && $this->should_show_global_app_link() && $this->should_show_app_link_content() ) {
             // Add a simple link to the app from regular WordPress admin
             $wp_admin_bar->add_node(
                 [
 					'id'    => 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path ),
-					'title' => $this->get_app_name(),
+					'title' => $this->get_app_link_title(),
 					'href'  => $this->get_app_home_url(),
 					'meta'  => [
 						'class' => 'wp-app-admin-link',
@@ -1044,6 +1152,83 @@ class Masterbar {
         return 'App';
     }
 
+    /**
+     * Get metadata for this app.
+     */
+    private function get_app_metadata() {
+        $metadata = \WpApp\Settings::get_registered_apps();
+
+        if ( isset( $metadata[ $this->app_url_path ] ) && is_array( $metadata[ $this->app_url_path ] ) ) {
+            return $metadata[ $this->app_url_path ];
+        }
+
+        return [
+            'name'     => $this->get_app_name(),
+            'url'      => $this->get_app_home_url(),
+            'icon_url' => null,
+        ];
+    }
+
+    /**
+     * Get HTML title for app admin bar links.
+     */
+    private function get_app_link_title() {
+        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
+        $metadata = $this->get_app_metadata();
+        $app_name = $this->get_app_display_name();
+        $title    = '<span class="wp-app-link-title">';
+
+        if ( ! empty( $settings['show_icon'] ) ) {
+            $icon_url = isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '';
+            $icon     = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
+
+            if ( '' !== $icon ) {
+                $title .= $this->get_app_icon_html( $icon );
+            } elseif ( $icon_url ) {
+                $title .= '<span class="wp-app-link-icon"><img src="' . esc_url( $icon_url ) . '" alt=""></span>';
+            } elseif ( ! empty( $settings['generate_letter_icon'] ) ) {
+                $letter = strtoupper( substr( $app_name, 0, 1 ) );
+                $title .= '<span class="wp-app-link-icon" aria-hidden="true">' . esc_html( $letter ) . '</span>';
+            }
+        }
+
+        if ( ! empty( $settings['show_text'] ) ) {
+            $title .= '<span class="wp-app-link-text">' . esc_html( $app_name ) . '</span>';
+        } else {
+            $title .= '<span class="screen-reader-text">' . esc_html( $app_name ) . '</span>';
+        }
+
+        $title .= '</span>';
+
+        return $title;
+    }
+
+    /**
+     * Get display title, including admin override when configured.
+     */
+    private function get_app_display_name() {
+        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
+        $title    = isset( $settings['title'] ) ? trim( $settings['title'] ) : '';
+
+        if ( '' !== $title ) {
+            return $title;
+        }
+
+        return $this->get_app_name();
+    }
+
+    /**
+     * Get icon HTML for a text or dashicon override.
+     */
+    private function get_app_icon_html( $icon ) {
+        if ( preg_match( '/^(dashicons-)?[a-z0-9-]+$/', $icon ) ) {
+            $dashicon = 0 === strpos( $icon, 'dashicons-' ) ? $icon : 'dashicons-' . $icon;
+            return '<span class="wp-app-link-icon" aria-hidden="true"><span class="dashicons ' . esc_attr( $dashicon ) . '"></span></span>';
+        }
+
+        return '<span class="wp-app-link-icon" aria-hidden="true">' . esc_html( $icon ) . '</span>';
+    }
+
 
     /**
      * Check if this is an app request
@@ -1066,6 +1251,31 @@ class Masterbar {
      */
     private function can_user_access_app() {
         return \WpApp\Registry::can_user_access_app( $this->app_url_path );
+    }
+
+    /**
+     * Check if this app should be shown outside its active app context.
+     */
+    private function should_show_global_app_link() {
+        return \WpApp\Settings::should_show_global_app_link( $this->app_url_path );
+    }
+
+    /**
+     * Check if app link settings leave visible content for the link.
+     */
+    private function should_show_app_link_content() {
+        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
+        $metadata = $this->get_app_metadata();
+
+        if ( ! empty( $settings['show_text'] ) ) {
+            return true;
+        }
+
+        if ( empty( $settings['show_icon'] ) ) {
+            return false;
+        }
+
+        return ! empty( $settings['icon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $settings['generate_letter_icon'] );
     }
 
     /**
