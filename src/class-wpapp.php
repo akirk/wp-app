@@ -17,6 +17,7 @@ class WpApp {
     private $required_capability = null;
     private $custom_roles        = [];
     private $app_name            = null;
+    private $app_name_textdomain = null;
     private $my_apps             = true;
     private $my_apps_icon        = null;
 
@@ -81,6 +82,10 @@ class WpApp {
         // Custom app name
         if ( isset( $config['app_name'] ) ) {
             $this->app_name = $config['app_name'];
+        }
+
+        if ( isset( $config['app_name_textdomain'] ) ) {
+            $this->app_name_textdomain = $config['app_name_textdomain'];
         }
 
         // My Apps plugin integration
@@ -159,6 +164,11 @@ class WpApp {
      */
     public function get_app_name() {
         if ( $this->app_name !== null ) {
+            if ( $this->app_name_textdomain && function_exists( 'translate' ) ) {
+                // phpcs:ignore WordPress.WP.I18n.LowLevelTranslationFunction, WordPress.WP.I18n.NonSingularStringLiteralText, WordPress.WP.I18n.NonSingularStringLiteralDomain -- App names can come from plugin headers and are translated lazily using the configured plugin textdomain.
+                return translate( $this->app_name, $this->app_name_textdomain );
+            }
+
             return $this->app_name;
         }
 

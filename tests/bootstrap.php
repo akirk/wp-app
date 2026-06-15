@@ -154,6 +154,14 @@ if ( ! function_exists( 'is_user_logged_in' ) ) {
 	}
 }
 
+if ( ! function_exists( 'translate' ) ) {
+	function translate( $text, $domain = 'default' ) {
+		global $__wp_app_test_translations;
+
+		return $__wp_app_test_translations[ $domain ][ $text ] ?? $text;
+	}
+}
+
 if ( ! function_exists( 'get_user_option' ) ) {
 	function get_user_option( $option, $user = 0 ) {
 		global $__wp_app_test_user_options;
