@@ -53,9 +53,9 @@ if ( ! function_exists( 'wp_app_head' ) ) {
         do_action( 'wp_app_head' );
 
         // Allow specific head content injection
-        do_action( 'wp_app_head_meta' );
-        do_action( 'wp_app_head_styles' );
-        do_action( 'wp_app_head_scripts' );
+        wp_app_do_scoped_action( 'wp_app_head_meta' );
+        wp_app_do_scoped_action( 'wp_app_head_styles' );
+        wp_app_do_scoped_action( 'wp_app_head_scripts' );
     }
 }
 
@@ -89,7 +89,109 @@ if ( ! function_exists( 'wp_app_body_close' ) ) {
         }
 
         // Custom app body close hook
-        do_action( 'wp_app_body_close' );
+        wp_app_do_scoped_action( 'wp_app_body_close' );
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_current_app_path' ) ) {
+    /**
+     * Get the URL path for the app currently being rendered.
+     *
+     * @return string
+     */
+    function wp_app_get_current_app_path() {
+        global $wp_app_route;
+
+        if ( isset( $wp_app_route['app_path'] ) && is_scalar( $wp_app_route['app_path'] ) ) {
+            return trim( (string) $wp_app_route['app_path'], '/' );
+        }
+
+        if ( isset( $wp_app_route['params']['app_path'] ) && is_scalar( $wp_app_route['params']['app_path'] ) ) {
+            return trim( (string) $wp_app_route['params']['app_path'], '/' );
+        }
+
+        return '';
+    }
+}
+
+if ( ! function_exists( 'wp_app_sanitize_hook_suffix' ) ) {
+    /**
+     * Convert an app path into a safe hook-name suffix.
+     *
+     * @param string $app_path App URL path.
+     * @return string
+     */
+    function wp_app_sanitize_hook_suffix( $app_path ) {
+        if ( function_exists( 'sanitize_key' ) ) {
+            return sanitize_key( $app_path );
+        }
+
+        return strtolower( preg_replace( '/[^a-zA-Z0-9_\-]/', '', (string) $app_path ) );
+    }
+}
+
+if ( ! function_exists( 'wp_app_normalize_asset_scope' ) ) {
+    /**
+     * Resolve an enqueue scope into an app path.
+     *
+     * @param string|array|null $scope Optional app slug, or array with an app key.
+     * @return string
+     */
+    function wp_app_normalize_asset_scope( $scope = null ) {
+        if ( is_array( $scope ) && isset( $scope['app'] ) ) {
+            $scope = $scope['app'];
+        }
+
+        if ( null === $scope ) {
+            $scope = wp_app_get_current_app_path();
+        }
+
+        if ( ! is_scalar( $scope ) ) {
+            return '';
+        }
+
+        $scope = trim( (string) $scope, '/' );
+
+        if ( '' === $scope || 'global' === $scope ) {
+            return '';
+        }
+
+        return $scope;
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_scoped_hook_name' ) ) {
+    /**
+     * Build a global or app-scoped hook name.
+     *
+     * @param string            $hook  Base hook name.
+     * @param string|array|null $scope Optional app slug, or array with an app key.
+     * @return string
+     */
+    function wp_app_get_scoped_hook_name( $hook, $scope = null ) {
+        $app_path = wp_app_normalize_asset_scope( $scope );
+
+        if ( '' === $app_path ) {
+            return $hook;
+        }
+
+        return $hook . '_' . wp_app_sanitize_hook_suffix( $app_path );
+    }
+}
+
+if ( ! function_exists( 'wp_app_do_scoped_action' ) ) {
+    /**
+     * Run a global wp-app hook, followed by the current app's scoped hook.
+     *
+     * @param string $hook Base hook name.
+     */
+    function wp_app_do_scoped_action( $hook ) {
+        do_action( $hook );
+
+        $scoped_hook = wp_app_get_scoped_hook_name( $hook );
+        if ( $scoped_hook !== $hook ) {
+            do_action( $scoped_hook );
+        }
     }
 }
 
@@ -146,9 +248,9 @@ if ( ! function_exists( 'wp_app_enqueue_style' ) ) {
     /**
      * Enqueue a style for app pages
      */
-    function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false ) {
+    function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false, $scope = null ) {
         add_action(
-            'wp_app_head_styles',
+            wp_app_get_scoped_hook_name( 'wp_app_head_styles', $scope ),
             function () use ( $handle, $src, $deps, $ver ) {
 				if ( $src ) {
 					$url = $src;
@@ -166,8 +268,8 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
     /**
      * Enqueue a script for app pages
      */
-    function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true ) {
-        $hook = $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts';
+    function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true, $scope = null ) {
+        $hook = wp_app_get_scoped_hook_name( $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts', $scope );
 
         add_action(
             $hook,
@@ -188,9 +290,9 @@ if ( ! function_exists( 'wp_app_add_inline_style' ) ) {
     /**
      * Add inline CSS for app pages
      */
-    function wp_app_add_inline_style( $handle, $css ) {
+    function wp_app_add_inline_style( $handle, $css, $scope = null ) {
         add_action(
-            'wp_app_head_styles',
+            wp_app_get_scoped_hook_name( 'wp_app_head_styles', $scope ),
             function () use ( $handle, $css ) {
 				echo '<style id="' . esc_attr( $handle ) . '-inline-css">' . "\n";
 				echo $css . "\n";
@@ -204,8 +306,8 @@ if ( ! function_exists( 'wp_app_add_inline_script' ) ) {
     /**
      * Add inline JavaScript for app pages
      */
-    function wp_app_add_inline_script( $handle, $js, $in_footer = true ) {
-        $hook = $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts';
+    function wp_app_add_inline_script( $handle, $js, $in_footer = true, $scope = null ) {
+        $hook = wp_app_get_scoped_hook_name( $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts', $scope );
 
         add_action(
             $hook,
