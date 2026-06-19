@@ -27,6 +27,25 @@ if ( ! function_exists( 'add_action' ) ) {
 	}
 }
 
+if ( ! function_exists( 'remove_action' ) ) {
+	function remove_action( $hook_name, $callback, $priority = 10 ) {
+		global $__wp_app_test_actions;
+
+		if ( empty( $__wp_app_test_actions[ $hook_name ][ $priority ] ) ) {
+			return false;
+		}
+
+		foreach ( $__wp_app_test_actions[ $hook_name ][ $priority ] as $index => $action ) {
+			if ( $action['callback'] === $callback ) {
+				unset( $__wp_app_test_actions[ $hook_name ][ $priority ][ $index ] );
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
 if ( ! function_exists( 'do_action' ) ) {
 	function do_action( $hook_name, ...$args ) {
 		global $__wp_app_test_actions, $__wp_app_test_action_counts;
@@ -144,6 +163,7 @@ if ( ! function_exists( 'sanitize_text_field' ) ) {
 
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	function wp_strip_all_tags( $text ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags -- Test stub for WordPress helper.
 		return strip_tags( (string) $text );
 	}
 }

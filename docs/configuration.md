@@ -53,7 +53,7 @@ Integrates with the [My Apps](https://wordpress.org/plugins/my-apps/) plugin to 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `my_apps` | bool\|string | `true` | `false` to disable, `true` to enable with default name, or a string for custom name |
-| `my_apps_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) |
+| `my_apps_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`) |
 
 ## Method Configuration
 
@@ -167,6 +167,14 @@ Register your app with the My Apps plugin launcher:
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'my_apps'      => 'My Custom App',  // or true for default name
 	'my_apps_icon' => plugins_url( 'assets/icon.png', __FILE__ ),
+] );
+```
+
+Dashicons can be used by passing the class name:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'my-app', [
+	'my_apps_icon' => 'dashicons-admin-site',
 ] );
 ```
 

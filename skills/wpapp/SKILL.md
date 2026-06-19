@@ -179,7 +179,7 @@ class Storage extends BaseStorage {
 | `admin_bar_app_link` | `true` | Add app entry to admin bar |
 | `clear_admin_bar` | `false` | Remove all WP admin bar items |
 | `my_apps` | `true` | Register with My Apps plugin |
-| `my_apps_icon` | `null` | URL to an app icon |
+| `my_apps_icon` | `null` | URL to an app icon or Dashicon class |
 
 Use admin color variables in app CSS instead of hard-coding WordPress admin colors:
 

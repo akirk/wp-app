@@ -84,7 +84,7 @@ class Settings {
      */
     public static function get_default_settings() {
         return [
-            'only_show_active_app' => false,
+            'only_show_active_app' => true,
             'apps'                 => [],
         ];
     }

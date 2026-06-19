@@ -137,11 +137,13 @@ class WpApp {
 
         \WpApp\Registry::register_app_metadata(
             $this->router->get_app_path(),
-            [
-                'name'     => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
-                'url'      => home_url( '/' . $this->router->get_app_path() . '/' ),
-                'icon_url' => $this->my_apps_icon,
-            ]
+            array_merge(
+                [
+                    'name' => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
+                    'url'  => home_url( '/' . $this->router->get_app_path() . '/' ),
+                ],
+                $this->get_my_apps_icon_data()
+            )
         );
 
         $this->initialized = true;
@@ -230,13 +232,35 @@ class WpApp {
 
         $name = is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name();
 
-        $apps[ $app_path ] = [
-            'name'     => $name,
-            'url'      => home_url( '/' . $app_path . '/' ),
-            'icon_url' => $this->my_apps_icon,
-        ];
+        $apps[ $app_path ] = array_merge(
+            isset( $apps[ $app_path ] ) && is_array( $apps[ $app_path ] ) ? $apps[ $app_path ] : [],
+            [
+                'name' => $name,
+                'url'  => home_url( '/' . $app_path . '/' ),
+            ],
+            $this->get_my_apps_icon_data()
+        );
 
         return $apps;
+    }
+
+    /**
+     * Get normalized icon data for My Apps-compatible consumers.
+     *
+     * @return array Icon data using one of the My Apps icon keys.
+     */
+    private function get_my_apps_icon_data() {
+        if ( ! is_string( $this->my_apps_icon ) || '' === trim( $this->my_apps_icon ) ) {
+            return [];
+        }
+
+        $icon = trim( $this->my_apps_icon );
+
+        if ( 0 === strpos( $icon, 'dashicons-' ) ) {
+            return [ 'dashicon' => $icon ];
+        }
+
+        return [ 'icon_url' => $icon ];
     }
 
     /**
