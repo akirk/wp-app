@@ -12,7 +12,8 @@ class MasterbarSettingsTest extends TestCase {
 
         $__wp_app_test_filters = [];
         $__wp_app_test_options = [];
-        $wp_query              = null;
+        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub resets the queried object.
+        $wp_query = null;
     }
 
     public function test_sanitize_settings_preserves_app_paths() {
@@ -38,6 +39,24 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertSame( 'dashicons-admin-site', $settings['apps']['team/tools']['icon'] );
         $this->assertTrue( $settings['apps']['team/tools']['show_icon'] );
         $this->assertFalse( $settings['apps']['team/tools']['generate_letter_icon'] );
+    }
+
+    public function test_only_show_active_app_defaults_on() {
+        $settings = Settings::get_settings();
+
+        $this->assertTrue( $settings['only_show_active_app'] );
+    }
+
+    public function test_only_show_active_app_preserves_saved_false() {
+        global $__wp_app_test_options;
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app' => false,
+        ];
+
+        $settings = Settings::get_settings();
+
+        $this->assertFalse( $settings['only_show_active_app'] );
     }
 
     public function test_global_only_active_setting_hides_inactive_app_link_unless_always_show() {
@@ -172,6 +191,73 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertArrayNotHasKey( 'my-apps-only', $apps );
     }
 
+    public function test_my_apps_icon_dashicon_registers_as_dashicon() {
+        $app = new WpApp(
+            '',
+            'courses',
+            [
+                'app_name'     => 'Courses',
+                'my_apps_icon' => 'dashicons-welcome-learn-more',
+            ]
+        );
+
+        $apps = $app->register_my_apps( [] );
+
+        $this->assertSame( 'dashicons-welcome-learn-more', $apps['courses']['dashicon'] );
+        $this->assertArrayNotHasKey( 'icon_url', $apps['courses'] );
+    }
+
+    public function test_my_apps_registration_preserves_existing_icon_when_no_icon_is_configured() {
+        $app = new WpApp( '', 'apiary-press', [ 'app_name' => 'Apiary Press' ] );
+
+        $apps = $app->register_my_apps(
+            [
+                'apiary-press' => [
+                    'name'     => 'Apiary Press',
+                    'url'      => 'https://example.org/apiary-press/',
+                    'icon_url' => 'https://example.org/wp-content/plugins/apiary-press/assets/icon.svg',
+                ],
+            ]
+        );
+
+        $this->assertSame( 'https://example.org/wp-content/plugins/apiary-press/assets/icon.svg', $apps['apiary-press']['icon_url'] );
+    }
+
+    public function test_my_apps_icon_dashicon_is_available_to_masterbar_metadata() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp(
+            '',
+            'metadata-icon-app',
+            [
+                'app_name'     => 'Metadata Icon App',
+                'my_apps_icon' => 'dashicons-admin-site',
+            ]
+        );
+        $app->init();
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app' => false,
+            'apps'                 => [
+                'metadata-icon-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => true,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $title = $admin_bar->nodes['wp-app-link-metadata_icon_app']['title'];
+
+        $this->assertStringContainsString( 'dashicons-admin-site', $title );
+    }
+
     public function test_visibility_status_explains_active_only_entries() {
         global $__wp_app_test_options;
 
@@ -204,17 +290,5 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertSame( 'disabled', $status['state'] );
         $this->assertStringContainsString( 'no masterbar entry to customize', $status['message'] );
-    }
-}
-
-class FakeAdminBar {
-    public $nodes = [];
-
-    public function add_node( $node ) {
-        $this->nodes[ $node['id'] ] = $node;
-    }
-
-    public function remove_node( $id ) {
-        unset( $this->nodes[ $id ] );
     }
 }

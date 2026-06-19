@@ -1166,6 +1166,7 @@ class Masterbar {
             'name'     => $this->get_app_name(),
             'url'      => $this->get_app_home_url(),
             'icon_url' => null,
+            'dashicon' => null,
         ];
     }
 
@@ -1180,10 +1181,13 @@ class Masterbar {
 
         if ( ! empty( $settings['show_icon'] ) ) {
             $icon_url = isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '';
+            $dashicon = isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '';
             $icon     = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
 
             if ( '' !== $icon ) {
                 $title .= $this->get_app_icon_html( $icon );
+            } elseif ( $dashicon ) {
+                $title .= $this->get_app_icon_html( $dashicon );
             } elseif ( $icon_url ) {
                 $title .= '<span class="wp-app-link-icon"><img src="' . esc_url( $icon_url ) . '" alt=""></span>';
             } elseif ( ! empty( $settings['generate_letter_icon'] ) ) {
@@ -1275,7 +1279,7 @@ class Masterbar {
             return false;
         }
 
-        return ! empty( $settings['icon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $settings['generate_letter_icon'] );
+        return ! empty( $settings['icon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $metadata['dashicon'] ) || ! empty( $settings['generate_letter_icon'] );
     }
 
     /**

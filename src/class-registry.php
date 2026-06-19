@@ -29,6 +29,7 @@ class Registry {
                 'name'     => ucwords( str_replace( [ '-', '_' ], ' ', $url_path ) ),
                 'url'      => function_exists( 'home_url' ) ? home_url( '/' . $url_path . '/' ) : '/' . $url_path . '/',
                 'icon_url' => null,
+                'dashicon' => null,
             ]
         );
         self::maybe_initialize_hooks();
@@ -187,6 +188,7 @@ class Registry {
                 'name'     => ucwords( str_replace( [ '-', '_' ], ' ', $url_path ) ),
                 'url'      => function_exists( 'home_url' ) ? home_url( '/' . $url_path . '/' ) : '/' . $url_path . '/',
                 'icon_url' => null,
+                'dashicon' => null,
             ],
             $existing,
             $metadata
