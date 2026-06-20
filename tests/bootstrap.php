@@ -1,5 +1,14 @@
 <?php
 
+if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+	define( 'WP_CONTENT_DIR', sys_get_temp_dir() . '/wp-app-test-content' );
+}
+
+if ( ! is_dir( WP_CONTENT_DIR ) ) {
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Test bootstrap fixture setup.
+	mkdir( WP_CONTENT_DIR, 0777, true );
+}
+
 if ( ! function_exists( 'did_action' ) ) {
 	function did_action( $hook_name ) {
 		global $__wp_app_test_action_counts;
@@ -170,7 +179,56 @@ if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 
 if ( ! function_exists( 'is_user_logged_in' ) ) {
 	function is_user_logged_in() {
-		return false;
+		global $__wp_app_test_is_user_logged_in;
+
+		return (bool) $__wp_app_test_is_user_logged_in;
+	}
+}
+
+if ( ! function_exists( 'get_current_user_id' ) ) {
+	function get_current_user_id() {
+		global $__wp_app_test_current_user_id;
+
+		return (int) ( $__wp_app_test_current_user_id ?? 0 );
+	}
+}
+
+if ( ! function_exists( 'switch_to_user_locale' ) ) {
+	function switch_to_user_locale( $user_id ) {
+		global $__wp_app_test_locale_stack, $__wp_app_test_current_locale, $__wp_app_test_user_locales;
+
+		$__wp_app_test_locale_stack[] = $__wp_app_test_current_locale ?? 'en_US';
+		$__wp_app_test_current_locale = $__wp_app_test_user_locales[ $user_id ] ?? 'en_US';
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'restore_previous_locale' ) ) {
+	function restore_previous_locale() {
+		global $__wp_app_test_locale_stack, $__wp_app_test_current_locale;
+
+		if ( empty( $__wp_app_test_locale_stack ) ) {
+			return false;
+		}
+
+		$__wp_app_test_current_locale = array_pop( $__wp_app_test_locale_stack );
+		return true;
+	}
+}
+
+if ( ! function_exists( 'get_language_attributes' ) ) {
+	function get_language_attributes() {
+		global $__wp_app_test_current_locale, $__wp_app_test_is_rtl;
+
+		$lang       = str_replace( '_', '-', $__wp_app_test_current_locale ?? 'en_US' );
+		$attributes = [ 'lang="' . esc_attr( $lang ) . '"' ];
+
+		if ( ! empty( $__wp_app_test_is_rtl ) ) {
+			$attributes[] = 'dir="rtl"';
+		}
+
+		return implode( ' ', $attributes );
 	}
 }
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
+<html <?php wp_app_language_attributes(); ?>>
 <head>
     <title><?php echo wp_app_title( 'About' ); ?></title>
     <?php wp_app_head(); ?>

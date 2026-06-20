@@ -12,7 +12,7 @@ $template_path = isset( $wp_app_route['params']['template_path'] ) ? $wp_app_rou
 $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['params']['app_path'] : '';
 ?>
 <!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
+<html <?php wp_app_language_attributes(); ?>>
 <head>
 	<title><?php echo wp_app_title( 'Page Not Found' ); ?></title>
 	<?php wp_app_head(); ?>
