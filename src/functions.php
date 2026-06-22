@@ -5,7 +5,7 @@
  */
 
 if ( ! defined( 'WP_APP_VERSION' ) ) {
-    define( 'WP_APP_VERSION', '1.3.0' );
+    define( 'WP_APP_VERSION', '1.3.1' );
 }
 
 if ( ! function_exists( 'wp_app_is_app_request' ) ) {
