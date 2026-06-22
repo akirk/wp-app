@@ -506,7 +506,7 @@ class Masterbar {
                 display: block;
                 font: normal 20px/1 dashicons;
                 height: 32px;
-                line-height: 32px;
+                line-height: 27px;
                 text-align: center;
                 text-indent: 0;
                 top: 0;
