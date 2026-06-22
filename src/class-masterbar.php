@@ -29,8 +29,8 @@ class Masterbar {
 	private static $admin_bar_app_link_styles_output     = false;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
-        $this->app_url_path = $app_url_path;
-        $this->wpapp        = $wpapp;
+		$this->app_url_path = $app_url_path;
+		$this->wpapp        = $wpapp;
 		self::$instances[ $app_url_path ? $app_url_path : spl_object_hash( $this ) ] = $this;
         self::maybe_initialize_admin_bar_overflow_hooks();
 
@@ -282,7 +282,8 @@ class Masterbar {
      * Add a single mobile overflow menu for app links emitted outside app context.
      */
     public static function add_admin_bar_overflow_menu( $wp_admin_bar ) {
-        $links = self::get_admin_bar_overflow_links();
+        $links     = self::get_admin_bar_overflow_links();
+        $is_sticky = self::should_show_admin_bar_overflow_as_top_level();
 
         if ( empty( $links ) ) {
             return;
@@ -293,7 +294,7 @@ class Masterbar {
                 'id'    => 'wp-app-admin-overflow',
                 'title' => '<span class="ab-icon"></span><span class="screen-reader-text">' . esc_html__( 'Apps' ) . '</span>',
                 'meta'  => [
-                    'class' => 'wp-app-admin-overflow',
+                    'class' => 'wp-app-admin-overflow' . ( $is_sticky ? ' wp-app-admin-overflow-sticky' : '' ),
                     'title' => __( 'Apps' ),
                 ],
             ]
@@ -308,6 +309,20 @@ class Masterbar {
                     'href'   => $link['href'],
                     'meta'   => [
                         'class' => 'wp-app-admin-overflow-link',
+                    ],
+                ]
+            );
+        }
+
+        if ( function_exists( 'current_user_can' ) && current_user_can( 'manage_options' ) ) {
+            $wp_admin_bar->add_node(
+                [
+                    'id'     => 'wp-app-admin-overflow-settings',
+                    'parent' => 'wp-app-admin-overflow',
+                    'title'  => __( 'WP Apps Settings' ),
+                    'href'   => function_exists( 'admin_url' ) ? admin_url( 'options-general.php?page=wp-apps' ) : home_url( '/wp-admin/options-general.php?page=wp-apps' ),
+                    'meta'   => [
+                        'class' => 'wp-app-admin-overflow-settings',
                     ],
                 ]
             );
@@ -360,31 +375,93 @@ class Masterbar {
      * Get the app links that should be collapsed into the mobile overflow menu.
      */
     private static function get_admin_bar_overflow_links() {
-        $links = [];
+        $links                          = [];
+        $current_app_path               = self::get_current_app_url_path();
+        $show_inactive_apps_in_overflow = \WpApp\Settings::should_show_inactive_apps_in_overflow();
+        $registered_apps                = \WpApp\Settings::get_registered_apps();
 
-        foreach ( self::$instances as $masterbar ) {
-            if ( ! $masterbar instanceof self ) {
+        foreach ( $registered_apps as $app_path => $metadata ) {
+            if ( ! is_string( $app_path ) || '' === $app_path || ! is_array( $metadata ) ) {
                 continue;
             }
 
-            if ( ! $masterbar->admin_bar_app_link || ! $masterbar->app_url_path ) {
+            if ( $current_app_path === $app_path ) {
                 continue;
             }
 
-            if ( $masterbar->is_app_request() || ! $masterbar->can_user_access_app() || ! $masterbar->should_show_global_app_link() || ! $masterbar->should_show_app_link_content() ) {
+            if ( class_exists( __NAMESPACE__ . '\Registry' ) && ! \WpApp\Registry::can_user_access_app( $app_path ) ) {
                 continue;
             }
 
-            $id_base = preg_replace( '/[^A-Za-z0-9_-]/', '_', $masterbar->app_url_path );
+            $masterbar = self::get_instance_for_app( $app_path );
 
-            $links[ $masterbar->app_url_path ] = [
-                'id'    => 'wp-app-admin-overflow-' . $id_base,
-                'title' => $masterbar->get_app_link_title(),
-                'href'  => $masterbar->get_app_home_url(),
-            ];
+            if ( $masterbar && ! $masterbar->admin_bar_app_link ) {
+                continue;
+            }
+
+            if ( $masterbar && ! $masterbar->should_show_app_link_content() ) {
+                continue;
+            }
+
+            if ( ! $masterbar && ! self::should_show_app_link_content_for_app( $app_path, $metadata ) ) {
+                continue;
+            }
+
+            if ( ! $show_inactive_apps_in_overflow && ( $masterbar ? ! $masterbar->should_show_global_app_link() : ! \WpApp\Settings::should_show_global_app_link( $app_path ) ) ) {
+                continue;
+            }
+
+            $links[ $app_path ] = self::get_admin_bar_overflow_link( $app_path, $metadata );
         }
 
         return apply_filters( 'wp_app_admin_bar_overflow_links', $links );
+    }
+
+    /**
+     * Build one overflow link record.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $metadata App metadata.
+     * @return array Overflow link.
+     */
+    private static function get_admin_bar_overflow_link( $app_path, $metadata ) {
+        $id_base = preg_replace( '/[^A-Za-z0-9_-]/', '_', $app_path );
+
+        return [
+            'id'    => 'wp-app-admin-overflow-' . $id_base,
+            'title' => self::get_app_link_title_for_app( $app_path, $metadata, null, true ),
+            'href'  => isset( $metadata['url'] ) && $metadata['url'] ? $metadata['url'] : home_url( '/' . $app_path ),
+        ];
+    }
+
+    /**
+     * Check if the overflow menu should be visible outside the mobile breakpoint.
+     */
+    private static function should_show_admin_bar_overflow_as_top_level() {
+        return \WpApp\Settings::should_show_inactive_apps_in_overflow();
+    }
+
+    /**
+     * Get the app path for the current app request.
+     */
+    private static function get_current_app_url_path() {
+        global $wp_query;
+
+        if ( $wp_query && isset( $wp_query->query_vars['wp_app_path'] ) ) {
+            $app_path = get_query_var( 'wp_app_path' );
+
+            if ( is_string( $app_path ) && '' !== $app_path ) {
+                return $app_path;
+            }
+        }
+
+        foreach ( self::$instances as $masterbar ) {
+            if ( $masterbar instanceof self && $masterbar->is_app_request() ) {
+                return $masterbar->app_url_path;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -400,12 +477,40 @@ class Masterbar {
                 z-index: 100101;
             }
 
-            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow {
-                display: none;
+            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow.wp-app-admin-overflow-sticky > .ab-item {
+                color: #a7aaad;
+                cursor: pointer;
+                overflow: hidden;
+                padding: 0;
+                position: relative;
+                text-indent: 100%;
+                white-space: nowrap;
+                width: 32px;
+            }
+
+            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow.wp-app-admin-overflow-sticky > .ab-item .ab-icon {
+                height: 32px;
+                margin: 0;
+                padding: 0;
+                width: 32px;
             }
 
             #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon:before {
                 content: "\f347";
+                display: block;
+                font: normal 20px/1 dashicons;
+                height: 32px;
+                line-height: 32px;
+                text-align: center;
+                text-indent: 0;
+                top: 0;
+                width: 32px;
+            }
+
+            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow-settings {
+                border-top: 1px solid rgba(255, 255, 255, 0.16);
+                margin-top: 4px;
+                padding-top: 4px;
             }
 
             @media screen and (max-width: 782px) {
@@ -435,13 +540,9 @@ class Masterbar {
                 }
 
                 #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon:before {
-                    display: block;
                     font: normal 32px/1 dashicons;
                     height: 46px;
                     line-height: 46px;
-                    text-align: center;
-                    text-indent: 0;
-                    top: 0;
                     width: 52px;
                 }
 
@@ -878,8 +979,6 @@ class Masterbar {
 
             ' . $selector . ' .wp-app-link-icon {
                 align-items: center;
-                background: var(--wp-app-admin-color-subtle);
-                border-radius: 3px;
                 color: var(--wp-app-masterbar-text);
                 display: inline-flex;
                 font-size: 11px;
@@ -892,18 +991,33 @@ class Masterbar {
                 width: 18px;
             }
 
+            ' . $selector . ' .wp-app-link-icon.wp-app-link-icon-generated {
+                background: var(--wp-app-admin-color-subtle);
+                border-radius: 3px;
+            }
+
             ' . $selector . ' .wp-app-link-icon img {
                 display: block;
                 height: 18px;
-                object-fit: cover;
+                max-height: 18px;
+                max-width: 18px;
+                object-fit: contain;
                 width: 18px;
             }
 
             ' . $selector . ' .wp-app-link-icon .dashicons {
+                font-family: dashicons !important;
                 font-size: 16px;
+                font-style: normal;
+                font-weight: 400;
                 height: 16px;
                 line-height: 16px;
+                text-transform: none;
                 width: 16px;
+            }
+
+            ' . $selector . ' .wp-app-link-icon .dashicons:before {
+                font-family: dashicons !important;
             }
         ';
     }
@@ -1120,7 +1234,7 @@ class Masterbar {
      */
     private function add_admin_context_items( $wp_admin_bar ) {
         // Only add link if user can access this app and the app link is enabled
-        if ( $this->can_user_access_app() && $this->admin_bar_app_link && $this->should_show_global_app_link() && $this->should_show_app_link_content() ) {
+        if ( $this->can_user_access_app() && $this->admin_bar_app_link && ! $this->should_show_app_link_in_overflow_only() && $this->should_show_global_app_link() && $this->should_show_app_link_content() ) {
             // Add a simple link to the app from regular WordPress admin
             $wp_admin_bar->add_node(
                 [
@@ -1174,9 +1288,21 @@ class Masterbar {
      * Get HTML title for app admin bar links.
      */
     private function get_app_link_title() {
-        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
-        $metadata = $this->get_app_metadata();
-        $app_name = $this->get_app_display_name();
+        return self::get_app_link_title_for_app( $this->app_url_path, $this->get_app_metadata(), $this->get_app_display_name(), $this->is_app_request() );
+    }
+
+    /**
+     * Get HTML title for a registered app admin bar link.
+     *
+     * @param string      $app_path App URL path.
+     * @param array       $metadata App metadata.
+     * @param string|null $fallback_name Optional fallback display name.
+     * @param bool        $force_show_text Whether to force visible text regardless of app settings.
+     * @return string Link title HTML.
+     */
+    private static function get_app_link_title_for_app( $app_path, $metadata, $fallback_name = null, $force_show_text = false ) {
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
+        $app_name = self::get_app_display_name_for_app( $app_path, $metadata, $fallback_name );
         $title    = '<span class="wp-app-link-title">';
 
         if ( ! empty( $settings['show_icon'] ) ) {
@@ -1185,18 +1311,18 @@ class Masterbar {
             $icon     = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
 
             if ( '' !== $icon ) {
-                $title .= $this->get_app_icon_html( $icon );
+                $title .= self::get_app_icon_html( $icon );
             } elseif ( $dashicon ) {
-                $title .= $this->get_app_icon_html( $dashicon );
+                $title .= self::get_app_icon_html( $dashicon );
             } elseif ( $icon_url ) {
-                $title .= '<span class="wp-app-link-icon"><img src="' . esc_url( $icon_url ) . '" alt=""></span>';
+                $title .= self::get_app_image_icon_html( $icon_url );
             } elseif ( ! empty( $settings['generate_letter_icon'] ) ) {
                 $letter = strtoupper( substr( $app_name, 0, 1 ) );
-                $title .= '<span class="wp-app-link-icon" aria-hidden="true">' . esc_html( $letter ) . '</span>';
+                $title .= '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true">' . esc_html( $letter ) . '</span>';
             }
         }
 
-        if ( ! empty( $settings['show_text'] ) ) {
+        if ( $force_show_text || ! empty( $settings['show_text'] ) ) {
             $title .= '<span class="wp-app-link-text">' . esc_html( $app_name ) . '</span>';
         } else {
             $title .= '<span class="screen-reader-text">' . esc_html( $app_name ) . '</span>';
@@ -1211,28 +1337,57 @@ class Masterbar {
      * Get display title, including admin override when configured.
      */
     private function get_app_display_name() {
-        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
+        return self::get_app_display_name_for_app( $this->app_url_path, $this->get_app_metadata(), $this->get_app_name() );
+    }
+
+    /**
+     * Get display title for an app path, including admin override when configured.
+     *
+     * @param string      $app_path App URL path.
+     * @param array       $metadata App metadata.
+     * @param string|null $fallback_name Optional fallback display name.
+     * @return string App display name.
+     */
+    private static function get_app_display_name_for_app( $app_path, $metadata, $fallback_name = null ) {
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
         $title    = isset( $settings['title'] ) ? trim( $settings['title'] ) : '';
 
         if ( '' !== $title ) {
             return $title;
         }
 
-        return $this->get_app_name();
+        if ( null !== $fallback_name ) {
+            return $fallback_name;
+        }
+
+        if ( isset( $metadata['name'] ) && is_string( $metadata['name'] ) && '' !== trim( $metadata['name'] ) ) {
+            return trim( $metadata['name'] );
+        }
+
+        return ucwords( str_replace( [ '-', '_' ], ' ', $app_path ) );
     }
 
     /**
      * Get icon HTML for a text or dashicon override.
      */
-    private function get_app_icon_html( $icon ) {
+    private static function get_app_icon_html( $icon ) {
         if ( preg_match( '/^(dashicons-)?[a-z0-9-]+$/', $icon ) ) {
             $dashicon = 0 === strpos( $icon, 'dashicons-' ) ? $icon : 'dashicons-' . $icon;
-            return '<span class="wp-app-link-icon" aria-hidden="true"><span class="dashicons ' . esc_attr( $dashicon ) . '"></span></span>';
+            return '<span class="wp-app-link-icon wp-app-link-icon-dashicon" aria-hidden="true"><span class="dashicons ' . esc_attr( $dashicon ) . '"></span></span>';
         }
 
-        return '<span class="wp-app-link-icon" aria-hidden="true">' . esc_html( $icon ) . '</span>';
+        return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true">' . esc_html( $icon ) . '</span>';
     }
 
+    /**
+     * Get icon HTML for an image URL.
+     *
+     * @param string $icon_url Icon URL.
+     * @return string Icon HTML.
+     */
+    private static function get_app_image_icon_html( $icon_url ) {
+        return '<span class="wp-app-link-icon wp-app-link-icon-image"><img src="' . esc_url( $icon_url ) . '" alt="" decoding="async"></span>';
+    }
 
     /**
      * Check if this is an app request
@@ -1265,11 +1420,30 @@ class Masterbar {
     }
 
     /**
+     * Check if this inactive app should be represented only in the overflow menu.
+     */
+    private function should_show_app_link_in_overflow_only() {
+        $current_app_path = self::get_current_app_url_path();
+
+        return $current_app_path && $current_app_path !== $this->app_url_path && \WpApp\Settings::should_show_inactive_apps_in_overflow();
+    }
+
+    /**
      * Check if app link settings leave visible content for the link.
      */
     private function should_show_app_link_content() {
-        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
-        $metadata = $this->get_app_metadata();
+        return self::should_show_app_link_content_for_app( $this->app_url_path, $this->get_app_metadata() );
+    }
+
+    /**
+     * Check if app link settings leave visible content for an app link.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $metadata App metadata.
+     * @return bool True when there is visible app link content.
+     */
+    private static function should_show_app_link_content_for_app( $app_path, $metadata ) {
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
 
         if ( ! empty( $settings['show_text'] ) ) {
             return true;

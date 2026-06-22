@@ -33,6 +33,10 @@ if ( ! function_exists( 'wp_app_head' ) ) {
             wp_app_dequeue_theme_assets();
         }
 
+        if ( function_exists( 'wp_app_enqueue_admin_bar_dependencies' ) ) {
+            wp_app_enqueue_admin_bar_dependencies();
+        }
+
         if ( function_exists( 'wp_head' ) ) {
             wp_head();
         } else {
@@ -56,6 +60,21 @@ if ( ! function_exists( 'wp_app_head' ) ) {
         wp_app_do_scoped_action( 'wp_app_head_meta' );
         wp_app_do_scoped_action( 'wp_app_head_styles' );
         wp_app_do_scoped_action( 'wp_app_head_scripts' );
+    }
+}
+
+if ( ! function_exists( 'wp_app_enqueue_admin_bar_dependencies' ) ) {
+    /**
+     * Queue core styles needed by the WordPress admin bar on app pages.
+     */
+    function wp_app_enqueue_admin_bar_dependencies() {
+        if ( function_exists( 'wp_enqueue_style' ) ) {
+            wp_enqueue_style( 'dashicons' );
+
+            if ( function_exists( 'is_admin_bar_showing' ) && is_admin_bar_showing() ) {
+                wp_enqueue_style( 'admin-bar' );
+            }
+        }
     }
 }
 

@@ -55,6 +55,12 @@ When disabled:
 
 ## Display Options
 
+### Global App Visibility
+
+Use **Settings > WP Apps** to control how registered app links appear across the masterbar. `Only show the active app by default` keeps inactive apps out of the top-level masterbar unless an individual app is marked `Always show this menu entry`.
+
+Enable `Show inactive apps in the overflow menu on app pages` to keep the current app visible while collecting the other registered app links under the `Apps` overflow menu.
+
 ### Admin Color Scheme
 
 WpApp outputs CSS custom properties from the current user's WordPress admin color scheme and uses them for the WordPress admin bar and anonymous-user masterbar. This keeps app navigation aligned with each user's selected admin profile color.
