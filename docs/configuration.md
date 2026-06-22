@@ -39,6 +39,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 
 WpApp automatically exposes the current user's WordPress admin color scheme as CSS custom properties on app pages. Use those variables in app styles instead of hard-coding brand colors.
 
+Global masterbar behavior can also be configured in **Settings > WP Apps**. The global display settings can hide inactive app links by default and, when enabled, collect all inactive app links under the `Apps` overflow menu while keeping the current app visible in the masterbar.
+
 ### Access Control
 
 | Option | Type | Default | Description |

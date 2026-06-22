@@ -64,4 +64,24 @@ class WpAppTest extends TestCase {
 
 		$this->assertSame( 'Meine App', $app->get_app_name() );
 	}
+
+	public function test_app_name_falls_back_when_translation_is_empty() {
+		$GLOBALS['__wp_app_test_action_counts']['init'] = 1;
+		$GLOBALS['__wp_app_test_translations']          = [
+			'my-app' => [
+				'My App' => '',
+			],
+		];
+
+		$app = new WpApp(
+			'/test/templates',
+			'my-app',
+			[
+				'app_name'            => 'My App',
+				'app_name_textdomain' => 'my-app',
+			]
+		);
+
+		$this->assertSame( 'My App', $app->get_app_name() );
+	}
 }

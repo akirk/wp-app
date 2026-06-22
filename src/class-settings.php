@@ -84,8 +84,9 @@ class Settings {
      */
     public static function get_default_settings() {
         return [
-            'only_show_active_app' => true,
-            'apps'                 => [],
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [],
         ];
     }
 
@@ -148,6 +149,16 @@ class Settings {
     }
 
     /**
+     * Whether inactive app links should be collected under the overflow menu on app pages.
+     *
+     * @return bool True when inactive apps should be shown in overflow.
+     */
+    public static function should_show_inactive_apps_in_overflow() {
+        $settings = self::get_settings();
+        return ! empty( $settings['show_inactive_apps_in_overflow'] );
+    }
+
+    /**
      * Get WpApp apps registered with this library.
      *
      * @return array App metadata keyed by app path.
@@ -186,8 +197,9 @@ class Settings {
         }
 
         return [
-            'only_show_active_app' => ! empty( $value['only_show_active_app'] ),
-            'apps'                 => $apps,
+            'only_show_active_app'           => ! empty( $value['only_show_active_app'] ),
+            'show_inactive_apps_in_overflow' => ! empty( $value['show_inactive_apps_in_overflow'] ),
+            'apps'                           => $apps,
         ];
     }
 
@@ -285,6 +297,12 @@ class Settings {
                                 <input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[only_show_active_app]" value="1" <?php checked( ! empty( $settings['only_show_active_app'] ) ); ?>>
                                 <?php echo esc_html__( 'Only show the active app by default' ); ?>
                             </label>
+                            <br>
+                            <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="0">
+                            <label>
+                                <input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="1" <?php checked( ! empty( $settings['show_inactive_apps_in_overflow'] ) ); ?>>
+                                <?php echo esc_html__( 'Show inactive apps in the overflow menu on app pages' ); ?>
+                            </label>
                         </td>
                     </tr>
                 </table>
@@ -311,6 +329,7 @@ class Settings {
                             class="card wp-app-settings-card"
                             data-default-title="<?php echo esc_attr( $app_name ); ?>"
                             data-default-letter="<?php echo esc_attr( strtoupper( substr( $app_name, 0, 1 ) ) ); ?>"
+                            data-default-dashicon="<?php echo esc_attr( isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '' ); ?>"
                             data-icon-url="<?php echo esc_url( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' ); ?>"
                             data-app-path="<?php echo esc_attr( $app_path ); ?>"
                         >
@@ -392,6 +411,7 @@ class Settings {
                     const iconField = card.querySelector("[data-wp-app-setting='icon']");
                     const generateLetterIconField = card.querySelector("[data-wp-app-setting='generate_letter_icon']");
                     const defaultTitle = card.dataset.defaultTitle || "";
+                    const defaultDashicon = card.dataset.defaultDashicon || "";
                     const iconUrl = card.dataset.iconUrl || "";
                     const title = titleField.value.trim() || defaultTitle;
                     const icon = iconField.value.trim();
@@ -422,6 +442,10 @@ class Settings {
                         } else {
                             iconWrap.textContent = icon;
                         }
+                    } else if (defaultDashicon) {
+                        const span = document.createElement("span");
+                        span.className = "dashicons " + defaultDashicon;
+                        iconWrap.appendChild(span);
                     } else if (iconUrl) {
                         const img = document.createElement("img");
                         img.alt = "";
@@ -546,7 +570,7 @@ class Settings {
      */
     private static function render_preview_icon( $app_settings, $metadata, $title ) {
         $icon           = isset( $app_settings['icon'] ) ? trim( $app_settings['icon'] ) : '';
-        $has_icon_value = '' !== $icon || ! empty( $metadata['icon_url'] ) || ! empty( $app_settings['generate_letter_icon'] );
+        $has_icon_value = '' !== $icon || ! empty( $metadata['dashicon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $app_settings['generate_letter_icon'] );
         $hidden         = empty( $app_settings['show_icon'] ) || ! $has_icon_value;
 
         echo '<span class="wp-app-link-icon"' . ( $hidden ? ' hidden' : '' ) . '>';
@@ -558,6 +582,8 @@ class Settings {
             } else {
                 echo esc_html( $icon );
             }
+        } elseif ( ! empty( $metadata['dashicon'] ) ) {
+            echo '<span class="dashicons ' . esc_attr( $metadata['dashicon'] ) . '"></span>';
         } elseif ( ! empty( $metadata['icon_url'] ) ) {
             echo '<img src="' . esc_url( $metadata['icon_url'] ) . '" alt="">';
         } elseif ( ! empty( $app_settings['generate_letter_icon'] ) ) {
@@ -607,7 +633,7 @@ class Settings {
             return false;
         }
 
-        return ! empty( $app_settings['icon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $app_settings['generate_letter_icon'] );
+        return ! empty( $app_settings['icon'] ) || ! empty( $metadata['dashicon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $app_settings['generate_letter_icon'] );
     }
 
     /**
@@ -651,6 +677,14 @@ class Settings {
         }
 
         if ( ! self::should_show_global_app_link( $app_path ) ) {
+            if ( self::should_show_inactive_apps_in_overflow() ) {
+                return [
+                    'state'   => 'overflow',
+                    'label'   => __( 'Shown in the overflow menu.' ),
+                    'message' => __( 'Inactive app pages collect this app under the Apps overflow menu for' ),
+                ];
+            }
+
             return [
                 'state'   => 'active_only',
                 'label'   => __( 'Shown only on its app pages.' ),
