@@ -407,7 +407,13 @@ class Masterbar {
                 continue;
             }
 
-            if ( ! $show_inactive_apps_in_overflow && ( $masterbar ? ! $masterbar->should_show_global_app_link() : ! \WpApp\Settings::should_show_global_app_link( $app_path ) ) ) {
+            $should_show_global_app_link = $masterbar ? $masterbar->should_show_global_app_link() : \WpApp\Settings::should_show_global_app_link( $app_path );
+
+            if ( $should_show_global_app_link ) {
+                continue;
+            }
+
+            if ( ! $show_inactive_apps_in_overflow ) {
                 continue;
             }
 
@@ -1316,7 +1322,7 @@ class Masterbar {
                 $title .= self::get_app_icon_html( $dashicon );
             } elseif ( $icon_url ) {
                 $title .= self::get_app_image_icon_html( $icon_url );
-            } elseif ( ! empty( $settings['generate_letter_icon'] ) ) {
+            } else {
                 $letter = strtoupper( substr( $app_name, 0, 1 ) );
                 $title .= '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true">' . esc_html( $letter ) . '</span>';
             }
@@ -1368,12 +1374,11 @@ class Masterbar {
     }
 
     /**
-     * Get icon HTML for a text or dashicon override.
+     * Get icon HTML for a text or Dashicon class override.
      */
     private static function get_app_icon_html( $icon ) {
-        if ( preg_match( '/^(dashicons-)?[a-z0-9-]+$/', $icon ) ) {
-            $dashicon = 0 === strpos( $icon, 'dashicons-' ) ? $icon : 'dashicons-' . $icon;
-            return '<span class="wp-app-link-icon wp-app-link-icon-dashicon" aria-hidden="true"><span class="dashicons ' . esc_attr( $dashicon ) . '"></span></span>';
+        if ( preg_match( '/^dashicons-[a-z0-9-]+$/', $icon ) ) {
+            return '<span class="wp-app-link-icon wp-app-link-icon-dashicon" aria-hidden="true"><span class="dashicons ' . esc_attr( $icon ) . '"></span></span>';
         }
 
         return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true">' . esc_html( $icon ) . '</span>';
@@ -1425,7 +1430,7 @@ class Masterbar {
     private function should_show_app_link_in_overflow_only() {
         $current_app_path = self::get_current_app_url_path();
 
-        return $current_app_path && $current_app_path !== $this->app_url_path && \WpApp\Settings::should_show_inactive_apps_in_overflow();
+        return $current_app_path && $current_app_path !== $this->app_url_path && \WpApp\Settings::should_show_inactive_apps_in_overflow() && ! $this->should_show_global_app_link();
     }
 
     /**
@@ -1453,7 +1458,7 @@ class Masterbar {
             return false;
         }
 
-        return ! empty( $settings['icon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $metadata['dashicon'] ) || ! empty( $settings['generate_letter_icon'] );
+        return true;
     }
 
     /**
