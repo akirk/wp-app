@@ -151,6 +151,45 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertSame( 'wp-app-admin-overflow', $admin_bar->nodes['wp-app-admin-overflow-inactive-overflow-app']['parent'] );
     }
 
+    public function test_always_show_inactive_app_stays_top_level_when_overflow_is_enabled() {
+        global $__wp_app_test_options, $wp_query;
+
+        $active_app = new WpApp( '', 'active-always-show-app', [ 'app_name' => 'Active Always Show App' ] );
+        $pinned_app = new WpApp( '', 'pinned-always-show-app', [ 'app_name' => 'Pinned Always Show App' ] );
+        $pinned_app->init();
+        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub simulates the current app request.
+        $wp_query = (object) [
+            'query_vars' => [
+                'wp_app_request' => true,
+                'wp_app_path'    => 'active-always-show-app',
+            ],
+        ];
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'pinned-always-show-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => true,
+                    'show_text'            => true,
+                    'always_show'          => true,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $active_app->masterbar()->add_wp_admin_bar_app_context_items( $admin_bar );
+        $pinned_app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
+
+        $this->assertArrayHasKey( 'wp-app-active_always_show_app', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-link-pinned_always_show_app', $admin_bar->nodes );
+        $this->assertArrayNotHasKey( 'wp-app-admin-overflow-pinned-always-show-app', $admin_bar->nodes );
+    }
+
     public function test_overflow_collects_inactive_registered_apps_hidden_by_global_setting() {
         global $__wp_app_test_options, $wp_query;
 
@@ -305,7 +344,7 @@ class MasterbarSettingsTest extends TestCase {
             'apps'                 => [
                 'customized-app' => [
                     'title'                => 'Renamed App',
-                    'icon'                 => 'admin-site',
+                    'icon'                 => 'dashicons-admin-site',
                     'show_icon'            => true,
                     'generate_letter_icon' => true,
                     'show_text'            => true,
@@ -323,6 +362,36 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'wp-app-link-icon-dashicon', $title );
         $this->assertStringContainsString( 'dashicons-admin-site', $title );
         $this->assertStringNotContainsString( 'Customized App</span>', $title );
+    }
+
+    public function test_dashicon_override_requires_full_dashicon_class() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'short-dashicon-app', [ 'app_name' => 'Short Dashicon App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app' => false,
+            'apps'                 => [
+                'short-dashicon-app' => [
+                    'title'                => '',
+                    'icon'                 => 'admin-site',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => true,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $title = $admin_bar->nodes['wp-app-link-short_dashicon_app']['title'];
+
+        $this->assertStringContainsString( 'wp-app-link-icon-generated', $title );
+        $this->assertStringContainsString( 'admin-site', $title );
+        $this->assertStringNotContainsString( 'wp-app-link-icon-dashicon', $title );
+        $this->assertStringNotContainsString( 'dashicons-admin-site', $title );
     }
 
     public function test_icon_override_counts_as_visible_link_content_without_text() {
@@ -351,6 +420,35 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( '*', $admin_bar->nodes['wp-app-link-emoji_app']['title'] );
         $this->assertStringContainsString( 'wp-app-link-icon-generated', $admin_bar->nodes['wp-app-link-emoji_app']['title'] );
         $this->assertStringContainsString( 'screen-reader-text', $admin_bar->nodes['wp-app-link-emoji_app']['title'] );
+    }
+
+    public function test_letter_icon_is_generated_when_icons_are_enabled_without_icon_override() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'letter-fallback-app', [ 'app_name' => 'Letter Fallback App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app' => false,
+            'apps'                 => [
+                'letter-fallback-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => false,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $title = $admin_bar->nodes['wp-app-link-letter_fallback_app']['title'];
+
+        $this->assertStringContainsString( 'wp-app-link-icon-generated', $title );
+        $this->assertStringContainsString( '>L</span>', $title );
+        $this->assertStringContainsString( 'screen-reader-text', $title );
     }
 
     public function test_overflow_forces_visible_text_for_icon_only_apps() {

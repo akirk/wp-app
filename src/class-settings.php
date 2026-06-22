@@ -271,6 +271,18 @@ class Settings {
                     width: 100%;
                 }
 
+                .wp-app-settings-card .form-table td p {
+                    margin-bottom: 10px;
+                }
+
+                .wp-app-settings-field {
+                    margin: 0 0 10px;
+                }
+
+                .wp-app-settings-field:last-child {
+                    margin-bottom: 0;
+                }
+
                 .wp-app-masterbar-visibility-note {
                     margin: 0;
                 }
@@ -331,10 +343,11 @@ class Settings {
                             data-default-letter="<?php echo esc_attr( strtoupper( substr( $app_name, 0, 1 ) ) ); ?>"
                             data-default-dashicon="<?php echo esc_attr( isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '' ); ?>"
                             data-icon-url="<?php echo esc_url( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' ); ?>"
+                            data-force-show-text="<?php echo 'overflow' === $visibility_status['state'] ? '1' : '0'; ?>"
                             data-app-path="<?php echo esc_attr( $app_path ); ?>"
                         >
                             <?php self::render_visibility_note_if_needed( $app_path, $visibility_status ); ?>
-                            <?php self::render_preview( $app_settings, $metadata, $app_name, $app_path ); ?>
+                            <?php self::render_preview( $app_settings, $metadata, $app_name, $app_path, 'overflow' === $visibility_status['state'] ); ?>
                             <table class="form-table" role="presentation">
                                 <tr>
                                     <th scope="row">
@@ -357,18 +370,19 @@ class Settings {
                                         <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon' ) ); ?>"><?php echo esc_html__( 'Icon' ); ?></label>
                                     </th>
                                     <td>
-                                        <input
-                                            id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon' ) ); ?>"
-                                            class="regular-text"
-                                            type="text"
-                                            name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon' ) ); ?>"
-                                            data-wp-app-setting="icon"
-                                            value="<?php echo esc_attr( $app_settings['icon'] ); ?>"
-                                            placeholder="<?php echo esc_attr__( 'Emoji or dashicon name' ); ?>"
-                                        >
-                                        <p class="description"><?php echo esc_html__( 'Emoji, dashicon name, or dashicon class.' ); ?></p>
-                                        <?php self::render_checkbox( $app_path, 'show_icon', $app_settings['show_icon'], __( 'Show icon' ) ); ?><br>
-                                        <?php self::render_checkbox( $app_path, 'generate_letter_icon', $app_settings['generate_letter_icon'], __( 'Generate letter icon when no icon is provided' ) ); ?>
+                                        <p class="wp-app-settings-field"><?php self::render_checkbox( $app_path, 'show_icon', $app_settings['show_icon'], __( 'Show icon' ) ); ?></p>
+                                        <div class="wp-app-settings-field">
+                                            <input
+                                                id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon' ) ); ?>"
+                                                class="regular-text"
+                                                type="text"
+                                                name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon' ) ); ?>"
+                                                data-wp-app-setting="icon"
+                                                value="<?php echo esc_attr( $app_settings['icon'] ); ?>"
+                                                placeholder="<?php echo esc_attr__( 'e.g. dashicons-admin-site' ); ?>"
+                                            >
+                                            <p class="description"><?php echo esc_html__( 'Use an emoji or' ); ?> <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank" rel="noopener noreferrer"><?php echo esc_html__( 'Dashicon' ); ?></a> <?php echo esc_html__( 'class.' ); ?></p>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr>
@@ -409,13 +423,12 @@ class Settings {
 
                     const titleField = card.querySelector("[data-wp-app-setting='title']");
                     const iconField = card.querySelector("[data-wp-app-setting='icon']");
-                    const generateLetterIconField = card.querySelector("[data-wp-app-setting='generate_letter_icon']");
                     const defaultTitle = card.dataset.defaultTitle || "";
                     const defaultDashicon = card.dataset.defaultDashicon || "";
                     const iconUrl = card.dataset.iconUrl || "";
+                    const forceShowText = card.dataset.forceShowText === "1";
                     const title = titleField.value.trim() || defaultTitle;
                     const icon = iconField.value.trim();
-                    const generateLetterIcon = generateLetterIconField.checked;
                     const showTextField = card.querySelector("[data-wp-app-setting='show_text']");
                     const showIconField = card.querySelector("[data-wp-app-setting='show_icon']");
                     const preview = card.querySelector(".wp-app-masterbar-preview-wrap");
@@ -423,7 +436,7 @@ class Settings {
                     const textWrap = preview.querySelector(".wp-app-link-text");
 
                     textWrap.textContent = title;
-                    textWrap.hidden = !showTextField.checked;
+                    textWrap.hidden = !forceShowText && !showTextField.checked;
                     iconWrap.innerHTML = "";
                     iconWrap.hidden = !showIconField.checked;
                     preview.classList.remove("is-hidden");
@@ -434,10 +447,9 @@ class Settings {
                     }
 
                     if (icon) {
-                        if (/^(dashicons-)?[a-z0-9-]+$/.test(icon)) {
-                            const dashicon = icon.indexOf("dashicons-") === 0 ? icon : "dashicons-" + icon;
+                        if (/^dashicons-[a-z0-9-]+$/.test(icon)) {
                             const span = document.createElement("span");
-                            span.className = "dashicons " + dashicon;
+                            span.className = "dashicons " + icon;
                             iconWrap.appendChild(span);
                         } else {
                             iconWrap.textContent = icon;
@@ -451,11 +463,8 @@ class Settings {
                         img.alt = "";
                         img.src = iconUrl;
                         iconWrap.appendChild(img);
-                    } else if (generateLetterIcon) {
-                        iconWrap.textContent = (title.charAt(0) || card.dataset.defaultLetter || "").toUpperCase();
                     } else {
-                        iconWrap.hidden = true;
-                        preview.classList.toggle("is-hidden", !showTextField.checked);
+                        iconWrap.textContent = (title.charAt(0) || card.dataset.defaultLetter || "").toUpperCase();
                     }
                 }
             </script>
@@ -496,10 +505,11 @@ class Settings {
     /**
      * Render the saved-state preview for one app.
      */
-    private static function render_preview( $app_settings, $metadata, $app_name, $app_path ) {
+    private static function render_preview( $app_settings, $metadata, $app_name, $app_path, $force_show_text = false ) {
         $title      = '' !== trim( $app_settings['title'] ) ? trim( $app_settings['title'] ) : $app_name;
         $menu_items = self::get_preview_menu_items( $app_path );
-        $is_hidden  = ! self::app_settings_have_visible_preview_content( $app_settings, $metadata );
+        $show_text  = $force_show_text || ! empty( $app_settings['show_text'] );
+        $is_hidden  = ! self::app_settings_have_visible_preview_content( $app_settings, $metadata ) && ! $force_show_text;
         ?>
         <div class="wp-app-masterbar-preview-wrap<?php echo $is_hidden ? ' is-hidden' : ''; ?>">
             <div id="wpadminbar" class="nojq">
@@ -509,7 +519,7 @@ class Settings {
                             <a class="ab-item" role="menuitem" href="<?php echo esc_url( isset( $metadata['url'] ) ? $metadata['url'] : '#' ); ?>"<?php echo ! empty( $menu_items ) ? ' aria-expanded="false"' : ''; ?>>
                                 <span class="wp-app-link-title">
                                     <?php self::render_preview_icon( $app_settings, $metadata, $title ); ?>
-                                    <span class="wp-app-link-text" <?php echo empty( $app_settings['show_text'] ) ? 'hidden' : ''; ?>><?php echo esc_html( $title ); ?></span>
+                                    <span class="wp-app-link-text" <?php echo $show_text ? '' : 'hidden'; ?>><?php echo esc_html( $title ); ?></span>
                                 </span>
                             </a>
                             <?php if ( ! empty( $menu_items ) ) : ?>
@@ -569,16 +579,14 @@ class Settings {
      * Render the saved-state preview icon for one app.
      */
     private static function render_preview_icon( $app_settings, $metadata, $title ) {
-        $icon           = isset( $app_settings['icon'] ) ? trim( $app_settings['icon'] ) : '';
-        $has_icon_value = '' !== $icon || ! empty( $metadata['dashicon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $app_settings['generate_letter_icon'] );
-        $hidden         = empty( $app_settings['show_icon'] ) || ! $has_icon_value;
+        $icon   = isset( $app_settings['icon'] ) ? trim( $app_settings['icon'] ) : '';
+        $hidden = empty( $app_settings['show_icon'] );
 
         echo '<span class="wp-app-link-icon"' . ( $hidden ? ' hidden' : '' ) . '>';
 
         if ( '' !== $icon ) {
             if ( self::is_dashicon_value( $icon ) ) {
-                $dashicon = 0 === strpos( $icon, 'dashicons-' ) ? $icon : 'dashicons-' . $icon;
-                echo '<span class="dashicons ' . esc_attr( $dashicon ) . '"></span>';
+                echo '<span class="dashicons ' . esc_attr( $icon ) . '"></span>';
             } else {
                 echo esc_html( $icon );
             }
@@ -586,7 +594,7 @@ class Settings {
             echo '<span class="dashicons ' . esc_attr( $metadata['dashicon'] ) . '"></span>';
         } elseif ( ! empty( $metadata['icon_url'] ) ) {
             echo '<img src="' . esc_url( $metadata['icon_url'] ) . '" alt="">';
-        } elseif ( ! empty( $app_settings['generate_letter_icon'] ) ) {
+        } else {
             echo esc_html( strtoupper( substr( $title, 0, 1 ) ) );
         }
 
@@ -633,7 +641,7 @@ class Settings {
             return false;
         }
 
-        return ! empty( $app_settings['icon'] ) || ! empty( $metadata['dashicon'] ) || ! empty( $metadata['icon_url'] ) || ! empty( $app_settings['generate_letter_icon'] );
+        return ! empty( $app_settings['show_icon'] );
     }
 
     /**
@@ -703,7 +711,7 @@ class Settings {
      * Check if an icon override should be rendered as a dashicon.
      */
     private static function is_dashicon_value( $icon ) {
-        return is_string( $icon ) && preg_match( '/^(dashicons-)?[a-z0-9-]+$/', $icon );
+        return is_string( $icon ) && preg_match( '/^dashicons-[a-z0-9-]+$/', $icon );
     }
 
     /**
