@@ -1241,18 +1241,69 @@ class Masterbar {
     private function add_admin_context_items( $wp_admin_bar ) {
         // Only add link if user can access this app and the app link is enabled
         if ( $this->can_user_access_app() && $this->admin_bar_app_link && ! $this->should_show_app_link_in_overflow_only() && $this->should_show_global_app_link() && $this->should_show_app_link_content() ) {
+            $app_node_id = $this->get_admin_bar_app_link_id();
+
             // Add a simple link to the app from regular WordPress admin
             $wp_admin_bar->add_node(
                 [
-					'id'    => 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path ),
+					'id'    => $app_node_id,
 					'title' => $this->get_app_link_title(),
 					'href'  => $this->get_app_home_url(),
 					'meta'  => [
-						'class' => 'wp-app-admin-link',
+						'class' => ( ! empty( $this->menu_items ) ? 'menupop ' : '' ) . 'wp-app-admin-link',
 					],
 				]
             );
+
+            foreach ( $this->menu_items as $item ) {
+                $wp_admin_bar->add_node(
+                    [
+						'id'     => $this->get_admin_context_menu_item_id( $item['id'] ),
+						'parent' => $this->get_admin_context_menu_item_parent( $item['parent'], $app_node_id ),
+						'title'  => $item['title'],
+						'href'   => $item['href'],
+						'meta'   => [
+							'class'  => 'wp-app-menu-item ' . $item['class'],
+							'target' => $item['target'],
+						],
+					]
+                );
+            }
         }
+    }
+
+    /**
+     * Get the top-level admin bar node ID for the inactive global app link.
+     */
+    private function get_admin_bar_app_link_id() {
+        return 'wp-app-link-' . str_replace( '-', '_', $this->app_url_path );
+    }
+
+    /**
+     * Get an app-scoped admin context submenu node ID.
+     *
+     * @param string $item_id Menu item ID.
+     * @return string Scoped admin bar node ID.
+     */
+    private function get_admin_context_menu_item_id( $item_id ) {
+        return $this->get_admin_bar_app_link_id() . '-' . $item_id;
+    }
+
+    /**
+     * Remap menu item parents for inactive global app dropdowns.
+     *
+     * @param string|null $parent Parent menu item ID.
+     * @param string      $app_node_id Inactive global app link node ID.
+     * @return string|null Remapped parent menu item ID.
+     */
+    private function get_admin_context_menu_item_parent( $parent, $app_node_id ) {
+        $active_app_node_id = 'wp-app-' . str_replace( '-', '_', $this->app_url_path );
+
+        if ( null === $parent || $active_app_node_id === $parent ) {
+            return $app_node_id;
+        }
+
+        return $this->get_admin_context_menu_item_id( $parent );
     }
 
     /**

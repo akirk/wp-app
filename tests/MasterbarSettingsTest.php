@@ -190,6 +190,92 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertArrayNotHasKey( 'wp-app-admin-overflow-pinned-always-show-app', $admin_bar->nodes );
     }
 
+    public function test_always_show_inactive_app_includes_app_dropdown_items() {
+        global $__wp_app_test_options, $wp_query;
+
+        $active_app = new WpApp( '', 'active-dropdown-app', [ 'app_name' => 'Active Dropdown App' ] );
+        $pinned_app = new WpApp( '', 'pinned-dropdown-app', [ 'app_name' => 'Pinned Dropdown App' ] );
+        $pinned_app->add_menu_item( 'settings', 'Settings', 'https://example.org/pinned-dropdown-app/settings' );
+        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub simulates the current app request.
+        $wp_query = (object) [
+            'query_vars' => [
+                'wp_app_request' => true,
+                'wp_app_path'    => 'active-dropdown-app',
+            ],
+        ];
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'pinned-dropdown-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => true,
+                    'show_text'            => true,
+                    'always_show'          => true,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $active_app->masterbar()->add_wp_admin_bar_app_context_items( $admin_bar );
+        $pinned_app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $this->assertArrayHasKey( 'wp-app-link-pinned_dropdown_app', $admin_bar->nodes );
+        $this->assertStringContainsString( 'menupop', $admin_bar->nodes['wp-app-link-pinned_dropdown_app']['meta']['class'] );
+        $this->assertArrayHasKey( 'wp-app-link-pinned_dropdown_app-settings', $admin_bar->nodes );
+        $this->assertSame( 'wp-app-link-pinned_dropdown_app', $admin_bar->nodes['wp-app-link-pinned_dropdown_app-settings']['parent'] );
+        $this->assertSame( 'Settings', $admin_bar->nodes['wp-app-link-pinned_dropdown_app-settings']['title'] );
+        $this->assertSame( 'https://example.org/pinned-dropdown-app/settings', $admin_bar->nodes['wp-app-link-pinned_dropdown_app-settings']['href'] );
+    }
+
+    public function test_always_show_inactive_app_scopes_nested_dropdown_parents() {
+        global $__wp_app_test_options, $wp_query;
+
+        $active_app = new WpApp( '', 'active-nested-dropdown-app', [ 'app_name' => 'Active Nested Dropdown App' ] );
+        $pinned_app = new WpApp( '', 'pinned-nested-dropdown-app', [ 'app_name' => 'Pinned Nested Dropdown App' ] );
+        $pinned_app->add_menu_item( 'manage', 'Manage', '' );
+        $pinned_app->add_menu_item(
+            'settings',
+            'Settings',
+            'https://example.org/pinned-nested-dropdown-app/settings',
+            [
+                'parent' => 'manage',
+            ]
+        );
+        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub simulates the current app request.
+        $wp_query = (object) [
+            'query_vars' => [
+                'wp_app_request' => true,
+                'wp_app_path'    => 'active-nested-dropdown-app',
+            ],
+        ];
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'pinned-nested-dropdown-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => true,
+                    'show_text'            => true,
+                    'always_show'          => true,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $active_app->masterbar()->add_wp_admin_bar_app_context_items( $admin_bar );
+        $pinned_app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $this->assertSame( 'wp-app-link-pinned_nested_dropdown_app', $admin_bar->nodes['wp-app-link-pinned_nested_dropdown_app-manage']['parent'] );
+        $this->assertSame( 'wp-app-link-pinned_nested_dropdown_app-manage', $admin_bar->nodes['wp-app-link-pinned_nested_dropdown_app-settings']['parent'] );
+    }
+
     public function test_overflow_collects_inactive_registered_apps_hidden_by_global_setting() {
         global $__wp_app_test_options, $wp_query;
 
