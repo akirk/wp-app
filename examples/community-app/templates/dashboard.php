@@ -14,7 +14,7 @@ global $app, $wpdb;
 $current_user = wp_get_current_user();
 ?>
 <!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
+<html <?php wp_app_language_attributes(); ?>>
 <head>
     <title><?php echo wp_app_title( 'Dashboard' ); ?></title>
     <?php wp_app_head(); ?>

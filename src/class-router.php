@@ -19,8 +19,47 @@ class Router {
         $this->template_directory = $template_directory;
         $this->url_path           = trim( $url_path, '/' );
 
+        $this->maybe_switch_to_user_locale_for_current_request();
+
         // Register this router with the global registry instead of adding hooks directly
         Registry::register_app( $this );
+    }
+
+    /**
+     * Switch to the signed-in user's locale as soon as an app router is created
+     * for the current request.
+     *
+     * Apps often translate labels while registering routes and menus on init,
+     * before query vars are available and before templates are rendered.
+     */
+    private function maybe_switch_to_user_locale_for_current_request() {
+        if (
+            $this->url_path === ''
+            || empty( $_SERVER['REQUEST_URI'] )
+            || ! is_string( $_SERVER['REQUEST_URI'] )
+            || ! is_user_logged_in()
+            || ! function_exists( 'switch_to_user_locale' )
+        ) {
+            return;
+        }
+
+        $request_uri = function_exists( 'wp_unslash' ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : $_SERVER['REQUEST_URI'];
+        $path        = wp_parse_url( $request_uri, PHP_URL_PATH );
+        if ( ! is_string( $path ) ) {
+            return;
+        }
+
+        $home_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+        $home_path = is_string( $home_path ) ? trim( $home_path, '/' ) : '';
+        $path      = trim( $path, '/' );
+
+        if ( $home_path !== '' && strpos( $path, $home_path . '/' ) === 0 ) {
+            $path = substr( $path, strlen( $home_path ) + 1 );
+        }
+
+        if ( $path === $this->url_path || strpos( $path, $this->url_path . '/' ) === 0 ) {
+            switch_to_user_locale( get_current_user_id() );
+        }
     }
 
     /**
@@ -172,7 +211,19 @@ class Router {
      * @param string $request_path Request path to handle
      */
     public function handle_app_request_directly( $request_path ) {
-        $this->handle_app_request( $request_path );
+        $switched_locale = false;
+
+        if ( is_user_logged_in() && function_exists( 'switch_to_user_locale' ) ) {
+            $switched_locale = switch_to_user_locale( get_current_user_id() );
+        }
+
+        try {
+            $this->handle_app_request( $request_path );
+        } finally {
+            if ( $switched_locale && function_exists( 'restore_previous_locale' ) ) {
+                restore_previous_locale();
+            }
+        }
     }
 
 

@@ -23,6 +23,7 @@ class Registry {
     public static function register_app( $router ) {
         $url_path                = $router->get_url_path();
         self::$apps[ $url_path ] = $router;
+
         self::register_app_metadata(
             $url_path,
             [

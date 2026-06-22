@@ -114,6 +114,63 @@ if ( ! function_exists( 'wp_app_get_current_app_path' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_is_app_url_request' ) ) {
+    /**
+     * Determine whether the current URL targets a specific WpApp path.
+     *
+     * This is useful before WordPress has resolved query vars, for example when
+     * an app needs to translate labels while registering itself on init.
+     *
+     * @param string $app_path App URL path.
+     * @return bool
+     */
+    function wp_app_is_app_url_request( $app_path ) {
+        $app_path = trim( (string) $app_path, '/' );
+        if ( $app_path === '' || empty( $_SERVER['REQUEST_URI'] ) || ! is_string( $_SERVER['REQUEST_URI'] ) ) {
+            return false;
+        }
+
+        $request_uri = function_exists( 'wp_unslash' ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : $_SERVER['REQUEST_URI'];
+        $path        = wp_parse_url( $request_uri, PHP_URL_PATH );
+        if ( ! is_string( $path ) ) {
+            return false;
+        }
+
+        $home_path = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+        $home_path = is_string( $home_path ) ? trim( $home_path, '/' ) : '';
+        $path      = trim( $path, '/' );
+
+        if ( $home_path !== '' && strpos( $path, $home_path . '/' ) === 0 ) {
+            $path = substr( $path, strlen( $home_path ) + 1 );
+        }
+
+        return $path === $app_path || strpos( $path, $app_path . '/' ) === 0;
+    }
+}
+
+if ( ! function_exists( 'wp_app_switch_to_user_locale_for_request' ) ) {
+    /**
+     * Switch to the signed-in user's locale when the current URL targets an app.
+     *
+     * Most WpApp rendering is switched automatically by the router. This helper
+     * covers app code that translates labels before routing has happened.
+     *
+     * @param string $app_path App URL path.
+     * @return bool Whether a user-locale switch occurred.
+     */
+    function wp_app_switch_to_user_locale_for_request( $app_path ) {
+        if (
+            ! wp_app_is_app_url_request( $app_path )
+            || ! is_user_logged_in()
+            || ! function_exists( 'switch_to_user_locale' )
+        ) {
+            return false;
+        }
+
+        return switch_to_user_locale( get_current_user_id() );
+    }
+}
+
 if ( ! function_exists( 'wp_app_sanitize_hook_suffix' ) ) {
     /**
      * Convert an app path into a safe hook-name suffix.
@@ -224,23 +281,44 @@ if ( ! function_exists( 'wp_app_title' ) ) {
 
 if ( ! function_exists( 'wp_app_language_attributes' ) ) {
     /**
-     * Get language attributes for HTML tag
+     * Output or return language attributes for the HTML tag.
+     *
+     * @param bool $echo Whether to echo the attributes. Defaults to true.
+     * @return string Language attributes.
      */
-    function wp_app_language_attributes() {
+    function wp_app_language_attributes( $echo = true ) {
+        if ( function_exists( 'get_language_attributes' ) ) {
+            $attributes = get_language_attributes();
+            if ( $echo ) {
+                echo $attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by WordPress.
+            }
+            return $attributes;
+        }
+
         $attributes = [];
 
         if ( function_exists( 'is_rtl' ) && is_rtl() ) {
             $attributes[] = 'dir="rtl"';
         }
 
-        if ( function_exists( 'get_bloginfo' ) ) {
+        if ( function_exists( 'determine_locale' ) ) {
+            $lang = str_replace( '_', '-', determine_locale() );
+            if ( $lang ) {
+                $attributes[] = 'lang="' . esc_attr( $lang ) . '"';
+            }
+        } elseif ( function_exists( 'get_bloginfo' ) ) {
             $lang = get_bloginfo( 'language' );
             if ( $lang ) {
                 $attributes[] = 'lang="' . esc_attr( $lang ) . '"';
             }
         }
 
-        return implode( ' ', $attributes );
+        $attributes = implode( ' ', $attributes );
+        if ( $echo ) {
+            echo $attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Attribute values are escaped above.
+        }
+
+        return $attributes;
     }
 }
 

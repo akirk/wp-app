@@ -166,7 +166,7 @@ class WpApp {
      */
     public function get_app_name() {
         if ( $this->app_name !== null ) {
-            if ( $this->app_name_textdomain && function_exists( 'translate' ) ) {
+            if ( $this->app_name_textdomain && function_exists( 'translate' ) && function_exists( 'did_action' ) && did_action( 'init' ) ) {
                 // phpcs:ignore WordPress.WP.I18n.LowLevelTranslationFunction, WordPress.WP.I18n.NonSingularStringLiteralText, WordPress.WP.I18n.NonSingularStringLiteralDomain -- App names can come from plugin headers and are translated lazily using the configured plugin textdomain.
                 return translate( $this->app_name, $this->app_name_textdomain );
             }
