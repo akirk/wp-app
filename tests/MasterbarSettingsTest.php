@@ -23,6 +23,7 @@ class MasterbarSettingsTest extends TestCase {
             [
                 'only_show_active_app'           => '1',
                 'show_inactive_apps_in_overflow' => '1',
+                'app_order'                      => [ 'team/tools', 'bad path!', 'team/tools', '/Reports_App/' ],
                 'apps'                           => [
                     'team/tools' => [
                         'title'                => '<b>Team Tools</b>',
@@ -38,6 +39,7 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertTrue( $settings['only_show_active_app'] );
         $this->assertTrue( $settings['show_inactive_apps_in_overflow'] );
+        $this->assertSame( [ 'team/tools', 'badpath', 'reports_app' ], $settings['app_order'] );
         $this->assertArrayHasKey( 'team/tools', $settings['apps'] );
         $this->assertSame( 'Team Tools', $settings['apps']['team/tools']['title'] );
         $this->assertSame( 'dashicons-admin-site', $settings['apps']['team/tools']['icon'] );
@@ -55,6 +57,32 @@ class MasterbarSettingsTest extends TestCase {
         $settings = Settings::get_settings();
 
         $this->assertTrue( $settings['show_inactive_apps_in_overflow'] );
+    }
+
+    public function test_registered_apps_follow_saved_order_before_new_apps() {
+        global $__wp_app_test_options;
+
+        new WpApp( '', 'zeta-settings-order-app', [ 'app_name' => 'Zeta Settings Order App' ] );
+        new WpApp( '', 'alpha-settings-order-app', [ 'app_name' => 'Alpha Settings Order App' ] );
+        new WpApp( '', 'middle-settings-order-app', [ 'app_name' => 'Middle Settings Order App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'app_order' => [
+                'zeta-settings-order-app',
+                'alpha-settings-order-app',
+            ],
+        ];
+
+        $keys = array_keys( Settings::get_registered_apps() );
+
+        $this->assertLessThan(
+            array_search( 'alpha-settings-order-app', $keys, true ),
+            array_search( 'zeta-settings-order-app', $keys, true )
+        );
+        $this->assertLessThan(
+            array_search( 'middle-settings-order-app', $keys, true ),
+            array_search( 'alpha-settings-order-app', $keys, true )
+        );
     }
 
     public function test_only_show_active_app_preserves_saved_false() {
