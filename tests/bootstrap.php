@@ -159,6 +159,20 @@ if ( ! function_exists( 'admin_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'plugins_url' ) ) {
+	function plugins_url( $path = '', $plugin = '' ) {
+		$plugin_path = str_replace( '\\', '/', (string) $plugin );
+		$base        = 'https://example.org/wp-content/plugins';
+
+		if ( '' !== $plugin_path ) {
+			$plugin_dir = basename( dirname( $plugin_path ) );
+			$base      .= '/' . $plugin_dir;
+		}
+
+		return $base . '/' . ltrim( (string) $path, '/' );
+	}
+}
+
 if ( ! function_exists( 'current_user_can' ) ) {
 	function current_user_can( $capability ) {
 		global $__wp_app_test_current_user_can;
