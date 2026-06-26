@@ -1,0 +1,18 @@
+{
+	"name": "my-company/encrypted-sources-app",
+	"description": "WordPress plugin example that augments a custom post type with WpApp client-side encrypted fields",
+	"type": "wordpress-plugin",
+	"require": {
+		"php": ">=7.4",
+		"akirk/wp-app": "dev-add-client-side-encryption-runtime"
+	},
+	"repositories": {
+		"wp-app": {
+			"type": "path",
+			"url": "../../",
+			"options": {
+				"symlink": true
+			}
+		}
+	}
+}

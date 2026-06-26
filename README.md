@@ -106,6 +106,7 @@ This starts a local WordPress instance with your plugin mounted and activated.
 | [Access Control](docs/access-control.md) | Capabilities, roles, permissions |
 | [Offline PWA Support](docs/offline-pwa.md) | Installable apps, manifests, service workers, and offline caching |
 | [BaseApp Pattern](docs/baseapp.md) | Structured architecture for larger apps |
+| [Client-Side Encryption](docs/encryption.md) | Browser encryption runtime and encrypted-field app pattern |
 | [Tutorial](TUTORIAL.md) | Step-by-step guide from minimal to full-featured |
 
 ## Claude Code Integration

@@ -174,10 +174,42 @@ if ( ! function_exists( 'add_query_arg' ) ) {
 	}
 }
 
+if ( ! function_exists( 'plugins_url' ) ) {
+	function plugins_url( $path = '', $plugin = '' ) {
+		$plugin_path = str_replace( '\\', '/', (string) $plugin );
+		$base        = 'https://example.org/wp-content/plugins';
+
+		if ( '' !== $plugin_path ) {
+			$plugin_dir = basename( dirname( $plugin_path ) );
+			$base      .= '/' . $plugin_dir;
+		}
+
+		return $base . '/' . ltrim( (string) $path, '/' );
+	}
+}
+
 if ( ! function_exists( 'wp_json_encode' ) ) {
 	function wp_json_encode( $data, $options = 0, $depth = 512 ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test stub for WordPress helper.
 		return json_encode( $data, $options, $depth );
+	}
+}
+
+if ( ! function_exists( 'wp_unslash' ) ) {
+	function wp_unslash( $value ) {
+		return is_array( $value ) ? array_map( 'wp_unslash', $value ) : stripslashes( (string) $value );
+	}
+}
+
+if ( ! function_exists( 'wp_slash' ) ) {
+	function wp_slash( $value ) {
+		return is_array( $value ) ? array_map( 'wp_slash', $value ) : addslashes( (string) $value );
+	}
+}
+
+if ( ! function_exists( 'wp_create_nonce' ) ) {
+	function wp_create_nonce( $action = -1 ) {
+		return 'test-nonce-' . sanitize_key( (string) $action );
 	}
 }
 

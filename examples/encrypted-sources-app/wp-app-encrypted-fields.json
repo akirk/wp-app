@@ -1,0 +1,52 @@
+{
+	"version": 1,
+	"app": {
+		"slug": "encrypted-sources",
+		"name": "Encrypted Sources"
+	},
+	"crypto": {
+		"iterations": 250000
+	},
+	"cpts": {
+		"journalist_source": {
+			"encryptedFields": {
+				"post_title": {
+					"label": "Source alias",
+					"storage": "post_field",
+					"field": "post_title",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				},
+				"contact": {
+					"label": "Contact",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_contact",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				},
+				"notes": {
+					"label": "Notes",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_notes",
+					"type": "textarea",
+					"minBytes": 1024,
+					"bucketBytes": 1024
+				},
+				"private_tags": {
+					"label": "Private tags",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_private_tags",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				}
+			},
+			"taxonomies": [
+				"source_risk",
+				"source_workflow"
+			]
+		}
+	}
+}

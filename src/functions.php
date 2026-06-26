@@ -409,6 +409,74 @@ if ( ! function_exists( 'wp_app_get_pwa_manifest_url' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
+    /**
+     * Get a URL for an asset shipped with the WpApp framework package.
+     *
+     * @param string $path Asset path relative to the framework assets directory.
+     * @return string Asset URL, or an empty string when WordPress cannot resolve plugin URLs.
+     */
+    function wp_app_get_asset_url( $path = '' ) {
+        if ( ! function_exists( 'plugins_url' ) ) {
+            return '';
+        }
+
+        $path = ltrim( (string) $path, '/' );
+
+        return plugins_url( '../assets/' . $path, __FILE__ );
+    }
+}
+
+if ( ! function_exists( 'wp_app_enqueue_crypto_runtime' ) ) {
+    /**
+     * Enqueue the WpApp client-side encryption runtime for app pages.
+     *
+     * @param string|array|null $scope Optional app slug, or array with an app key.
+     */
+    function wp_app_enqueue_crypto_runtime( $scope = null ) {
+        wp_app_enqueue_script(
+            'wp-app-crypto',
+            wp_app_get_asset_url( 'wp-app-crypto.js' ),
+            [],
+            WP_APP_VERSION,
+            true,
+            $scope
+        );
+    }
+}
+
+if ( ! function_exists( 'wp_app_enqueue_encrypted_fields_runtime' ) ) {
+    /**
+     * Enqueue the WpApp encrypted fields data client for app pages.
+     *
+     * @param string|array|null $scope Optional app slug, or array with an app key.
+     */
+    function wp_app_enqueue_encrypted_fields_runtime( $scope = null ) {
+        wp_app_enqueue_crypto_runtime( $scope );
+        wp_app_enqueue_script(
+            'wp-app-encrypted-fields',
+            wp_app_get_asset_url( 'wp-app-encrypted-fields.js' ),
+            [ 'wp-app-crypto' ],
+            WP_APP_VERSION,
+            true,
+            $scope
+        );
+    }
+}
+
+if ( ! function_exists( 'wp_app_register_client_encrypted_fields' ) ) {
+    /**
+     * Register a client-side encrypted fields manifest.
+     *
+     * @param string $manifest_path Path to JSON manifest.
+     * @param array  $config Runtime config.
+     * @return \WpApp\ClientEncryptedFields
+     */
+    function wp_app_register_client_encrypted_fields( $manifest_path, $config = [] ) {
+        return \WpApp\ClientEncryptedFields::register( $manifest_path, $config );
+    }
+}
+
 if ( ! function_exists( 'wp_app_add_inline_style' ) ) {
     /**
      * Add inline CSS for app pages
