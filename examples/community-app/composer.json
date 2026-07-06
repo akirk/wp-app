@@ -9,7 +9,7 @@
     "repositories": {
         "wp-app": {
             "type": "path",
-            "url": "/Users/alex/Sites/wp-app"
+            "url": "../.."
         }
     }
 }
