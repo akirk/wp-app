@@ -4,6 +4,14 @@ if ( ! defined( 'WP_CONTENT_DIR' ) ) {
 	define( 'WP_CONTENT_DIR', sys_get_temp_dir() . '/wp-app-test-content' );
 }
 
+if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
+	define( 'WP_PLUGIN_DIR', WP_CONTENT_DIR . '/plugins' );
+}
+
+if ( ! defined( 'WP_PLUGIN_URL' ) ) {
+	define( 'WP_PLUGIN_URL', 'https://example.org/wp-content/plugins' );
+}
+
 if ( ! is_dir( WP_CONTENT_DIR ) ) {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Test bootstrap fixture setup.
 	mkdir( WP_CONTENT_DIR, 0777, true );
@@ -344,6 +352,30 @@ if ( ! function_exists( 'get_user_option' ) ) {
 		}
 
 		return false;
+	}
+}
+
+if ( ! function_exists( 'get_user_meta' ) ) {
+	function get_user_meta( $user_id, $key = '', $single = false ) {
+		global $__wp_app_test_user_meta;
+
+		if ( '' === $key ) {
+			return $__wp_app_test_user_meta[ $user_id ] ?? [];
+		}
+
+		$value = $__wp_app_test_user_meta[ $user_id ][ $key ] ?? ( $single ? '' : [] );
+
+		return $single ? $value : [ $value ];
+	}
+}
+
+if ( ! function_exists( 'update_user_meta' ) ) {
+	function update_user_meta( $user_id, $meta_key, $meta_value ) {
+		global $__wp_app_test_user_meta;
+
+		$__wp_app_test_user_meta[ $user_id ][ $meta_key ] = $meta_value;
+
+		return true;
 	}
 }
 

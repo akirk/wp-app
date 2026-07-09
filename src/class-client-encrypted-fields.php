@@ -100,7 +100,7 @@ class ClientEncryptedFields {
 			return;
 		}
 
-		foreach ( [ 'manifest', 'settings', 'list', 'get', 'save', 'delete' ] as $action ) {
+		foreach ( [ 'manifest', 'settings', 'save_verifier', 'list', 'get', 'save', 'delete' ] as $action ) {
 			add_action( 'wp_ajax_' . $this->ajax_action( $action ), [ $this, 'ajax_' . $action ] );
 		}
 	}
@@ -173,10 +173,32 @@ class ClientEncryptedFields {
 		$this->send_json_success(
 			[
 				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Encodes a KDF salt for JSON transport.
-				'salt'       => base64_encode( $salt ),
-				'iterations' => isset( $this->manifest['crypto']['iterations'] ) ? (int) $this->manifest['crypto']['iterations'] : 250000,
+				'salt'             => base64_encode( $salt ),
+				'iterations'       => isset( $this->manifest['crypto']['iterations'] ) ? (int) $this->manifest['crypto']['iterations'] : 250000,
+				'verifier'         => $this->get_user_verifier( $user_id ),
+				'hasEncryptedData' => $this->has_encrypted_data(),
 			]
 		);
+	}
+
+	/**
+	 * AJAX save verifier endpoint.
+	 */
+	public function ajax_save_verifier() {
+		$this->check_ajax_request();
+
+		$body     = $this->get_json_body();
+		$verifier = isset( $body['verifier'] ) && is_array( $body['verifier'] ) ? $body['verifier'] : null;
+
+		if ( ! $verifier ) {
+			$this->send_json_error( [ 'message' => 'Verifier is required.' ], 400 );
+		}
+
+		if ( function_exists( 'update_user_meta' ) ) {
+			update_user_meta( get_current_user_id(), $this->get_verifier_meta_key(), wp_json_encode( $verifier ) );
+		}
+
+		$this->send_json_success( [ 'verifier' => $verifier ] );
 	}
 
 	/**
@@ -355,6 +377,65 @@ class ClientEncryptedFields {
 	 */
 	private function ajax_action( $action ) {
 		return $this->config['action_prefix'] . '_' . $action;
+	}
+
+	/**
+	 * Get user verifier meta key.
+	 *
+	 * @return string
+	 */
+	private function get_verifier_meta_key() {
+		return '_wp_app_encrypted_fields_verifier_' . $this->config['action_prefix'];
+	}
+
+	/**
+	 * Get encrypted verifier envelope for a user.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array|null
+	 */
+	private function get_user_verifier( $user_id ) {
+		$value = function_exists( 'get_user_meta' ) ? get_user_meta( $user_id, $this->get_verifier_meta_key(), true ) : '';
+
+		if ( is_array( $value ) ) {
+			return $value;
+		}
+
+		$decoded = is_string( $value ) && '' !== $value ? json_decode( $value, true ) : null;
+
+		return is_array( $decoded ) ? $decoded : null;
+	}
+
+	/**
+	 * Determine whether any configured encrypted field already has data.
+	 *
+	 * @return bool
+	 */
+	private function has_encrypted_data() {
+		if ( ! class_exists( '\WP_Query' ) ) {
+			return false;
+		}
+
+		foreach ( $this->manifest['cpts'] as $cpt => $definition ) {
+			$query = new \WP_Query(
+				[
+					'post_type'      => $cpt,
+					'post_status'    => [ 'publish', 'private', 'draft' ],
+					'posts_per_page' => 100,
+					'fields'         => 'all',
+				]
+			);
+
+			foreach ( $query->posts as $post ) {
+				foreach ( $definition['encryptedFields'] as $field_definition ) {
+					if ( $this->read_post_encrypted_field( $post, $field_definition ) ) {
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**

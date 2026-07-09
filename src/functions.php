@@ -423,6 +423,24 @@ if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
 
         $path = ltrim( (string) $path, '/' );
 
+        if ( defined( 'WP_PLUGIN_DIR' ) && defined( 'WP_PLUGIN_URL' ) ) {
+            $plugin_dir = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
+
+            foreach ( get_included_files() as $included_file ) {
+                $included_file = str_replace( '\\', '/', $included_file );
+
+                if ( substr( $included_file, -20 ) !== '/vendor/autoload.php' ) {
+                    continue;
+                }
+
+                $candidate = dirname( $included_file ) . '/akirk/wp-app/assets/' . $path;
+
+                if ( file_exists( $candidate ) && 0 === strpos( $candidate, $plugin_dir . '/' ) ) {
+                    return rtrim( WP_PLUGIN_URL, '/' ) . substr( $candidate, strlen( $plugin_dir ) );
+                }
+            }
+        }
+
         return plugins_url( '../assets/' . $path, __FILE__ );
     }
 }

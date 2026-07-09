@@ -119,6 +119,16 @@ await encrypted
 	.set(123, 'notes', 'Updated note');
 ```
 
+## Password Setup
+
+The default unlock flow uses a password input dialog, not `window.prompt()`.
+
+When no encrypted fields or verifier exist yet, the runtime shows a create-password flow. The user chooses an app-specific encryption password, confirms it, and the browser immediately stores a small encrypted verifier through AJAX.
+
+On later visits, the runtime shows an unlock flow. It derives the key from the entered password and decrypts the verifier before app code can read records. If verifier decryption fails, the password is rejected immediately.
+
+This password is not the user's WordPress password. WordPress stores the salt and encrypted verifier, but cannot recover the password.
+
 ## Storage
 
 Encrypted fields can be stored in post fields or post meta.

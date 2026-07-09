@@ -9,6 +9,7 @@
 		this.manifest = this.options.manifest || {};
 		this.runtime = null;
 		this.settings = null;
+		this.verifierValue = 'wp-app-encrypted-fields-verifier';
 	}
 
 	WpAppEncryptedFields.fromGlobal = function () {
@@ -24,14 +25,20 @@
 			this.settings = await this.request('settings', {});
 		}
 
-		this.runtime = root.WpAppCrypto.createRuntime({
+		var isSetup = !this.settings.verifier && !this.settings.hasEncryptedData;
+		var password = await this.getPassword(isSetup);
+
+		this.runtime = await root.WpAppCrypto.createSession({
+			password: password,
 			salt: this.settings.salt,
-			iterations: this.settings.iterations,
-			prompt: this.options.prompt || 'Enter the encryption password for this app.',
-			passwordProvider: this.options.passwordProvider
+			iterations: this.settings.iterations
 		});
 
-		await this.runtime.unlock();
+		if (this.settings.verifier) {
+			await this.verifyPassword();
+		} else if (isSetup) {
+			await this.createVerifier();
+		}
 
 		return this.runtime;
 	};
@@ -44,6 +51,155 @@
 
 	WpAppEncryptedFields.prototype.cpt = function (name) {
 		return new WpAppEncryptedFieldsCpt(this, name);
+	};
+
+	WpAppEncryptedFields.prototype.getPassword = async function (isSetup) {
+		if (typeof this.options.passwordProvider === 'function') {
+			return this.options.passwordProvider(isSetup, this);
+		}
+
+		return this.showPasswordDialog(isSetup);
+	};
+
+	WpAppEncryptedFields.prototype.showPasswordDialog = function (isSetup) {
+		var appName = this.manifest.app && this.manifest.app.name ? this.manifest.app.name : 'this app';
+		this.injectUnlockStyles();
+
+		return new Promise(function (resolve, reject) {
+			var overlay = document.createElement('div');
+			var dialog = document.createElement('form');
+			var title = document.createElement('h2');
+			var description = document.createElement('p');
+			var password = document.createElement('input');
+			var confirm = document.createElement('input');
+			var error = document.createElement('p');
+			var actions = document.createElement('div');
+			var submit = document.createElement('button');
+			var cancel = document.createElement('button');
+
+			overlay.className = 'wp-app-encrypted-fields-unlock';
+			dialog.className = 'wp-app-encrypted-fields-unlock__dialog';
+			title.textContent = isSetup ? 'Create encryption password' : 'Unlock encrypted fields';
+			description.textContent = isSetup
+				? 'Choose a password for encrypted fields in ' + appName + '. This is not your WordPress password. WordPress cannot recover it.'
+				: 'Enter the encryption password for ' + appName + '. This is not your WordPress password.';
+			password.type = 'password';
+			password.autocomplete = isSetup ? 'new-password' : 'current-password';
+			password.placeholder = 'Encryption password';
+			password.required = true;
+			confirm.type = 'password';
+			confirm.autocomplete = 'new-password';
+			confirm.placeholder = 'Confirm encryption password';
+			confirm.required = isSetup;
+			error.className = 'wp-app-encrypted-fields-unlock__error';
+			actions.className = 'wp-app-encrypted-fields-unlock__actions';
+			submit.type = 'submit';
+			submit.textContent = isSetup ? 'Create and unlock' : 'Unlock';
+			cancel.type = 'button';
+			cancel.textContent = 'Cancel';
+
+			dialog.appendChild(title);
+			dialog.appendChild(description);
+			dialog.appendChild(password);
+			if (isSetup) {
+				dialog.appendChild(confirm);
+			}
+			dialog.appendChild(error);
+			actions.appendChild(cancel);
+			actions.appendChild(submit);
+			dialog.appendChild(actions);
+			overlay.appendChild(dialog);
+			document.body.appendChild(overlay);
+			password.focus();
+
+			function cleanup() {
+				if (overlay.parentNode) {
+					overlay.parentNode.removeChild(overlay);
+				}
+			}
+
+			cancel.addEventListener('click', function () {
+				cleanup();
+				reject(new Error('Unlock cancelled.'));
+			});
+
+			dialog.addEventListener('submit', function (event) {
+				event.preventDefault();
+				error.textContent = '';
+
+				if (isSetup && password.value !== confirm.value) {
+					error.textContent = 'Passwords do not match.';
+					return;
+				}
+
+				if (!password.value) {
+					error.textContent = 'Enter an encryption password.';
+					return;
+				}
+
+				cleanup();
+				resolve(password.value);
+			});
+		});
+	};
+
+	WpAppEncryptedFields.prototype.injectUnlockStyles = function () {
+		if (document.getElementById('wp-app-encrypted-fields-unlock-styles')) {
+			return;
+		}
+
+		var style = document.createElement('style');
+		style.id = 'wp-app-encrypted-fields-unlock-styles';
+		style.textContent = [
+			'.wp-app-encrypted-fields-unlock{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:rgba(0,0,0,.45);padding:20px}',
+			'.wp-app-encrypted-fields-unlock__dialog{box-sizing:border-box;width:min(100%,420px);display:grid;gap:14px;margin:0;padding:24px;background:var(--wp-app-color-surface,#fff);color:var(--wp-app-color-text,#1d2327);border:1px solid var(--wp-app-color-border,#dcdcde);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.28);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}',
+			'.wp-app-encrypted-fields-unlock__dialog h2{margin:0;font-size:22px;line-height:1.2}',
+			'.wp-app-encrypted-fields-unlock__dialog p{margin:0;color:var(--wp-app-color-muted,#646970);line-height:1.45}',
+			'.wp-app-encrypted-fields-unlock__dialog input{box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid var(--wp-app-color-border,#dcdcde);border-radius:6px;background:var(--wp-app-color-surface,#fff);color:var(--wp-app-color-text,#1d2327);font:inherit}',
+			'.wp-app-encrypted-fields-unlock__error{min-height:20px;color:#b32d2e!important}',
+			'.wp-app-encrypted-fields-unlock__actions{display:flex;justify-content:flex-end;gap:10px}',
+			'.wp-app-encrypted-fields-unlock__actions button{padding:8px 12px;border:1px solid var(--wp-app-color-border,#dcdcde);border-radius:6px;background:var(--wp-app-color-secondary,#f0f0f1);color:var(--wp-app-color-text,#1d2327);font:inherit;cursor:pointer}',
+			'.wp-app-encrypted-fields-unlock__actions button[type=submit]{background:var(--wp-app-color-primary,#0073aa);border-color:var(--wp-app-color-primary,#0073aa);color:var(--wp-app-color-on-primary,#fff)}'
+		].join('');
+		document.head.appendChild(style);
+	};
+
+	WpAppEncryptedFields.prototype.getVerifierAad = function () {
+		return {
+			app: this.manifest.app && this.manifest.app.slug ? this.manifest.app.slug : this.actionPrefix,
+			field: '__verifier',
+			version: 1
+		};
+	};
+
+	WpAppEncryptedFields.prototype.createVerifier = async function () {
+		var verifier = await this.runtime.encrypt(this.verifierValue, {
+			type: 'verifier',
+			aad: this.getVerifierAad(),
+			minBytes: 256,
+			bucketBytes: 256
+		});
+
+		await this.postJson('save_verifier', {
+			verifier: verifier
+		});
+
+		this.settings.verifier = verifier;
+	};
+
+	WpAppEncryptedFields.prototype.verifyPassword = async function () {
+		try {
+			var value = await this.runtime.decrypt(this.settings.verifier, {
+				aad: this.getVerifierAad()
+			});
+
+			if (value !== this.verifierValue) {
+				throw new Error('Verifier mismatch.');
+			}
+		} catch (error) {
+			this.runtime = null;
+			throw new Error('That password did not unlock these encrypted fields.');
+		}
 	};
 
 	WpAppEncryptedFields.prototype.request = async function (action, payload) {
