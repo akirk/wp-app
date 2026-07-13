@@ -135,20 +135,53 @@ class WpApp {
             add_filter( 'my_apps_plugins', [ $this, 'register_my_apps' ] );
         }
 
-        \WpApp\Registry::register_app_metadata(
-            $this->router->get_app_path(),
-            array_merge(
-                [
-                    'name' => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
-                    'url'  => home_url( '/' . $this->router->get_app_path() . '/' ),
-                ],
-                $this->get_my_apps_icon_data()
-            )
-        );
+        $this->register_app_metadata();
+        add_action( 'init', [ $this, 'apply_init_filter' ] );
 
         $this->initialized = true;
 
         do_action( 'wp_app_initialized', $this );
+    }
+
+    /**
+     * Apply the app-specific init filter, then refresh metadata.
+     */
+    public function apply_init_filter() {
+        apply_filters( $this->get_init_filter_name(), $this );
+        $this->register_app_metadata();
+    }
+
+    /**
+     * Get the app-specific WordPress init filter name.
+     *
+     * @return string Filter name.
+     */
+    public function get_init_filter_name() {
+        return 'wp_app_init_' . $this->get_hook_suffix();
+    }
+
+    /**
+     * Get the app path.
+     *
+     * @return string App path.
+     */
+    public function get_app_path() {
+        return $this->router->get_app_path();
+    }
+
+    /**
+     * Get a normalized app path for hook names.
+     *
+     * @return string Hook suffix.
+     */
+    private function get_hook_suffix() {
+        $suffix = str_replace( '/', '_', trim( $this->get_app_path(), '/' ) );
+
+        if ( function_exists( 'sanitize_key' ) ) {
+            return sanitize_key( $suffix );
+        }
+
+        return strtolower( preg_replace( '/[^a-zA-Z0-9_\-]/', '', $suffix ) );
     }
 
     /**
@@ -185,6 +218,31 @@ class WpApp {
         $name = ucwords( $name );
 
         return $name;
+    }
+
+    /**
+     * Set a custom display name for the app.
+     *
+     * @param string $app_name App display name.
+     */
+    public function set_app_name( $app_name ) {
+        $this->app_name = $app_name;
+    }
+
+    /**
+     * Register display metadata for this app.
+     */
+    private function register_app_metadata() {
+        \WpApp\Registry::register_app_metadata(
+            $this->router->get_app_path(),
+            array_merge(
+                [
+                    'name' => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
+                    'url'  => home_url( '/' . $this->router->get_app_path() . '/' ),
+                ],
+                $this->get_my_apps_icon_data()
+            )
+        );
     }
 
     /**
