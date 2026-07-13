@@ -104,6 +104,13 @@ if ( ! function_exists( 'esc_html__' ) ) {
 	}
 }
 
+if ( ! function_exists( 'esc_attr__' ) ) {
+	function esc_attr__( $text, $domain = 'default' ) {
+		// phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText, WordPress.WP.I18n.NonSingularStringLiteralDomain -- Test stub mirrors WordPress' dynamic helper signature.
+		return esc_attr( __( $text, $domain ) );
+	}
+}
+
 if ( ! function_exists( 'apply_filters' ) ) {
 	function apply_filters( $hook_name, $value, ...$args ) {
 		global $__wp_app_test_filters;
@@ -309,6 +316,40 @@ if ( ! function_exists( 'esc_attr' ) ) {
 if ( ! function_exists( 'esc_url' ) ) {
 	function esc_url( $url ) {
 		return esc_attr( $url );
+	}
+}
+
+if ( ! function_exists( 'esc_js' ) ) {
+	function esc_js( $text ) {
+		return str_replace(
+			[ '\\', "'", '"', "\n", "\r" ],
+			[ '\\\\', "\\'", '\"', '\n', '\r' ],
+			(string) $text
+		);
+	}
+}
+
+if ( ! function_exists( 'checked' ) ) {
+	function checked( $checked, $current = true, $display = true ) {
+		$result = $checked === $current ? 'checked="checked"' : '';
+
+		if ( $display ) {
+			echo $result;
+		}
+
+		return $result;
+	}
+}
+
+if ( ! function_exists( 'settings_fields' ) ) {
+	function settings_fields( $option_group ) {
+		echo '<input type="hidden" name="option_page" value="' . esc_attr( $option_group ) . '">';
+	}
+}
+
+if ( ! function_exists( 'submit_button' ) ) {
+	function submit_button( $text = 'Save Changes' ) {
+		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr( $text ) . '"></p>';
 	}
 }
 

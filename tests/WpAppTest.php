@@ -12,7 +12,7 @@ class WpAppTest extends TestCase {
 		$GLOBALS['__wp_app_test_action_counts'] = [];
 		$GLOBALS['__wp_app_test_actions']       = [];
 		$GLOBALS['__wp_app_test_filters']       = [];
-		$this->reset_registry_metadata();
+		Registry::reset();
 	}
 
 	protected function tearDown(): void {
@@ -149,12 +149,5 @@ class WpAppTest extends TestCase {
 		$this->assertSame( 1, $base_app->menu_setup_count );
 		$items = $base_app->get_app()->masterbar()->get_preview_menu_items();
 		$this->assertArrayHasKey( 'dashboard', $items );
-	}
-
-	private function reset_registry_metadata() {
-		$reflection = new \ReflectionClass( Registry::class );
-		$property   = $reflection->getProperty( 'app_metadata' );
-		$property->setAccessible( true );
-		$property->setValue( [] );
 	}
 }

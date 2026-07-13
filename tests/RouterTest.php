@@ -3,6 +3,7 @@
 namespace WpApp\Tests;
 
 use PHPUnit\Framework\TestCase;
+use WpApp\Registry;
 use WpApp\Router;
 
 class RouterTest extends TestCase {
@@ -21,19 +22,13 @@ class RouterTest extends TestCase {
         $__wp_app_test_current_user_id   = 0;
         $__wp_app_test_user_locales      = [];
         $_SERVER['REQUEST_URI']          = '';
+        Registry::reset();
 
         $this->router = new Router( '/test/templates' );
     }
 
     private function get_routes() {
-        $reflection      = new \ReflectionClass( $this->router );
-        $routes_property = $reflection->getProperty( 'routes' );
-
-        if ( PHP_VERSION_ID < 80100 ) {
-            $routes_property->setAccessible( true );
-        }
-
-        return array_values( $routes_property->getValue( $this->router ) );
+        return array_values( $this->router->get_routes() );
     }
 
     public function test_add_route() {

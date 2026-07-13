@@ -213,4 +213,14 @@ class Registry {
     public static function get_app_capabilities() {
         return self::$app_capabilities;
     }
+
+    /**
+     * Clear all registered apps and registry state.
+     */
+    public static function reset() {
+        self::$apps              = [];
+        self::$hooks_initialized = false;
+        self::$app_capabilities  = [];
+        self::$app_metadata      = [];
+    }
 }

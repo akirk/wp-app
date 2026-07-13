@@ -472,8 +472,10 @@ class Masterbar {
 
     /**
      * Get mobile overflow CSS for WordPress admin bar app links.
+     *
+     * @return string CSS.
      */
-    private static function get_admin_bar_overflow_styles() {
+    public static function get_admin_bar_overflow_styles() {
         return '
             #wpadminbar {
                 z-index: 100100;

@@ -4,6 +4,7 @@ namespace WpApp\Tests;
 
 use PHPUnit\Framework\TestCase;
 use WpApp\Masterbar;
+use WpApp\Registry;
 use WpApp\Settings;
 use WpApp\WpApp;
 
@@ -14,6 +15,7 @@ class MasterbarSettingsTest extends TestCase {
         $__wp_app_test_current_user_can = true;
         $__wp_app_test_filters          = [];
         $__wp_app_test_options          = [];
+        Registry::reset();
         // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub resets the queried object.
         $wp_query = null;
     }
@@ -363,8 +365,8 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertArrayHasKey( 'wp-app-admin-overflow-settings', $admin_bar->nodes );
         $this->assertSame( 'wp-app-admin-overflow', $admin_bar->nodes['wp-app-admin-overflow-settings']['parent'] );
         $this->assertSame( 'https://example.org/wp-admin/options-general.php?page=wp-apps', $admin_bar->nodes['wp-app-admin-overflow-settings']['href'] );
-        $this->assertStringContainsString( '#wpadminbar li#wp-admin-bar-wp-app-admin-overflow-settings', $this->get_admin_bar_overflow_styles() );
-        $this->assertStringContainsString( 'border-top: 1px solid', $this->get_admin_bar_overflow_styles() );
+        $this->assertStringContainsString( '#wpadminbar li#wp-admin-bar-wp-app-admin-overflow-settings', Masterbar::get_admin_bar_overflow_styles() );
+        $this->assertStringContainsString( 'border-top: 1px solid', Masterbar::get_admin_bar_overflow_styles() );
         $this->assertSame( 'wp-app-admin-overflow-settings', array_key_last( $admin_bar->nodes ) );
     }
 
@@ -412,7 +414,7 @@ class MasterbarSettingsTest extends TestCase {
             'apps'                           => [],
         ];
 
-        $styles = $this->get_admin_bar_overflow_styles();
+        $styles = Masterbar::get_admin_bar_overflow_styles();
 
         $this->assertStringContainsString( 'li#wp-admin-bar-wp-app-admin-overflow', $styles );
         $this->assertStringContainsString( 'cursor: pointer;', $styles );
@@ -768,27 +770,38 @@ class MasterbarSettingsTest extends TestCase {
     }
 
     public function test_settings_preview_uses_metadata_dashicon() {
-        $method = new \ReflectionMethod( Settings::class, 'render_preview_icon' );
-        $method->setAccessible( true );
+        global $__wp_app_test_options;
+
+        $app = new WpApp(
+            '',
+            'metadata-preview-icon-app',
+            [
+                'app_name'     => 'WordPress Courses',
+                'my_apps_icon' => 'dashicons-welcome-learn-more',
+            ]
+        );
+        $app->init();
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'apps' => [
+                'metadata-preview-icon-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => true,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
 
         ob_start();
-        $method->invoke(
-            null,
-            [
-                'icon'                 => '',
-                'show_icon'            => true,
-                'generate_letter_icon' => false,
-            ],
-            [
-                'dashicon' => 'dashicons-welcome-learn-more',
-            ],
-            'WordPress Courses'
-        );
+        Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'wp-app-link-icon', $html );
+        $this->assertStringContainsString( '<span class="wp-app-link-icon"><span class="dashicons dashicons-welcome-learn-more"></span></span>', $html );
         $this->assertStringContainsString( 'dashicons dashicons-welcome-learn-more', $html );
-        $this->assertStringNotContainsString( ' hidden', $html );
+        $this->assertStringNotContainsString( '<span class="wp-app-link-icon" hidden', $html );
     }
 
     public function test_app_link_styles_preserve_dashicons_font_inside_admin_bar() {
@@ -832,12 +845,5 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertSame( 'disabled', $status['state'] );
         $this->assertStringContainsString( 'no masterbar entry to customize', $status['message'] );
-    }
-
-    private function get_admin_bar_overflow_styles() {
-        $method = new \ReflectionMethod( Masterbar::class, 'get_admin_bar_overflow_styles' );
-        $method->setAccessible( true );
-
-        return $method->invoke( null );
     }
 }

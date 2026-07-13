@@ -97,6 +97,15 @@ class Router {
     }
 
     /**
+     * Get registered routes.
+     *
+     * @return array Route definitions.
+     */
+    public function get_routes() {
+        return $this->routes;
+    }
+
+    /**
      * Set the minimum capability required to access this app
      *
      * @param string $capability WordPress capability (e.g., 'read', 'edit_posts', 'manage_options')
