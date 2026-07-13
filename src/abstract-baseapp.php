@@ -37,11 +37,21 @@ abstract class BaseApp {
 	public function init() {
 		$this->setup_database();
 		$this->setup_routes();
-		$this->setup_menu();
+		add_filter( $this->app->get_init_filter_name(), [ $this, 'setup_menu_on_init' ] );
 
 		$this->app->init();
+	}
 
-		do_action( 'base_app_initialized', $this );
+	/**
+	 * Set up menu items on WordPress init.
+	 *
+	 * @param WpApp $app WpApp instance.
+	 * @return WpApp Unmodified WpApp instance.
+	 */
+	public function setup_menu_on_init( $app ) {
+		$this->setup_menu();
+
+		return $app;
 	}
 
 	/**

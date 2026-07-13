@@ -2,6 +2,11 @@
 
 For larger applications, extend `BaseApp` for better organization. This pattern separates concerns into database setup, route registration, and menu configuration.
 
+`BaseApp::init()` should be called from `plugins_loaded` so WpApp can register
+routes early. Menu setup runs later through the app-specific
+`wp_app_init_{app_path}` filter on WordPress `init`, so translated menu labels
+can be used safely in `setup_menu()`.
+
 ## Basic Structure
 
 ```php
@@ -60,7 +65,7 @@ BaseApp requires you to implement three methods:
 |--------|---------|
 | `setup_database()` | Database initialization (often empty if using BaseStorage) |
 | `setup_routes()` | Register all routes |
-| `setup_menu()` | Add menu items to the masterbar |
+| `setup_menu()` | Add menu items to the masterbar on WordPress `init`, so translated labels can be used safely |
 
 ## BaseStorage Pattern
 
