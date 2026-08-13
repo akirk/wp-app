@@ -19,7 +19,16 @@ class Router {
         $this->template_directory = $template_directory;
         $this->url_path           = trim( $url_path, '/' );
 
-        $this->maybe_switch_to_user_locale_for_current_request();
+        if ( function_exists( 'is_user_logged_in' ) ) {
+            $this->maybe_switch_to_user_locale_for_current_request();
+        } else {
+            add_action(
+                'plugins_loaded',
+                function () {
+					$this->maybe_switch_to_user_locale_for_current_request();
+				}
+            );
+        }
 
         // Register this router with the global registry instead of adding hooks directly
         Registry::register_app( $this );
@@ -37,6 +46,7 @@ class Router {
             $this->url_path === ''
             || empty( $_SERVER['REQUEST_URI'] )
             || ! is_string( $_SERVER['REQUEST_URI'] )
+            || ! function_exists( 'is_user_logged_in' )
             || ! is_user_logged_in()
             || ! function_exists( 'switch_to_user_locale' )
         ) {
