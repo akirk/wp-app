@@ -457,6 +457,48 @@ class Settings {
                     font-size: 12px;
                 }
 
+                .wp-app-settings-package {
+                    border-top: 1px solid #dcdcde;
+                    grid-column: 1 / -1;
+                    margin-top: 14px;
+                    padding-top: 12px;
+                }
+
+                .wp-app-settings-package summary {
+                    color: #50575e;
+                    cursor: pointer;
+                    display: inline-block;
+                    font-weight: 600;
+                    max-width: 100%;
+                    overflow-wrap: anywhere;
+                }
+
+                .wp-app-settings-package-summary {
+                    margin: 8px 0 10px;
+                }
+
+                .wp-app-settings-package dl {
+                    display: grid;
+                    gap: 6px 12px;
+                    grid-template-columns: max-content minmax(0, 1fr);
+                    margin: 0;
+                }
+
+                .wp-app-settings-package dt {
+                    color: #50575e;
+                    font-weight: 600;
+                }
+
+                .wp-app-settings-package dd {
+                    margin: 0;
+                    min-width: 0;
+                    overflow-wrap: anywhere;
+                }
+
+                .wp-app-settings-package code {
+                    font-size: 12px;
+                }
+
                 .wp-app-settings-card-actions {
                     margin: 0;
                     text-align: right;
@@ -636,6 +678,7 @@ class Settings {
                                         </p>
                                     <?php endif; ?>
                                 </div>
+                                <?php self::render_package_metadata( $metadata ); ?>
                             </div>
                         </section>
                     <?php endforeach; ?>
@@ -1017,6 +1060,404 @@ class Settings {
             <code><?php echo esc_html( $app_path ); ?></code>
         </p>
         <?php
+    }
+
+    /**
+     * Render package diagnostics for one registered app.
+     *
+     * @param array $metadata App metadata.
+     */
+    private static function render_package_metadata( $metadata ) {
+        if ( empty( $metadata['wp_app_package'] ) || ! is_array( $metadata['wp_app_package'] ) ) {
+            return;
+        }
+
+        $package         = $metadata['wp_app_package'];
+        $loaded          = isset( $package['loaded'] ) && is_array( $package['loaded'] ) ? $package['loaded'] : [];
+        $expected        = isset( $package['expected'] ) && '' !== (string) $package['expected'] ? (string) $package['expected'] : __( 'Not detected' );
+        $loaded_version  = isset( $loaded['version'] ) && '' !== (string) $loaded['version'] ? (string) $loaded['version'] : __( 'the loaded copy' );
+        $loaded_raw_path = isset( $loaded['path'] ) ? (string) $loaded['path'] : '';
+        $source_raw_path = isset( $package['expected_source'] ) ? (string) $package['expected_source'] : '';
+        $loaded_path     = '' !== $loaded_raw_path ? self::format_filesystem_path( $loaded_raw_path ) : __( 'Unknown' );
+        $expected_source = '' !== $source_raw_path ? self::format_filesystem_path( $source_raw_path ) : '';
+        $expected_plugin = self::get_wp_content_plugin_slug( $expected_source );
+        $loaded_plugin   = self::get_wp_content_plugin_slug( $loaded_path );
+        $using_own_copy  = '' !== $expected_plugin && $expected_plugin === $loaded_plugin;
+        $using_other     = '' !== $expected_plugin && '' !== $loaded_plugin && $expected_plugin !== $loaded_plugin;
+        $app_plugin      = self::get_plugin_metadata_from_path( $source_raw_path );
+        $loaded_provider = self::get_plugin_metadata_from_path( $loaded_raw_path );
+        $app_label       = self::format_plugin_label( $app_plugin );
+        $provider_label  = self::format_plugin_label( $loaded_provider );
+        ?>
+        <details class="wp-app-settings-package">
+            <summary>
+                <?php
+                if ( $using_own_copy ) {
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: Plugin name and version. 2: Loaded wp-app version. */
+                            __( '%1$s is using its bundled wp-app %2$s' ),
+                            $app_label,
+                            $loaded_version
+                        )
+                    );
+                } elseif ( $using_other && '' !== $provider_label ) {
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: Plugin name and version. 2: Loaded wp-app version. 3: Plugin name and version providing wp-app. */
+                            __( '%1$s is using wp-app %2$s from %3$s' ),
+                            $app_label,
+                            $loaded_version,
+                            $provider_label
+                        )
+                    );
+                } else {
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: Plugin name and version. 2: Loaded wp-app version. */
+                            __( '%1$s is using wp-app %2$s' ),
+                            $app_label,
+                            $loaded_version
+                        )
+                    );
+                }
+                ?>
+            </summary>
+            <p class="description wp-app-settings-package-summary">
+                <?php
+                if ( $using_own_copy ) {
+                    echo esc_html__( 'The active wp-app copy comes from this plugin.' );
+                } elseif ( $using_other && '' !== $provider_label ) {
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: Plugin name and version. 2: Plugin name and version providing wp-app. */
+                            __( '%1$s includes wp-app, but the copy from %2$s was loaded first.' ),
+                            $app_label,
+                            $provider_label
+                        )
+                    );
+                } else {
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: Expected wp-app version constraint. 2: Loaded wp-app version. */
+                            __( 'This app asks for %1$s and is using wp-app %2$s.' ),
+                            $expected,
+                            $loaded_version
+                        )
+                    );
+                }
+                ?>
+            </p>
+            <dl>
+                <dt><?php echo esc_html__( 'App plugin' ); ?></dt>
+                <dd>
+                    <?php echo esc_html( $app_label ); ?>
+                    <span class="description"><?php echo esc_html__( 'includes wp-app' ); ?></span>
+                    <code><?php echo esc_html( $expected ); ?></code>
+                    <?php if ( '' !== $expected_source ) : ?>
+                        <?php /* translators: %s: Path to the composer.json file that declares the wp-app package requirement. */ ?>
+                        <span class="description"><?php echo esc_html( sprintf( __( 'from %s' ), $expected_source ) ); ?></span>
+                    <?php endif; ?>
+                </dd>
+                <dt><?php echo esc_html__( 'Active wp-app' ); ?></dt>
+                <dd>
+                    <code><?php echo esc_html( $loaded_version ); ?></code>
+                    <?php if ( '' !== $provider_label ) : ?>
+                        <?php /* translators: %s: Plugin name and version providing the loaded wp-app package. */ ?>
+                        <span class="description"><?php echo esc_html( sprintf( __( 'from %s' ), $provider_label ) ); ?></span>
+                    <?php endif; ?>
+                    <?php /* translators: %s: Filesystem path to the loaded wp-app package. */ ?>
+                    <span class="description"><?php echo esc_html( sprintf( __( 'from %s' ), $loaded_path ) ); ?></span>
+                </dd>
+            </dl>
+        </details>
+        <?php
+    }
+
+    /**
+     * Format a filesystem path for admin display.
+     *
+     * @param string $path Filesystem path.
+     * @return string Display path.
+     */
+    private static function format_filesystem_path( $path ) {
+        $path = self::normalize_filesystem_path( $path );
+
+        if ( defined( 'WP_CONTENT_DIR' ) ) {
+            $content_dir = rtrim( self::normalize_filesystem_path( WP_CONTENT_DIR ), '/' );
+
+            if ( 0 === strpos( $path, $content_dir . '/' ) ) {
+                return 'wp-content/' . substr( $path, strlen( $content_dir ) + 1 );
+            }
+        }
+
+        return $path;
+    }
+
+    /**
+     * Normalize a path for display without resolving symlinks.
+     *
+     * @param string $path Filesystem path.
+     * @return string Normalized path.
+     */
+    private static function normalize_filesystem_path( $path ) {
+        $path     = str_replace( '\\', '/', (string) $path );
+        $prefix   = '';
+        $segments = [];
+
+        if ( preg_match( '#^[a-zA-Z]:/#', $path, $matches ) ) {
+            $prefix = $matches[0];
+            $path   = substr( $path, strlen( $prefix ) );
+        } elseif ( 0 === strpos( $path, '/' ) ) {
+            $prefix = '/';
+            $path   = ltrim( $path, '/' );
+        }
+
+        foreach ( explode( '/', $path ) as $segment ) {
+            if ( '' === $segment || '.' === $segment ) {
+                continue;
+            }
+
+            if ( '..' === $segment ) {
+                if ( ! empty( $segments ) && '..' !== end( $segments ) ) {
+                    array_pop( $segments );
+                    continue;
+                }
+
+                if ( '' === $prefix ) {
+                    $segments[] = $segment;
+                }
+
+                continue;
+            }
+
+            $segments[] = $segment;
+        }
+
+        return $prefix . implode( '/', $segments );
+    }
+
+    /**
+     * Get a plugin folder slug from a formatted wp-content path.
+     *
+     * @param string $path Formatted filesystem path.
+     * @return string Plugin folder slug, or an empty string.
+     */
+    private static function get_wp_content_plugin_slug( $path ) {
+        $path = self::normalize_filesystem_path( $path );
+
+        if ( defined( 'WP_CONTENT_DIR' ) ) {
+            $plugins_dir = rtrim( self::normalize_filesystem_path( WP_CONTENT_DIR ), '/' ) . '/plugins/';
+
+            if ( 0 === strpos( $path, $plugins_dir ) ) {
+                $relative = substr( $path, strlen( $plugins_dir ) );
+                $parts    = explode( '/', $relative );
+
+                return isset( $parts[0] ) ? $parts[0] : '';
+            }
+        }
+
+        if ( preg_match( '#(?:^|/)wp-content/plugins/([^/]+)#', $path, $matches ) ) {
+            return $matches[1];
+        }
+
+        return '';
+    }
+
+    /**
+     * Get a friendly plugin folder name from a formatted wp-content path.
+     *
+     * @param string $path Formatted filesystem path.
+     * @return string Plugin folder name, or an empty string.
+     */
+    private static function get_wp_content_plugin_name( $path ) {
+        $slug = self::get_wp_content_plugin_slug( $path );
+
+        if ( '' === $slug ) {
+            return '';
+        }
+
+        return ucwords( str_replace( [ '-', '_' ], ' ', $slug ) );
+    }
+
+    /**
+     * Get plugin metadata from a path inside a plugin folder.
+     *
+     * @param string $path Filesystem path.
+     * @return array Plugin metadata.
+     */
+    private static function get_plugin_metadata_from_path( $path ) {
+        $slug = self::get_wp_content_plugin_slug( $path );
+
+        if ( '' === $slug ) {
+            return [
+                'name'    => __( 'This app' ),
+                'version' => '',
+                'slug'    => '',
+            ];
+        }
+
+        $metadata = [
+            'name'    => self::get_wp_content_plugin_name( $path ),
+            'version' => '',
+            'slug'    => $slug,
+        ];
+
+        $plugin_file = self::find_plugin_file( $slug );
+
+        if ( '' === $plugin_file ) {
+            return $metadata;
+        }
+
+        $headers = self::read_plugin_headers( $plugin_file );
+
+        if ( ! empty( $headers['Plugin Name'] ) ) {
+            $metadata['name'] = $headers['Plugin Name'];
+        }
+
+        if ( ! empty( $headers['Version'] ) ) {
+            $metadata['version'] = $headers['Version'];
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * Format plugin name and version for display.
+     *
+     * @param array $metadata Plugin metadata.
+     * @return string Plugin label.
+     */
+    private static function format_plugin_label( $metadata ) {
+        $name = isset( $metadata['name'] ) && '' !== (string) $metadata['name'] ? (string) $metadata['name'] : __( 'This app' );
+
+        if ( empty( $metadata['version'] ) ) {
+            return $name;
+        }
+
+        return $name . ' ' . $metadata['version'];
+    }
+
+    /**
+     * Find the main plugin file for a plugin slug.
+     *
+     * @param string $slug Plugin folder slug.
+     * @return string Plugin file path, or an empty string.
+     */
+    private static function find_plugin_file( $slug ) {
+        if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+            return '';
+        }
+
+        $plugin_dir = rtrim( self::normalize_filesystem_path( WP_CONTENT_DIR ), '/' ) . '/plugins/' . $slug;
+
+        if ( ! is_dir( $plugin_dir ) ) {
+            return '';
+        }
+
+        self::load_wordpress_plugin_functions();
+
+        if ( function_exists( 'get_plugins' ) ) {
+            $plugins = get_plugins( '/' . $slug );
+
+            if ( is_array( $plugins ) && ! empty( $plugins ) ) {
+                if ( isset( $plugins[ $slug . '.php' ] ) ) {
+                    return $plugin_dir . '/' . $slug . '.php';
+                }
+
+                $plugin_files = array_keys( $plugins );
+                $plugin_file  = reset( $plugin_files );
+
+                if ( is_string( $plugin_file ) && '' !== $plugin_file ) {
+                    return $plugin_dir . '/' . $plugin_file;
+                }
+            }
+        }
+
+        $slug_file = $plugin_dir . '/' . $slug . '.php';
+
+        if ( is_readable( $slug_file ) && self::file_has_plugin_header( $slug_file ) ) {
+            return $slug_file;
+        }
+
+        $files = glob( $plugin_dir . '/*.php' );
+
+        if ( ! is_array( $files ) ) {
+            return '';
+        }
+
+        foreach ( $files as $file ) {
+            if ( self::file_has_plugin_header( $file ) ) {
+                return $file;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Whether a file contains a WordPress plugin header.
+     *
+     * @param string $file File path.
+     * @return bool True when plugin header exists.
+     */
+    private static function file_has_plugin_header( $file ) {
+        $headers = self::read_plugin_headers( $file );
+
+        return ! empty( $headers['Plugin Name'] );
+    }
+
+    /**
+     * Read the WordPress plugin name and version headers from a file.
+     *
+     * @param string $file File path.
+     * @return array Plugin headers.
+     */
+    private static function read_plugin_headers( $file ) {
+        if ( ! is_readable( $file ) ) {
+            return [];
+        }
+
+        self::load_wordpress_plugin_functions();
+
+        if ( function_exists( 'get_plugin_data' ) ) {
+            $data = get_plugin_data( $file, false, false );
+
+            return [
+                'Plugin Name' => isset( $data['Name'] ) ? $data['Name'] : '',
+                'Version'     => isset( $data['Version'] ) ? $data['Version'] : '',
+            ];
+        }
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a local plugin header file.
+        $contents = file_get_contents( $file, false, null, 0, 8192 );
+
+        if ( ! is_string( $contents ) ) {
+            return [];
+        }
+
+        $headers = [];
+
+        foreach ( [ 'Plugin Name', 'Version' ] as $header ) {
+            if ( preg_match( '/^[ \t\/*#@]*' . preg_quote( $header, '/' ) . ':(.*)$/mi', $contents, $matches ) ) {
+                $headers[ $header ] = trim( wp_strip_all_tags( $matches[1] ) );
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Load WordPress' plugin metadata helpers when available.
+     */
+    private static function load_wordpress_plugin_functions() {
+        if ( function_exists( 'get_plugin_data' ) && function_exists( 'get_plugins' ) ) {
+            return;
+        }
+
+        if ( defined( 'ABSPATH' ) && is_readable( ABSPATH . 'wp-admin/includes/plugin.php' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
     }
 
     /**

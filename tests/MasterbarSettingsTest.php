@@ -804,6 +804,108 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringNotContainsString( '<span class="wp-app-link-icon" hidden', $html );
     }
 
+    public function test_registered_app_metadata_includes_wp_app_package_versions() {
+        $plugin_dir   = sys_get_temp_dir() . '/wp-app-package-test-' . uniqid();
+        $template_dir = $plugin_dir . '/templates';
+
+        mkdir( $template_dir, 0777, true );
+        file_put_contents(
+            $plugin_dir . '/composer.json',
+            wp_json_encode(
+                [
+                    'name'    => 'example/package-test-app',
+                    'require' => [
+                        'akirk/wp-app' => '^1.2',
+                    ],
+                ]
+            )
+        );
+
+        $app = new WpApp( $template_dir, 'package-test-app', [ 'app_name' => 'Package Test App' ] );
+        $app->init();
+
+        $apps = Settings::get_registered_apps();
+
+        $this->assertSame( '^1.2', $apps['package-test-app']['wp_app_package']['expected'] );
+        $this->assertSame( $plugin_dir . '/composer.json', $apps['package-test-app']['wp_app_package']['expected_source'] );
+        $this->assertSame( 'akirk/wp-app', $apps['package-test-app']['wp_app_package']['loaded']['name'] );
+        $this->assertNotEmpty( $apps['package-test-app']['wp_app_package']['loaded']['path'] );
+    }
+
+    public function test_settings_page_renders_wp_app_package_metadata() {
+        $app = new WpApp(
+            '',
+            'configured-package-app',
+            [
+                'app_name'           => 'Configured Package App',
+                'wp_app_requirement' => '~2.0',
+            ]
+        );
+        $app->init();
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( '<details class="wp-app-settings-package">', $html );
+        $this->assertStringContainsString( 'This app is using wp-app', $html );
+        $this->assertStringContainsString( 'This app asks for ~2.0 and is using wp-app', $html );
+        $this->assertStringContainsString( '<code>~2.0</code>', $html );
+        $this->assertStringContainsString( '<dt>Active wp-app</dt>', $html );
+        $this->assertStringNotContainsString( '<dt>Loaded from</dt>', $html );
+    }
+
+    public function test_settings_page_shows_when_another_plugins_wp_app_package_is_active() {
+        $memex_dir      = WP_CONTENT_DIR . '/plugins/memex';
+        $wordopedia_dir = WP_CONTENT_DIR . '/plugins/wordopedia';
+
+        if ( ! is_dir( $memex_dir ) ) {
+            mkdir( $memex_dir, 0777, true );
+        }
+
+        if ( ! is_dir( $wordopedia_dir ) ) {
+            mkdir( $wordopedia_dir, 0777, true );
+        }
+        file_put_contents(
+            $memex_dir . '/memex.php',
+            "<?php\n/**\n * Plugin Name: Memex\n * Version: 1.4.0\n */\n"
+        );
+        file_put_contents(
+            $wordopedia_dir . '/wordopedia.php',
+            "<?php\n/**\n * Plugin Name: Wordopedia\n * Version: 2.1.0\n */\n"
+        );
+
+        Registry::register_app_metadata(
+            'memex',
+            [
+                'name'           => 'Memex',
+                'url'            => 'https://example.org/memex/',
+                'wp_app_package' => [
+                    'expected'        => '^1.2',
+                    'expected_source' => WP_CONTENT_DIR . '/plugins/memex/composer.json',
+                    'loaded'          => [
+                        'name'    => 'akirk/wp-app',
+                        'version' => '1.2.4',
+                        'path'    => WP_CONTENT_DIR . '/plugins/wordopedia/vendor/composer/../akirk/wp-app',
+                    ],
+                ],
+            ]
+        );
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'Memex 1.4.0 is using wp-app 1.2.4 from Wordopedia 2.1.0', $html );
+        $this->assertStringContainsString( 'Memex 1.4.0 includes wp-app, but the copy from Wordopedia 2.1.0 was loaded first.', $html );
+        $this->assertStringContainsString( '<dt>App plugin</dt>', $html );
+        $this->assertStringContainsString( 'Memex 1.4.0', $html );
+        $this->assertStringContainsString( '<dt>Active wp-app</dt>', $html );
+        $this->assertStringContainsString( 'from Wordopedia 2.1.0', $html );
+        $this->assertStringContainsString( 'wp-content/plugins/wordopedia/vendor/akirk/wp-app', $html );
+        $this->assertStringNotContainsString( 'vendor/composer/../akirk/wp-app', $html );
+    }
+
     public function test_app_link_styles_preserve_dashicons_font_inside_admin_bar() {
         $styles = Masterbar::get_app_link_styles( '#wpadminbar' );
 
