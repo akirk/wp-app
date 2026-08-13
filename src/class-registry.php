@@ -125,6 +125,10 @@ class Registry {
 
         add_rewrite_rule( $root_rewrite_rule, $root_query_string, 'top' );
         add_rewrite_rule( $sub_rewrite_rule, $sub_query_string, 'top' );
+
+        if ( class_exists( __NAMESPACE__ . '\Pwa' ) ) {
+            Pwa::add_rewrite_rules_for_app( $url_path );
+        }
     }
 
     /**
@@ -155,6 +159,10 @@ class Registry {
 
         $app_path     = get_query_var( 'wp_app_path' );
         $request_path = get_query_var( 'wp_app_request' );
+
+        if ( class_exists( __NAMESPACE__ . '\Pwa' ) && Pwa::maybe_handle_app_request( $app_path, $request_path ) ) {
+            exit;
+        }
 
         // Find the router for this app path
         if ( isset( self::$apps[ $app_path ] ) ) {

@@ -81,6 +81,7 @@ WordPress isn't just for blogs. It's a powerful foundation for web applications.
 - **Admin Bar Integration** - WordPress-style navigation for your app
 - **Admin Color Scheme Tokens** - CSS variables from each user's WordPress admin color profile
 - **Access Control** - WordPress capability-based authentication
+- **Offline PWA Support** - App-scoped manifests and service workers for installable apps
 - **BaseApp Pattern** - Structured architecture for complex applications
 - **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
 
@@ -103,6 +104,7 @@ This starts a local WordPress instance with your plugin mounted and activated.
 | [Routing](docs/routing.md) | URL patterns, parameters, templates |
 | [Masterbar](docs/masterbar.md) | Admin bar customization |
 | [Access Control](docs/access-control.md) | Capabilities, roles, permissions |
+| [Offline PWA Support](docs/offline-pwa.md) | Installable apps, manifests, service workers, and offline caching |
 | [BaseApp Pattern](docs/baseapp.md) | Structured architecture for larger apps |
 | [Tutorial](TUTORIAL.md) | Step-by-step guide from minimal to full-featured |
 

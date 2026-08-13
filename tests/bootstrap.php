@@ -159,6 +159,21 @@ if ( ! function_exists( 'admin_url' ) ) {
 	}
 }
 
+if ( ! function_exists( 'add_query_arg' ) ) {
+	function add_query_arg( $args, $url = '' ) {
+		$args = is_array( $args ) ? $args : [];
+
+		return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $args );
+	}
+}
+
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	function wp_json_encode( $data, $options = 0, $depth = 512 ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test stub for WordPress helper.
+		return json_encode( $data, $options, $depth );
+	}
+}
+
 if ( ! function_exists( 'current_user_can' ) ) {
 	function current_user_can( $capability ) {
 		global $__wp_app_test_current_user_can;
@@ -332,6 +347,14 @@ if ( ! function_exists( 'get_template_directory_uri' ) ) {
 
 if ( ! function_exists( 'add_rewrite_rule' ) ) {
 	function add_rewrite_rule( $regex, $query, $after = 'bottom' ) {
+		global $__wp_app_test_rewrite_rules;
+
+		$__wp_app_test_rewrite_rules[] = [
+			'regex' => $regex,
+			'query' => $query,
+			'after' => $after,
+		];
+
 		return true;
 	}
 }

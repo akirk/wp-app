@@ -383,6 +383,32 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_register_pwa' ) ) {
+    /**
+     * Register Progressive Web App support for an app path.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $config PWA manifest and offline cache configuration.
+     * @return array Normalized PWA configuration.
+     */
+    function wp_app_register_pwa( $app_path, $config = [] ) {
+        return \WpApp\Pwa::register( $app_path, $config );
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_pwa_manifest_url' ) ) {
+    /**
+     * Get an app's PWA manifest URL with optional query args.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $args Query arguments.
+     * @return string Manifest URL.
+     */
+    function wp_app_get_pwa_manifest_url( $app_path, $args = [] ) {
+        return \WpApp\Pwa::get_manifest_url( $app_path, $args );
+    }
+}
+
 if ( ! function_exists( 'wp_app_add_inline_style' ) ) {
     /**
      * Add inline CSS for app pages
