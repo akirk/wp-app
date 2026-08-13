@@ -10,11 +10,13 @@ use WpApp\WpApp;
 
 class MasterbarSettingsTest extends TestCase {
     protected function setUp(): void {
-        global $__wp_app_test_current_user_can, $__wp_app_test_filters, $__wp_app_test_options, $wp_query;
+        global $__wp_app_test_current_user_can, $__wp_app_test_filters, $__wp_app_test_options, $__wp_app_test_plugin_data, $__wp_app_test_plugins, $wp_query;
 
         $__wp_app_test_current_user_can = true;
         $__wp_app_test_filters          = [];
         $__wp_app_test_options          = [];
+        $__wp_app_test_plugin_data      = [];
+        $__wp_app_test_plugins          = [];
         Registry::reset();
         // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub resets the queried object.
         $wp_query = null;
@@ -856,6 +858,8 @@ class MasterbarSettingsTest extends TestCase {
     }
 
     public function test_settings_page_shows_when_another_plugins_wp_app_package_is_active() {
+        global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
+
         $memex_dir      = WP_CONTENT_DIR . '/plugins/memex';
         $wordopedia_dir = WP_CONTENT_DIR . '/plugins/wordopedia';
 
@@ -866,14 +870,32 @@ class MasterbarSettingsTest extends TestCase {
         if ( ! is_dir( $wordopedia_dir ) ) {
             mkdir( $wordopedia_dir, 0777, true );
         }
-        file_put_contents(
-            $memex_dir . '/memex.php',
-            "<?php\n/**\n * Plugin Name: Memex\n * Version: 1.4.0\n */\n"
-        );
-        file_put_contents(
-            $wordopedia_dir . '/wordopedia.php',
-            "<?php\n/**\n * Plugin Name: Wordopedia\n * Version: 2.1.0\n */\n"
-        );
+
+        $memex_file      = $memex_dir . '/memex.php';
+        $wordopedia_file = $wordopedia_dir . '/wordopedia.php';
+
+        touch( $memex_file );
+        touch( $wordopedia_file );
+
+        $__wp_app_test_plugins = [
+            'memex'      => [
+                'memex.php' => [],
+            ],
+            'wordopedia' => [
+                'wordopedia.php' => [],
+            ],
+        ];
+
+        $__wp_app_test_plugin_data = [
+            $memex_file      => [
+                'Name'    => 'Memex',
+                'Version' => '1.4.0',
+            ],
+            $wordopedia_file => [
+                'Name'    => 'Wordopedia',
+                'Version' => '2.1.0',
+            ],
+        ];
 
         Registry::register_app_metadata(
             'memex',
@@ -904,6 +926,32 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'from Wordopedia 2.1.0', $html );
         $this->assertStringContainsString( 'wp-content/plugins/wordopedia/vendor/akirk/wp-app', $html );
         $this->assertStringNotContainsString( 'vendor/composer/../akirk/wp-app', $html );
+    }
+
+    public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
+        Registry::register_app_metadata(
+            'unknown-requirement-app',
+            [
+                'name'           => 'Unknown Requirement App',
+                'url'            => 'https://example.org/unknown-requirement-app/',
+                'wp_app_package' => [
+                    'expected' => null,
+                    'loaded'   => [
+                        'name'    => 'akirk/wp-app',
+                        'version' => '1.2.4',
+                        'path'    => WP_CONTENT_DIR . '/plugins/provider/vendor/akirk/wp-app',
+                    ],
+                ],
+            ]
+        );
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'wp-app requirement not detected', $html );
+        $this->assertStringNotContainsString( 'This app asks for Not detected', $html );
+        $this->assertStringNotContainsString( 'Unknown Requirement App includes wp-app', $html );
     }
 
     public function test_app_link_styles_preserve_dashicons_font_inside_admin_bar() {

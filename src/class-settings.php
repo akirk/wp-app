@@ -1074,7 +1074,8 @@ class Settings {
 
         $package         = $metadata['wp_app_package'];
         $loaded          = isset( $package['loaded'] ) && is_array( $package['loaded'] ) ? $package['loaded'] : [];
-        $expected        = isset( $package['expected'] ) && '' !== (string) $package['expected'] ? (string) $package['expected'] : __( 'Not detected' );
+        $has_expected    = isset( $package['expected'] ) && '' !== (string) $package['expected'];
+        $expected        = $has_expected ? (string) $package['expected'] : __( 'Not detected' );
         $loaded_version  = isset( $loaded['version'] ) && '' !== (string) $loaded['version'] ? (string) $loaded['version'] : __( 'the loaded copy' );
         $loaded_raw_path = isset( $loaded['path'] ) ? (string) $loaded['path'] : '';
         $source_raw_path = isset( $package['expected_source'] ) ? (string) $package['expected_source'] : '';
@@ -1136,12 +1137,21 @@ class Settings {
                             $provider_label
                         )
                     );
-                } else {
+                } elseif ( $has_expected ) {
                     echo esc_html(
                         sprintf(
                             /* translators: 1: Expected wp-app version constraint. 2: Loaded wp-app version. */
                             __( 'This app asks for %1$s and is using wp-app %2$s.' ),
                             $expected,
+                            $loaded_version
+                        )
+                    );
+                } else {
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: Plugin name and version. 2: Loaded wp-app version. */
+                            __( '%1$s is using wp-app %2$s.' ),
+                            $app_label,
                             $loaded_version
                         )
                     );
@@ -1152,8 +1162,12 @@ class Settings {
                 <dt><?php echo esc_html__( 'App plugin' ); ?></dt>
                 <dd>
                     <?php echo esc_html( $app_label ); ?>
-                    <span class="description"><?php echo esc_html__( 'includes wp-app' ); ?></span>
-                    <code><?php echo esc_html( $expected ); ?></code>
+                    <?php if ( $has_expected ) : ?>
+                        <span class="description"><?php echo esc_html__( 'requires wp-app' ); ?></span>
+                        <code><?php echo esc_html( $expected ); ?></code>
+                    <?php else : ?>
+                        <span class="description"><?php echo esc_html__( 'wp-app requirement not detected' ); ?></span>
+                    <?php endif; ?>
                     <?php if ( '' !== $expected_source ) : ?>
                         <?php /* translators: %s: Path to the composer.json file that declares the wp-app package requirement. */ ?>
                         <span class="description"><?php echo esc_html( sprintf( __( 'from %s' ), $expected_source ) ); ?></span>
@@ -1246,8 +1260,10 @@ class Settings {
     private static function get_wp_content_plugin_slug( $path ) {
         $path = self::normalize_filesystem_path( $path );
 
-        if ( defined( 'WP_CONTENT_DIR' ) ) {
-            $plugins_dir = rtrim( self::normalize_filesystem_path( WP_CONTENT_DIR ), '/' ) . '/plugins/';
+        $plugins_dir = self::get_plugin_root_path();
+
+        if ( '' !== $plugins_dir ) {
+            $plugins_dir = rtrim( $plugins_dir, '/' ) . '/';
 
             if ( 0 === strpos( $path, $plugins_dir ) ) {
                 $relative = substr( $path, strlen( $plugins_dir ) );
@@ -1345,11 +1361,13 @@ class Settings {
      * @return string Plugin file path, or an empty string.
      */
     private static function find_plugin_file( $slug ) {
-        if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+        $plugin_root = self::get_plugin_root_path();
+
+        if ( '' === $plugin_root ) {
             return '';
         }
 
-        $plugin_dir = rtrim( self::normalize_filesystem_path( WP_CONTENT_DIR ), '/' ) . '/plugins/' . $slug;
+        $plugin_dir = rtrim( $plugin_root, '/' ) . '/' . $slug;
 
         if ( ! is_dir( $plugin_dir ) ) {
             return '';
@@ -1390,6 +1408,23 @@ class Settings {
             if ( self::file_has_plugin_header( $file ) ) {
                 return $file;
             }
+        }
+
+        return '';
+    }
+
+    /**
+     * Get the normalized plugins directory path.
+     *
+     * @return string Plugin root path, or an empty string.
+     */
+    private static function get_plugin_root_path() {
+        if ( defined( 'WP_PLUGIN_DIR' ) ) {
+            return rtrim( self::normalize_filesystem_path( WP_PLUGIN_DIR ), '/' );
+        }
+
+        if ( defined( 'WP_CONTENT_DIR' ) ) {
+            return rtrim( self::normalize_filesystem_path( WP_CONTENT_DIR ), '/' ) . '/plugins';
         }
 
         return '';
