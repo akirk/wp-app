@@ -107,9 +107,23 @@ The app's existing rewrite rule handles these extensionless URLs, so no extra ph
 | `client_cache_status_event` | `wp-app-pwa-cache-status` | Browser event fired when cache status is reported. |
 | `client_version_event` | `wp-app-pwa-version` | Browser event fired when the service worker reports its cache/version. |
 | `client_sync_event` | `wp-app-pwa-sync` | Browser event fired when Background Sync asks clients to replay queued work. |
-| `manifest_callback` | unset | Callable that returns manifest overrides for contextual manifests. |
 | `head_tags` | `true` | Set to `false` when templates output contextual manifest tags themselves. |
 | `register_service_worker` | `true` | Set to `false` when an app-specific runtime registers the generated worker itself. |
+
+## Manifest Filters
+
+Apps can adjust the generated manifest at render time with WordPress filters. This is useful for contextual manifests, such as changing `name`, `short_name`, or `start_url` based on query arguments.
+
+```php
+add_filter( 'wp_app_pwa_manifest_field_notes', function( $manifest, $config ) {
+	$manifest['name']      = 'Trip Notes';
+	$manifest['start_url'] = home_url( '/field-notes/trip/123/' );
+
+	return $manifest;
+}, 10, 2 );
+```
+
+WpApp runs the global `wp_app_pwa_manifest` filter first, then the app-scoped `wp_app_pwa_manifest_{app_path}` filter. The app path suffix is sanitized the same way scoped WpApp hooks are sanitized.
 
 ## Cache Status UI
 

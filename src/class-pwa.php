@@ -322,20 +322,35 @@ class Pwa {
 	}
 
 	/**
-	 * Get manifest data, optionally using a plugin-provided callback.
+	 * Get manifest data after WordPress filters have run.
 	 *
 	 * @param array $config Normalized PWA config.
 	 * @return array Manifest data.
 	 */
 	private static function get_manifest( $config ) {
-		if ( is_callable( $config['manifest_callback'] ) ) {
-			$manifest = call_user_func( $config['manifest_callback'], $config );
-			if ( is_array( $manifest ) ) {
-				return array_merge( $config['manifest'], $manifest );
-			}
+		$manifest = $config['manifest'];
+
+		if ( function_exists( 'apply_filters' ) ) {
+			/**
+			 * Filters the generated PWA manifest for any WpApp app.
+			 *
+			 * @param array $manifest Web app manifest data.
+			 * @param array $config   Normalized PWA config.
+			 */
+			$manifest = apply_filters( 'wp_app_pwa_manifest', $manifest, $config );
+
+			/**
+			 * Filters the generated PWA manifest for a specific WpApp app.
+			 *
+			 * The dynamic portion of the hook name is the sanitized app path.
+			 *
+			 * @param array $manifest Web app manifest data.
+			 * @param array $config   Normalized PWA config.
+			 */
+			$manifest = apply_filters( 'wp_app_pwa_manifest_' . self::sanitize_hook_suffix( $config['app_path'] ), $manifest, $config );
 		}
 
-		return $config['manifest'];
+		return is_array( $manifest ) ? $manifest : $config['manifest'];
 	}
 
 	/**
@@ -644,7 +659,6 @@ self.addEventListener("sync", function(event) {
 			'manifest_path'                    => $manifest_path,
 			'manifest_paths'                   => self::normalize_endpoint_paths( $manifest_path, $config['manifest_aliases'] ?? [] ),
 			'manifest_url'                     => $manifest_url,
-			'manifest_callback'                => $config['manifest_callback'] ?? null,
 			'service_worker_path'              => $service_worker_path,
 			'service_worker_paths'             => self::normalize_endpoint_paths( $service_worker_path, $config['service_worker_aliases'] ?? [] ),
 			'service_worker_url'               => $service_worker_url,

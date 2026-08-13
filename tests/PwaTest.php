@@ -10,10 +10,11 @@ class PwaTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		global $__wp_app_test_actions, $__wp_app_test_action_counts, $__wp_app_test_rewrite_rules, $wp_app_route;
+		global $__wp_app_test_actions, $__wp_app_test_action_counts, $__wp_app_test_filters, $__wp_app_test_rewrite_rules, $wp_app_route;
 
 		$__wp_app_test_actions       = [];
 		$__wp_app_test_action_counts = [];
+		$__wp_app_test_filters       = [];
 		$__wp_app_test_rewrite_rules = [];
 		$wp_app_route                = null;
 	}
@@ -209,26 +210,32 @@ class PwaTest extends TestCase {
 		$this->assertStringContainsString( 'api.checkCache', $output );
 	}
 
-	public function test_manifest_callback_can_generate_contextual_manifest() {
+	public function test_scoped_manifest_filter_can_generate_contextual_manifest() {
+		add_filter(
+			'wp_app_pwa_manifest_travel-app-manifest',
+			function ( $manifest, $config ) {
+				$manifest['name']       = 'Summer Trip';
+				$manifest['short_name'] = 'Summer Trip';
+				$manifest['start_url']  = 'https://example.org/travel-app/trip/123/';
+				$manifest['scope']      = 'https://example.org/';
+				$manifest['icons']      = [
+					[
+						'src'   => 'https://example.org/travel-app/icon.svg',
+						'sizes' => 'any',
+						'type'  => 'image/svg+xml',
+					],
+				];
+
+				return $manifest;
+			},
+			10,
+			2
+		);
+
 		Pwa::register(
 			'travel-app-manifest',
 			[
-				'name'              => 'Travel Timeline',
-				'manifest_callback' => function ( $config ) {
-					return [
-						'name'       => 'Summer Trip',
-						'short_name' => 'Summer Trip',
-						'start_url'  => 'https://example.org/travel-app/trip/123/',
-						'scope'      => 'https://example.org/',
-						'icons'      => [
-							[
-								'src'   => 'https://example.org/travel-app/icon.svg',
-								'sizes' => 'any',
-								'type'  => 'image/svg+xml',
-							],
-						],
-					];
-				},
+				'name' => 'Travel Timeline',
 			]
 		);
 
@@ -242,6 +249,31 @@ class PwaTest extends TestCase {
 		$this->assertSame( 'Summer Trip', $manifest['name'] );
 		$this->assertSame( 'https://example.org/travel-app/trip/123/', $manifest['start_url'] );
 		$this->assertSame( 'image/svg+xml', $manifest['icons'][0]['type'] );
+	}
+
+	public function test_manifest_filter_non_array_result_falls_back_to_generated_manifest() {
+		add_filter(
+			'wp_app_pwa_manifest_invalid-filter-result',
+			function ( $manifest ) {
+				return null;
+			}
+		);
+
+		Pwa::register(
+			'invalid-filter-result',
+			[
+				'name' => 'Generated Manifest',
+			]
+		);
+
+		ob_start();
+		$handled = Pwa::maybe_handle_app_request( 'invalid-filter-result', 'wp-app-manifest' );
+		$output  = ob_get_clean();
+
+		$manifest = json_decode( $output, true );
+
+		$this->assertTrue( $handled );
+		$this->assertSame( 'Generated Manifest', $manifest['name'] );
 	}
 
 	public function test_pwa_rewrite_rules_include_dotted_endpoint_paths() {
