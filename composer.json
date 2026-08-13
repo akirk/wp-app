@@ -20,6 +20,7 @@
         "files": [
             "src/class-registry.php",
             "src/class-settings.php",
+            "src/class-pwa.php",
             "src/class-router.php",
             "src/class-masterbar.php",
             "src/class-wpapp.php",

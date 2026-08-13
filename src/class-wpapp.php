@@ -20,6 +20,7 @@ class WpApp {
     private $app_name_textdomain = null;
     private $my_apps             = true;
     private $my_apps_icon        = null;
+    private $pwa_config          = null;
 
     public function __construct( $template_directory = '', $url_path = 'app', $config = [] ) {
         // Handle legacy parameter style
@@ -95,6 +96,10 @@ class WpApp {
 
         if ( isset( $config['my_apps_icon'] ) ) {
             $this->my_apps_icon = $config['my_apps_icon'];
+        }
+
+        if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
+            $this->enable_pwa( is_array( $config['pwa'] ) ? $config['pwa'] : [] );
         }
     }
 
@@ -622,6 +627,45 @@ class WpApp {
      */
     public function admin_bar_app_link( $add = true ) {
         $this->masterbar->admin_bar_app_link( $add );
+    }
+
+    /**
+     * Enable Progressive Web App support for this app.
+     *
+     * @param array $config PWA manifest and offline cache configuration.
+     * @return array Normalized PWA configuration.
+     */
+    public function enable_pwa( $config = [] ) {
+        if ( ! isset( $config['name'] ) ) {
+            $config['name'] = $this->get_app_name();
+        }
+
+        if ( ! isset( $config['short_name'] ) ) {
+            $config['short_name'] = $config['name'];
+        }
+
+        $this->pwa_config = Pwa::register( $this->router->get_url_path(), $config );
+
+        return $this->pwa_config;
+    }
+
+    /**
+     * Get the normalized PWA configuration, when enabled.
+     *
+     * @return array|null PWA configuration or null.
+     */
+    public function get_pwa_config() {
+        return $this->pwa_config;
+    }
+
+    /**
+     * Get this app's PWA manifest URL with optional query args.
+     *
+     * @param array $args Query arguments.
+     * @return string Manifest URL.
+     */
+    public function get_pwa_manifest_url( $args = [] ) {
+        return Pwa::get_manifest_url( $this->router->get_url_path(), $args );
     }
 
 
