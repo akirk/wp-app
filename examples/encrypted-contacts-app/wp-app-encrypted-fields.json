@@ -1,27 +1,35 @@
 {
 	"version": 1,
 	"app": {
-		"slug": "encrypted-sources",
-		"name": "Encrypted Sources"
+		"slug": "encrypted-contacts",
+		"name": "Encrypted Contacts"
 	},
 	"crypto": {
 		"iterations": 250000
 	},
 	"cpts": {
-		"journalist_source": {
+		"encrypted_contact": {
 			"encryptedFields": {
 				"post_title": {
-					"label": "Source alias",
+					"label": "Contact name",
 					"storage": "post_field",
 					"field": "post_title",
 					"type": "text",
 					"minBytes": 512,
 					"bucketBytes": 512
 				},
-				"contact": {
-					"label": "Contact",
+				"email": {
+					"label": "Email",
 					"storage": "post_meta",
-					"metaKey": "_encrypted_contact",
+					"metaKey": "_encrypted_email",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				},
+				"phone": {
+					"label": "Phone",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_phone",
 					"type": "text",
 					"minBytes": 512,
 					"bucketBytes": 512
@@ -44,8 +52,7 @@
 				}
 			},
 			"taxonomies": [
-				"source_risk",
-				"source_workflow"
+				"contact_type"
 			]
 		}
 	}

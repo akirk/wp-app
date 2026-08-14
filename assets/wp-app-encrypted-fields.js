@@ -13,7 +13,13 @@
 		this.passwordErrorMessage = 'That password did not unlock these encrypted fields.';
 	}
 
-	WpAppEncryptedFields.fromGlobal = function () {
+	WpAppEncryptedFields.fromGlobal = function (key) {
+		var configs = root.WpAppEncryptedFieldsConfigs || {};
+
+		if (key && configs[key]) {
+			return new WpAppEncryptedFields(configs[key]);
+		}
+
 		return new WpAppEncryptedFields(root.WpAppEncryptedFieldsConfig || {});
 	};
 
@@ -186,6 +192,14 @@
 		this.settings.verifier = verifier;
 	};
 
+	WpAppEncryptedFields.prototype.ensureVerifier = async function () {
+		if (!this.runtime || !this.settings || this.settings.verifier) {
+			return;
+		}
+
+		await this.createVerifier();
+	};
+
 	WpAppEncryptedFields.prototype.decryptValue = async function (envelope, options) {
 		try {
 			return await this.runtime.decrypt(envelope, options);
@@ -255,6 +269,10 @@
 		}
 
 		return cpts[cpt];
+	};
+
+	WpAppEncryptedFields.prototype.getCptNames = function () {
+		return Object.keys(this.manifest.cpts || {});
 	};
 
 	WpAppEncryptedFields.prototype.getEncryptedFields = function (cpt) {
@@ -354,6 +372,8 @@
 				? await this.decryptValue(record.encrypted[field], { aad: this.getAdditionalData(cpt, field) })
 				: '';
 		}
+
+		await this.ensureVerifier();
 
 		return decrypted;
 	};

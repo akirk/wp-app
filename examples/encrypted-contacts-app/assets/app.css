@@ -1,0 +1,471 @@
+.encrypted-contacts-app {
+	max-width: 1120px;
+	margin: 0 auto;
+	padding: 32px 20px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.encrypted-contacts-app [hidden] {
+	display: none !important;
+}
+
+.app-header {
+	margin-bottom: 28px;
+}
+
+.app-header h1 {
+	margin: 0 0 8px;
+	font-size: 32px;
+	line-height: 1.15;
+}
+
+.app-header p {
+	max-width: 720px;
+	margin: 0;
+	color: var(--wp-app-color-muted);
+}
+
+.encrypted-contacts-app .button.app-action-button,
+.encrypted-contacts-app .button.app-secondary-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 42px;
+	margin-top: 16px;
+	padding: 0 16px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	font: inherit;
+	font-weight: 650;
+	line-height: 1;
+	cursor: pointer;
+	text-decoration: none;
+	box-shadow: none;
+	transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.encrypted-contacts-app .button.app-action-button {
+	background: var(--wp-app-color-primary, #0073aa);
+	color: var(--wp-app-color-on-primary, #fff);
+}
+
+.encrypted-contacts-app .button.app-action-button:hover {
+	border-color: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 12%);
+	background: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 8%);
+	color: var(--wp-app-color-on-primary, #fff);
+}
+
+.encrypted-contacts-app .button.app-secondary-button {
+	border-color: var(--wp-app-color-border, #dcdcde);
+	background: var(--wp-app-color-surface, #fff);
+	color: var(--wp-app-color-text, #1d2327);
+}
+
+.encrypted-contacts-app .button.app-secondary-button:hover,
+.encrypted-contacts-app .button.contact-edit-button:hover,
+.wp-app-encrypted-fields-unlock__button:hover {
+	border-color: var(--wp-app-color-primary, #0073aa);
+	color: var(--wp-app-color-primary, #0073aa);
+}
+
+.encrypted-contacts-app .button.app-secondary-button,
+.encrypted-contacts-app .button.contact-edit-button,
+.encrypted-contacts-app .button.contact-delete-button,
+.wp-app-encrypted-fields-unlock__button {
+	cursor: pointer;
+}
+
+.wp-app-encrypted-fields-unlock__button {
+	min-height: 38px;
+	padding: 0 14px;
+	border: 1px solid var(--wp-app-color-border, #dcdcde);
+	border-radius: 6px;
+	background: var(--wp-app-color-secondary, #f0f0f1);
+	color: var(--wp-app-color-text, #1d2327);
+	font: inherit;
+	font-weight: 600;
+}
+
+.wp-app-encrypted-fields-unlock__button--primary {
+	border-color: var(--wp-app-color-primary, #0073aa);
+	background: var(--wp-app-color-primary, #0073aa);
+	color: var(--wp-app-color-on-primary, #fff);
+}
+
+.encrypted-contacts-app .button.app-action-button:focus,
+.encrypted-contacts-app .button.app-secondary-button:focus,
+.encrypted-contacts-app .button.contact-edit-button:focus,
+.encrypted-contacts-app .button.contact-delete-button:focus,
+.contact-name-button:focus,
+.wp-app-encrypted-fields-unlock__button:focus {
+	outline: 2px solid transparent;
+	box-shadow: 0 0 0 3px rgba(0, 115, 170, .24);
+}
+
+.form-actions,
+.contact-item__actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.form-actions {
+	flex-wrap: wrap;
+	margin-top: 16px;
+}
+
+.form-actions .app-action-button,
+.form-actions .app-secondary-button {
+	margin-top: 0;
+}
+
+.encrypted-contacts-app .button.app-secondary-button,
+.encrypted-contacts-app .button.contact-edit-button,
+.encrypted-contacts-app .button.contact-delete-button {
+	box-sizing: border-box;
+	min-height: 42px;
+	padding: 0 16px;
+	border: 1px solid var(--wp-app-color-border, #dcdcde);
+	border-radius: 6px;
+	background: var(--wp-app-color-surface, #fff);
+	color: var(--wp-app-color-text, #1d2327);
+	font: inherit;
+	font-weight: 650;
+	line-height: 1;
+	box-shadow: none;
+	transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.encrypted-contacts-app .button.contact-edit-button,
+.encrypted-contacts-app .button.contact-delete-button {
+	min-height: 32px;
+	padding: 0 12px;
+	font-size: 13px;
+}
+
+.encrypted-contacts-app .button.contact-delete-button:hover {
+	border-color: var(--wp-app-color-error, #b32d2e);
+	color: var(--wp-app-color-error, #b32d2e);
+}
+
+.app-status {
+	max-width: 720px;
+	margin: 12px 0 0;
+	color: var(--wp-app-color-muted);
+}
+
+.app-status.is-error {
+	color: var(--wp-app-color-error, #b32d2e);
+}
+
+.app-status.is-success {
+	color: var(--wp-app-color-primary, #0073aa);
+}
+
+.contact-composer,
+.contact-list {
+	margin-top: 24px;
+	padding-top: 24px;
+	border-top: 1px solid var(--wp-app-color-border);
+}
+
+.encrypted-contacts-app [data-locked] {
+	display: none;
+}
+
+.field-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.encrypted-contacts-app label {
+	display: grid;
+	gap: 6px;
+	margin-bottom: 16px;
+	font-weight: 600;
+}
+
+.encrypted-contacts-app input,
+.encrypted-contacts-app select,
+.encrypted-contacts-app textarea {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--wp-app-color-border);
+	border-radius: 6px;
+	background: var(--wp-app-color-surface);
+	color: var(--wp-app-color-text);
+	font: inherit;
+}
+
+.contact-list h2 {
+	margin: 0;
+}
+
+.contact-list__header {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 12px;
+}
+
+.contact-list__header p {
+	margin: 4px 0 0;
+	color: var(--wp-app-color-muted);
+}
+
+.contact-list__actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.contact-list__actions .app-action-button {
+	margin-top: 0;
+}
+
+.contact-list__items {
+	border-top: 1px solid var(--wp-app-color-border);
+}
+
+.contact-import {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 42px;
+	margin: 0;
+	padding: 0 14px;
+	border: 1px dashed var(--wp-app-color-border);
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--wp-app-color-surface, #fff), var(--wp-app-color-secondary, #f0f0f1) 42%);
+	color: var(--wp-app-color-muted);
+	cursor: pointer;
+	text-align: center;
+	font-weight: 650;
+	line-height: 1;
+	transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.contact-import input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.contact-import span {
+	display: block;
+}
+
+.contact-import.is-dragging,
+.contact-import:hover {
+	border-color: var(--wp-app-color-primary, #0073aa);
+	background: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #fff 92%);
+	box-shadow: 0 0 0 3px rgba(0, 115, 170, .12);
+}
+
+.contact-item {
+	display: grid;
+	grid-template-columns: 44px minmax(0, 1fr);
+	gap: 14px;
+	padding: 14px 0;
+	border-bottom: 1px solid var(--wp-app-color-border);
+}
+
+.contact-avatar {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #fff 86%);
+	color: var(--wp-app-color-primary, #0073aa);
+	font-weight: 700;
+}
+
+.contact-item__body {
+	min-width: 0;
+}
+
+.contact-item__header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.contact-item h3 {
+	margin: 0;
+	font-size: 20px;
+}
+
+.contact-name-button {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--wp-app-color-text);
+	font: inherit;
+	font-weight: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.contact-name-button:hover {
+	color: var(--wp-app-color-primary, #0073aa);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+.contact-item__actions span {
+	display: inline-flex;
+	align-items: center;
+	min-height: 26px;
+	padding: 0 9px;
+	border-radius: 999px;
+	background: var(--wp-app-color-secondary, #f0f0f1);
+	font-size: 12px;
+	font-weight: 650;
+}
+
+.contact-item--encrypted .contact-item__header span {
+	display: inline-flex;
+	align-items: center;
+	min-height: 26px;
+	padding: 0 9px;
+	border-radius: 999px;
+	background: var(--wp-app-color-secondary, #f0f0f1);
+	color: var(--wp-app-color-muted);
+	font-size: 12px;
+	font-weight: 650;
+}
+
+.contact-item--encrypted .contact-avatar {
+	background: var(--wp-app-color-secondary, #f0f0f1);
+	color: var(--wp-app-color-muted);
+}
+
+.encrypted-field-grid {
+	display: grid;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.encrypted-field-grid p {
+	display: grid;
+	grid-template-columns: 76px minmax(0, 1fr);
+	gap: 10px;
+	margin: 0;
+	color: var(--wp-app-color-muted);
+}
+
+.encrypted-field-grid span {
+	font-size: 13px;
+	font-weight: 650;
+}
+
+.encrypted-field-grid code {
+	overflow-wrap: anywhere;
+	padding: 2px 5px;
+	border-radius: 4px;
+	background: var(--wp-app-color-secondary, #f0f0f1);
+	color: var(--wp-app-color-text);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.contact-detail-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 18px;
+	margin-top: 6px;
+}
+
+.contact-expanded {
+	margin-top: 4px;
+}
+
+.contact-detail,
+.contact-notes,
+.contact-tags {
+	margin: 6px 0 0;
+}
+
+.contact-notes {
+	max-width: 720px;
+	color: var(--wp-app-color-text);
+}
+
+.contact-item__header span,
+.contact-detail,
+.contact-tags {
+	color: var(--wp-app-color-muted);
+}
+
+.contact-detail a {
+	color: var(--wp-app-color-primary, #0073aa);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+.contact-detail a:empty {
+	display: none;
+}
+
+.contact-notes:empty,
+.contact-tags:empty {
+	display: none;
+}
+
+.contact-composer {
+	margin-top: 20px;
+	padding: 18px;
+	border: 1px solid var(--wp-app-color-border);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--wp-app-color-surface, #fff), var(--wp-app-color-secondary, #f0f0f1) 38%);
+}
+
+.contact-composer__header h2 {
+	margin: 0 0 16px;
+	font-size: 22px;
+}
+
+@media (max-width: 720px) {
+	.contact-list__header {
+		display: grid;
+		align-items: start;
+	}
+
+	.contact-list__actions {
+		flex-wrap: wrap;
+	}
+
+	.contact-item__header {
+		display: grid;
+	}
+
+	.contact-item {
+		grid-template-columns: 38px minmax(0, 1fr);
+	}
+
+	.contact-avatar {
+		width: 38px;
+		height: 38px;
+	}
+
+	.contact-item__actions {
+		justify-content: flex-start;
+	}
+
+	.field-grid {
+		grid-template-columns: 1fr;
+	}
+}

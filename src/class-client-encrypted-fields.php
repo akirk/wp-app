@@ -123,7 +123,7 @@ class ClientEncryptedFields {
 
 		wp_app_add_inline_script(
 			'wp-app-encrypted-fields-config',
-			'window.WpAppEncryptedFieldsConfig = ' . wp_json_encode( $this->get_client_config() ) . ';',
+			$this->get_client_config_script(),
 			false,
 			$scope
 		);
@@ -141,6 +141,20 @@ class ClientEncryptedFields {
 			'nonce'        => function_exists( 'wp_create_nonce' ) ? wp_create_nonce( $this->config['nonce_action'] ) : '',
 			'manifest'     => $this->manifest,
 		];
+	}
+
+	/**
+	 * Get client configuration bootstrap script.
+	 *
+	 * @return string
+	 */
+	public function get_client_config_script() {
+		$config = $this->get_client_config();
+		$key    = $this->config['action_prefix'];
+
+		return 'window.WpAppEncryptedFieldsConfigs = window.WpAppEncryptedFieldsConfigs || {};'
+			. 'window.WpAppEncryptedFieldsConfigs[' . wp_json_encode( $key ) . '] = ' . wp_json_encode( $config ) . ';'
+			. 'window.WpAppEncryptedFieldsConfig = ' . wp_json_encode( $config ) . ';';
 	}
 
 	/**
@@ -581,7 +595,7 @@ class ClientEncryptedFields {
 				continue;
 			}
 
-			update_post_meta( $post_id, $field_definition['metaKey'], $value );
+			update_post_meta( $post_id, $field_definition['metaKey'], wp_slash( $value ) );
 		}
 
 		if ( count( $post_update ) > 1 ) {
