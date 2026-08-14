@@ -83,7 +83,7 @@ $encrypted_contact_labels  = [
 		<div class="contact-list__header">
 			<div>
 				<h2>Contacts</h2>
-				<p><span data-contact-count><?php echo esc_html( count( $encrypted_contact_records ) ); ?></span> encrypted contacts</p>
+				<p><span data-contact-count><?php echo esc_html( count( $encrypted_contact_records ) ); ?></span> <span data-contact-count-label><?php echo 1 === count( $encrypted_contact_records ) ? 'encrypted contact' : 'encrypted contacts'; ?></span></p>
 			</div>
 			<div class="contact-list__actions">
 				<div class="contact-import" data-import-dropzone hidden>

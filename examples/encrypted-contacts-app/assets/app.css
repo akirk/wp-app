@@ -32,7 +32,7 @@
 	justify-content: center;
 	box-sizing: border-box;
 	min-height: 42px;
-	margin-top: 16px;
+	margin: 0;
 	padding: 0 16px;
 	border: 1px solid transparent;
 	border-radius: 6px;
@@ -54,6 +54,10 @@
 	border-color: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 12%);
 	background: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 8%);
 	color: var(--wp-app-color-on-primary, #fff);
+}
+
+.app-header .button.app-action-button {
+	margin-top: 16px;
 }
 
 .encrypted-contacts-app .button.app-secondary-button {
@@ -93,6 +97,12 @@
 	color: var(--wp-app-color-on-primary, #fff);
 }
 
+.wp-app-encrypted-fields-unlock__button--primary:hover {
+	border-color: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 12%);
+	background: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 8%);
+	color: var(--wp-app-color-on-primary, #fff);
+}
+
 .encrypted-contacts-app .button.app-action-button:focus,
 .encrypted-contacts-app .button.app-secondary-button:focus,
 .encrypted-contacts-app .button.contact-edit-button:focus,
@@ -113,11 +123,6 @@
 .form-actions {
 	flex-wrap: wrap;
 	margin-top: 16px;
-}
-
-.form-actions .app-action-button,
-.form-actions .app-secondary-button {
-	margin-top: 0;
 }
 
 .encrypted-contacts-app .button.app-secondary-button,
@@ -151,16 +156,25 @@
 
 .app-status {
 	max-width: 720px;
-	margin: 12px 0 0;
+	padding: 2px 0 2px 10px;
+	border-left: 3px solid transparent;
 	color: var(--wp-app-color-muted);
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.app-header .app-status {
+	margin: 20px 0 0;
 }
 
 .app-status.is-error {
+	border-left-color: var(--wp-app-color-error, #b32d2e);
 	color: var(--wp-app-color-error, #b32d2e);
 }
 
 .app-status.is-success {
-	color: var(--wp-app-color-primary, #0073aa);
+	border-left-color: var(--wp-app-color-primary, #0073aa);
+	color: color-mix(in srgb, var(--wp-app-color-primary, #0073aa), #000 24%);
 }
 
 .contact-composer,

@@ -11,6 +11,7 @@
 		contacts: app.querySelector('[data-contacts]'),
 		contactTemplate: app.querySelector('[data-contact-template]'),
 		count: app.querySelector('[data-contact-count]'),
+		countLabel: app.querySelector('[data-contact-count-label]'),
 		form: app.querySelector('[data-contact-form]'),
 		formTitle: app.querySelector('[data-form-title]'),
 		importFiles: app.querySelector('[data-import-files]'),
@@ -19,7 +20,6 @@
 		status: app.querySelector('[data-status]'),
 		unlockButton: app.querySelector('[data-unlock]')
 	} : {};
-	var unlockedMessage = 'Encrypted fields are unlocked in this browser session. New and edited contact details are encrypted before they are saved to WordPress. Reloading the page locks the fields again.';
 	var contactsById = {};
 	var editingId = 0;
 	var typeLabels = {};
@@ -65,6 +65,16 @@
 		elements.status.hidden = !message;
 		elements.status.classList.toggle('is-error', type === 'error');
 		elements.status.classList.toggle('is-success', type === 'success');
+	}
+
+	function setContactCount(count, state) {
+		if (elements.count) {
+			elements.count.textContent = String(count);
+		}
+
+		if (elements.countLabel) {
+			elements.countLabel.textContent = count === 1 ? state + ' contact' : state + ' contacts';
+		}
 	}
 
 	function setEditMode(contact) {
@@ -185,7 +195,7 @@
 		if (elements.importZone) {
 			elements.importZone.hidden = false;
 		}
-		setStatus(unlockedMessage, 'success');
+		setStatus('');
 	}
 
 	function unfoldVcardLines(text) {
@@ -325,7 +335,7 @@
 		}
 
 		await loadContacts();
-		setStatus('Imported ' + imported.length + ' encrypted contacts. ' + unlockedMessage, 'success');
+		setStatus('Imported ' + imported.length + ' contacts.', 'success');
 	}
 
 	function getPhoneHref(phone) {
@@ -405,9 +415,7 @@
 			fragment.appendChild(renderContact(contact));
 		});
 
-		if (elements.count) {
-			elements.count.textContent = String(contactRecords.length);
-		}
+		setContactCount(contactRecords.length, 'decrypted');
 
 		elements.contacts.replaceChildren();
 		if (contactRecords.length) {
@@ -415,7 +423,7 @@
 			return;
 		}
 
-		elements.contacts.appendChild(document.createElement('p')).textContent = 'No encrypted contacts saved yet.';
+		elements.contacts.appendChild(document.createElement('p')).textContent = 'No contacts saved yet.';
 	}
 
 	if (elements.addButton) {
@@ -482,7 +490,7 @@
 
 				closeComposer();
 				await loadContacts();
-				setStatus((wasEditing ? 'Encrypted contact updated. ' : 'Encrypted contact saved. ') + unlockedMessage, 'success');
+				setStatus(wasEditing ? 'Contact updated.' : 'Contact saved.', 'success');
 			} catch (error) {
 				setStatus(error.message, 'error');
 			}
@@ -492,7 +500,7 @@
 	if (elements.cancelEditButton) {
 		elements.cancelEditButton.addEventListener('click', function () {
 			closeComposer();
-			setStatus(unlockedMessage, 'success');
+			setStatus('');
 		});
 	}
 
@@ -535,7 +543,7 @@
 						resetForm();
 					}
 					await loadContacts();
-					setStatus('Encrypted contact deleted. ' + unlockedMessage, 'success');
+					setStatus('Contact deleted.', 'success');
 				} catch (error) {
 					setStatus(error.message, 'error');
 				}
