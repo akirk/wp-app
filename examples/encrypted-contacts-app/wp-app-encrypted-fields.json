@@ -1,0 +1,59 @@
+{
+	"version": 1,
+	"app": {
+		"slug": "encrypted-contacts",
+		"name": "Encrypted Contacts"
+	},
+	"crypto": {
+		"iterations": 250000
+	},
+	"cpts": {
+		"encrypted_contact": {
+			"encryptedFields": {
+				"post_title": {
+					"label": "Contact name",
+					"storage": "post_field",
+					"field": "post_title",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				},
+				"email": {
+					"label": "Email",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_email",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				},
+				"phone": {
+					"label": "Phone",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_phone",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				},
+				"notes": {
+					"label": "Notes",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_notes",
+					"type": "textarea",
+					"minBytes": 1024,
+					"bucketBytes": 1024
+				},
+				"private_tags": {
+					"label": "Private tags",
+					"storage": "post_meta",
+					"metaKey": "_encrypted_private_tags",
+					"type": "text",
+					"minBytes": 512,
+					"bucketBytes": 512
+				}
+			},
+			"taxonomies": [
+				"contact_type"
+			]
+		}
+	}
+}

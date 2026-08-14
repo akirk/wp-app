@@ -124,4 +124,31 @@ class ScopedHooksTest extends TestCase {
 
 		$this->assertStringContainsString( 'global.js', $output );
 	}
+
+	public function test_crypto_runtime_can_be_enqueued_for_app_scope() {
+		global $wp_app_route;
+
+		\wp_app_enqueue_crypto_runtime( 'encrypted-sources' );
+
+		$wp_app_route = [
+			'app_path' => 'other-app',
+		];
+
+		ob_start();
+		\wp_app_body_close();
+		$other_app_output = ob_get_clean();
+
+		$this->assertStringNotContainsString( 'wp-app-crypto.js', $other_app_output );
+
+		$wp_app_route = [
+			'app_path' => 'encrypted-sources',
+		];
+
+		ob_start();
+		\wp_app_body_close();
+		$encrypted_app_output = ob_get_clean();
+
+		$this->assertStringContainsString( 'wp-app-crypto-js', $encrypted_app_output );
+		$this->assertStringContainsString( 'wp-app-crypto.js?ver=' . WP_APP_VERSION, $encrypted_app_output );
+	}
 }

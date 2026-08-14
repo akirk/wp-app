@@ -1,0 +1,22 @@
+{
+	"name": "my-company/encrypted-contacts-app",
+	"description": "WordPress plugin example that augments a custom post type with WpApp client-side encrypted fields",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=7.4",
+		"akirk/wp-app": "^1.4.0"
+	},
+	"repositories": {
+		"wp-app": {
+			"type": "path",
+			"url": "../../",
+			"options": {
+				"symlink": false,
+				"versions": {
+					"akirk/wp-app": "1.4.0"
+				}
+			}
+		}
+	}
+}
