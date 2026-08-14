@@ -111,14 +111,14 @@ function encrypted_sources_register_app() {
 				'encrypted-sources',
 				plugin_dir_url( __FILE__ ) . 'assets/app.css',
 				[],
-				'1.0.0',
+				filemtime( __DIR__ . '/assets/app.css' ),
 				'encrypted-sources'
 			);
 			wp_app_enqueue_script(
 				'encrypted-sources',
 				plugin_dir_url( __FILE__ ) . 'assets/app.js',
 				[],
-				'1.0.0',
+				filemtime( __DIR__ . '/assets/app.js' ),
 				true,
 				'encrypted-sources'
 			);

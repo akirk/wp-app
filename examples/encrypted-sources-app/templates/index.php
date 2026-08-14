@@ -18,8 +18,9 @@ if ( ! is_user_logged_in() ) {
 		<div>
 			<h1>Encrypted Sources</h1>
 			<p>Structural source records live in WordPress. Names, notes, contact details, and private tags decrypt only in this browser.</p>
+			<button class="button button-primary app-action-button" type="button" data-unlock>Unlock encrypted fields</button>
+			<p class="app-status" data-status role="status" aria-live="polite" hidden></p>
 		</div>
-		<button class="button button-primary" type="button" data-unlock>Unlock</button>
 	</header>
 
 	<section class="source-composer" data-locked>
@@ -58,15 +59,33 @@ if ( ! is_user_logged_in() ) {
 				Notes
 				<textarea name="notes" rows="5"></textarea>
 			</label>
-			<button class="button button-primary" type="submit">Save encrypted source</button>
+			<div class="form-actions">
+				<button class="button button-primary app-action-button" type="submit" data-save-source>Save encrypted source</button>
+				<button class="button app-secondary-button" type="button" data-cancel-edit hidden>Cancel edit</button>
+			</div>
 		</form>
 	</section>
 
-	<section class="source-list" data-locked>
-		<h2>Sources</h2>
-		<div data-sources></div>
-	</section>
-</main>
+		<section class="source-list" data-locked>
+			<h2>Sources</h2>
+			<div data-sources></div>
+		</section>
+
+		<template data-source-template>
+			<article class="source-item">
+				<div class="source-item__header">
+					<h3 data-source-field="post_title"></h3>
+					<div class="source-item__actions">
+						<span data-source-field="source_risk"></span>
+						<button class="button source-edit-button" type="button" data-edit-source>Edit</button>
+					</div>
+				</div>
+				<p class="source-contact" data-source-field="contact"></p>
+				<p data-source-field="notes"></p>
+				<p class="source-tags" data-source-field="private_tags"></p>
+			</article>
+		</template>
+	</main>
 
 <?php wp_app_body_close(); ?>
 </body>
