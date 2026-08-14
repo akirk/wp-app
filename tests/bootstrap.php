@@ -374,6 +374,28 @@ if ( ! function_exists( 'sanitize_key' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_plugins' ) ) {
+	function get_plugins( $plugin_folder = '' ) {
+		global $__wp_app_test_plugins;
+
+		$plugin_folder = trim( (string) $plugin_folder, '/' );
+
+		if ( '' === $plugin_folder ) {
+			return is_array( $__wp_app_test_plugins ?? null ) ? $__wp_app_test_plugins : [];
+		}
+
+		return isset( $__wp_app_test_plugins[ $plugin_folder ] ) && is_array( $__wp_app_test_plugins[ $plugin_folder ] ) ? $__wp_app_test_plugins[ $plugin_folder ] : [];
+	}
+}
+
+if ( ! function_exists( 'get_plugin_data' ) ) {
+	function get_plugin_data( $plugin_file, $markup = true, $translate = true ) {
+		global $__wp_app_test_plugin_data;
+
+		return isset( $__wp_app_test_plugin_data[ $plugin_file ] ) && is_array( $__wp_app_test_plugin_data[ $plugin_file ] ) ? $__wp_app_test_plugin_data[ $plugin_file ] : [];
+	}
+}
+
 if ( ! function_exists( 'get_stylesheet_directory_uri' ) ) {
 	function get_stylesheet_directory_uri() {
 		return 'https://example.org/wp-content/themes/child-theme';

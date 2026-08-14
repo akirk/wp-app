@@ -21,6 +21,7 @@ class WpApp {
     private $my_apps             = true;
     private $my_apps_icon        = null;
     private $pwa_config          = null;
+    private $wp_app_requirement  = null;
 
     public function __construct( $template_directory = '', $url_path = 'app', $config = [] ) {
         // Handle legacy parameter style
@@ -100,6 +101,10 @@ class WpApp {
 
         if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
             $this->enable_pwa( is_array( $config['pwa'] ) ? $config['pwa'] : [] );
+        }
+
+        if ( isset( $config['wp_app_requirement'] ) ) {
+            $this->wp_app_requirement = (string) $config['wp_app_requirement'];
         }
     }
 
@@ -242,12 +247,190 @@ class WpApp {
             $this->router->get_app_path(),
             array_merge(
                 [
-                    'name' => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
-                    'url'  => home_url( '/' . $this->router->get_app_path() . '/' ),
+                    'name'           => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
+                    'url'            => home_url( '/' . $this->router->get_app_path() . '/' ),
+                    'wp_app_package' => [
+                        'expected'        => $this->get_wp_app_requirement(),
+                        'expected_source' => $this->get_wp_app_requirement_source(),
+                        'loaded'          => self::get_loaded_wp_app_package(),
+                    ],
                 ],
                 $this->get_my_apps_icon_data()
             )
         );
+    }
+
+    /**
+     * Get the wp-app version constraint expected by the consuming plugin.
+     *
+     * @return string|null Version constraint, or null when it cannot be detected.
+     */
+    private function get_wp_app_requirement() {
+        if ( null !== $this->wp_app_requirement ) {
+            return $this->wp_app_requirement;
+        }
+
+        $composer = $this->get_consumer_composer_json();
+
+        if ( empty( $composer['data'] ) || ! is_array( $composer['data'] ) ) {
+            return null;
+        }
+
+        foreach ( [ 'require', 'require-dev' ] as $section ) {
+            if ( isset( $composer['data'][ $section ]['akirk/wp-app'] ) && is_string( $composer['data'][ $section ]['akirk/wp-app'] ) ) {
+                return $composer['data'][ $section ]['akirk/wp-app'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get where the consuming plugin's wp-app version constraint was detected.
+     *
+     * @return string|null Path to composer.json, or null when unknown or explicitly configured.
+     */
+    private function get_wp_app_requirement_source() {
+        if ( null !== $this->wp_app_requirement ) {
+            return null;
+        }
+
+        $composer = $this->get_consumer_composer_json();
+
+        return isset( $composer['path'] ) ? $composer['path'] : null;
+    }
+
+    /**
+     * Find and decode the nearest consumer composer.json for this app.
+     *
+     * @return array|null Composer data and path, or null when unavailable.
+     */
+    private function get_consumer_composer_json() {
+        $directory = $this->template_directory;
+
+        if ( '' === $directory ) {
+            return null;
+        }
+
+        $directory = is_dir( $directory ) ? $directory : dirname( $directory );
+        $directory = realpath( $directory );
+
+        if ( ! $directory ) {
+            return null;
+        }
+
+        $loaded_package_dir = realpath( dirname( __DIR__ ) );
+
+        while ( $directory && dirname( $directory ) !== $directory ) {
+            if ( $loaded_package_dir && 0 === strpos( $directory, $loaded_package_dir ) ) {
+                return null;
+            }
+
+            $path = $directory . DIRECTORY_SEPARATOR . 'composer.json';
+
+            if ( is_readable( $path ) ) {
+                // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a local composer.json file.
+                $data = json_decode( file_get_contents( $path ), true );
+
+                if ( is_array( $data ) ) {
+                    return [
+                        'path' => $path,
+                        'data' => $data,
+                    ];
+                }
+            }
+
+            if ( defined( 'WP_CONTENT_DIR' ) && self::normalize_path( $directory ) === self::normalize_path( WP_CONTENT_DIR ) ) {
+                break;
+            }
+
+            $directory = dirname( $directory );
+        }
+
+        return null;
+    }
+
+    /**
+     * Get metadata for the loaded wp-app package.
+     *
+     * @return array Loaded package metadata.
+     */
+    private static function get_loaded_wp_app_package() {
+        $version = null;
+        $path    = self::normalize_path( dirname( __DIR__ ) );
+
+        if ( class_exists( '\Composer\InstalledVersions' ) ) {
+            try {
+                if ( \Composer\InstalledVersions::isInstalled( 'akirk/wp-app' ) ) {
+                    $version       = \Composer\InstalledVersions::getPrettyVersion( 'akirk/wp-app' );
+                    $composer_path = \Composer\InstalledVersions::getInstallPath( 'akirk/wp-app' );
+
+                    if ( is_string( $composer_path ) && '' !== $composer_path ) {
+                        $path = self::normalize_path( $composer_path );
+                    }
+                }
+            } catch ( \Exception $e ) {
+                $version = null;
+            }
+        }
+
+        if ( null === $version && $path && is_readable( $path . DIRECTORY_SEPARATOR . 'composer.json' ) ) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the local loaded package composer.json file.
+            $data = json_decode( file_get_contents( $path . DIRECTORY_SEPARATOR . 'composer.json' ), true );
+
+            if ( is_array( $data ) && isset( $data['version'] ) && is_string( $data['version'] ) ) {
+                $version = $data['version'];
+            }
+        }
+
+        return [
+            'name'    => 'akirk/wp-app',
+            'version' => $version,
+            'path'    => $path ? $path : dirname( __DIR__ ),
+        ];
+    }
+
+    /**
+     * Normalize a filesystem path without requiring WordPress helpers.
+     *
+     * @param string $path Path.
+     * @return string Normalized path.
+     */
+    private static function normalize_path( $path ) {
+        $path     = str_replace( '\\', '/', (string) $path );
+        $prefix   = '';
+        $segments = [];
+
+        if ( preg_match( '#^[a-zA-Z]:/#', $path, $matches ) ) {
+            $prefix = $matches[0];
+            $path   = substr( $path, strlen( $prefix ) );
+        } elseif ( 0 === strpos( $path, '/' ) ) {
+            $prefix = '/';
+            $path   = ltrim( $path, '/' );
+        }
+
+        foreach ( explode( '/', $path ) as $segment ) {
+            if ( '' === $segment || '.' === $segment ) {
+                continue;
+            }
+
+            if ( '..' === $segment ) {
+                if ( ! empty( $segments ) && '..' !== end( $segments ) ) {
+                    array_pop( $segments );
+                    continue;
+                }
+
+                if ( '' === $prefix ) {
+                    $segments[] = $segment;
+                }
+
+                continue;
+            }
+
+            $segments[] = $segment;
+        }
+
+        return $prefix . implode( '/', $segments );
     }
 
     /**
