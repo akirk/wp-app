@@ -1,6 +1,6 @@
 # WpApp Framework
 
-An opinionated framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation.
+A framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation.
 
 ## Quick Start
 
