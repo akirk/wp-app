@@ -150,4 +150,47 @@ class WpAppTest extends TestCase {
 		$items = $base_app->get_app()->masterbar()->get_preview_menu_items();
 		$this->assertArrayHasKey( 'dashboard', $items );
 	}
+
+	public function test_require_login_defaults_to_true() {
+		$app = new WpApp( '/test/templates', 'my-app' );
+
+		$this->assertSame( 'read', $app->get_required_capability() );
+	}
+
+	public function test_require_login_can_be_disabled_explicitly() {
+		$app = new WpApp(
+			'/test/templates',
+			'my-app',
+			[
+				'require_login' => false,
+			]
+		);
+
+		$this->assertNull( $app->get_required_capability() );
+	}
+
+	public function test_require_login_default_does_not_override_explicit_capability() {
+		$app = new WpApp(
+			'/test/templates',
+			'my-app',
+			[
+				'require_capability' => 'manage_options',
+			]
+		);
+
+		$this->assertSame( 'manage_options', $app->get_required_capability() );
+	}
+
+	public function test_require_login_true_overrides_require_capability() {
+		$app = new WpApp(
+			'/test/templates',
+			'my-app',
+			[
+				'require_capability' => 'manage_options',
+				'require_login'      => true,
+			]
+		);
+
+		$this->assertSame( 'read', $app->get_required_capability() );
+	}
 }

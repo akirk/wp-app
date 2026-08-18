@@ -72,7 +72,13 @@ class WpApp {
             $this->require_capability( $config['minimal_capability'] );
         }
 
-        if ( isset( $config['require_login'] ) && $config['require_login'] ) {
+        if ( isset( $config['require_login'] ) ) {
+            if ( $config['require_login'] ) {
+                $this->require_capability( 'read' );
+            }
+        } elseif ( ! isset( $config['require_capability'] ) && ! isset( $config['minimal_capability'] ) ) {
+            // require_login defaults to true: require at least a logged-in user
+            // unless an explicit capability requirement is already configured.
             $this->require_capability( 'read' );
         }
 

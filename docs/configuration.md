@@ -11,7 +11,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'show_wp_logo'                 => false,
 	'show_site_name'               => true,
 	'admin_bar_app_link'           => true,
-	'require_login'                => false,
+	'require_login'                => true,
 	'require_capability'           => null,
 	'clear_admin_bar'              => false,
 	'my_apps'                      => true,
@@ -45,7 +45,7 @@ Global masterbar behavior can also be configured in **Settings > WP Apps**. The 
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `require_login` | bool | `false` | Require users to be logged in (shortcut for `require_capability => 'read'`) |
+| `require_login` | bool | `true` | Require users to be logged in (shortcut for `require_capability => 'read'`). Set to `false` to make the app public |
 | `require_capability` | string | `null` | WordPress capability required to access the app |
 
 ### My Apps Plugin Integration
