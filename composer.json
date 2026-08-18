@@ -1,6 +1,6 @@
 {
     "name": "akirk/wp-app",
-    "description": "An opinionated framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation",
+    "description": "A framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation",
     "type": "library",
     "license": "GPL-2.0-or-later",
     "authors": [
