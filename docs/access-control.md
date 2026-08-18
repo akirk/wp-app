@@ -6,16 +6,21 @@ WpApp uses WordPress capabilities to control access to your app and individual r
 
 ### Require Login
 
-The simplest access control - require users to be logged in:
+Apps require a logged-in user by default (equivalent to `require_capability => 'read'`). To make an app public, set `require_login => false`:
 
 ```php
-// Via config
+// Explicit (also the default)
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'require_login' => true,
 ] );
 
 // Or via method
 $app->require_capability( 'read' );
+
+// Public app - opt out of the default
+$public_app = new WpApp( __DIR__ . '/templates', 'my-app', [
+	'require_login' => false,
+] );
 ```
 
 ### Require Specific Capability
@@ -154,7 +159,9 @@ When running multiple WpApp instances, each can have different access requiremen
 
 ```php
 // Public app
-$public_app = new WpApp( __DIR__ . '/templates/public', 'public' );
+$public_app = new WpApp( __DIR__ . '/templates/public', 'public', [
+	'require_login' => false,
+] );
 $public_app->init();
 
 // Members-only app
