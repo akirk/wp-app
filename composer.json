@@ -27,7 +27,8 @@
             "src/class-client-encrypted-fields.php",
             "src/BaseStorage.php",
             "src/abstract-baseapp.php",
-            "src/functions.php"
+            "src/functions.php",
+            "src/rest/class-access.php"
         ]
     },
     "autoload-dev": {

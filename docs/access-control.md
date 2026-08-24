@@ -177,6 +177,81 @@ $admin_app = new WpApp( __DIR__ . '/templates/admin', 'admin-panel', [
 $admin_app->init();
 ```
 
+## REST API Access Control
+
+`require_login` / `require_capability` gate the app's **front end** — its routes and
+templates. They do **not** gate the WordPress REST API. This matters whenever your
+app stores data in a custom post type or taxonomy registered with
+`show_in_rest => true` (which the block editor requires):
+
+- Core serves every **published** post of a `show_in_rest` post type to anonymous
+  callers at `/wp/v2/<type>`, and every term of a `show_in_rest` taxonomy at
+  `/wp/v2/<taxonomy>` — it keys off `show_in_rest` alone, **not** `public` or
+  `publicly_queryable`. Setting `public => false` does not hide anything here.
+- `register_post_meta( ..., 'show_in_rest' => true )` is readable by anyone who can
+  read the post; an `auth_callback` only gates **writes**.
+
+So an app whose front end is login-only still leaks its notes/recipes/records over
+REST unless the REST layer is gated too. Do that with the framework's gated
+controllers, which require the same capability for reads while leaving the block
+editor (which reads as a logged-in user) working:
+
+```php
+use WpApp\Rest\Access;
+
+add_action( 'init', function () {
+    // Declare the app's REST-backed types. Access injects the gated controller
+    // (and show_in_rest) into their registration automatically — so the
+    // register_*() calls below need no rest_controller_class of their own.
+    Access::protect_post_type( 'note', 'read' );
+    Access::protect_taxonomy( 'note_tag', 'read' );
+
+    register_post_type( 'note', [
+        'public'       => false,
+        'show_in_rest' => true, // needed for the block editor
+        'supports'     => [ 'title', 'editor', 'author', 'custom-fields' ],
+        // ...
+    ] );
+
+    register_taxonomy( 'note_tag', 'note', [
+        'public'       => false,
+        'show_in_rest' => true,
+    ] );
+} );
+```
+
+Call `protect_*` **before** the matching `register_*` (both run on `init`).
+
+Pass the same capability you gave the app: `'read'` for a login-only app,
+`'edit_posts'` for an editor-only app, and so on. Pass `null` to require only that
+the caller be logged in. After this, anonymous reads return `401`; a logged-in user
+without the capability gets `403`.
+
+**Compliance check:** every app-owned post type / taxonomy registered with
+`show_in_rest => true` should have a matching `Access::protect_post_type()` /
+`Access::protect_taxonomy()` declaration. Because that declaration is the single
+place the gate is wired, auditing a plugin is a grep: the count of app-owned
+`show_in_rest` registrations should equal the count of `Access::protect_*` calls
+(minus any type deliberately left public).
+
+### Deliberately public reads (share links)
+
+If an app intentionally exposes some objects anonymously — e.g. a share-token
+link — opt back in with the `wp_app_rest_public_read` filter, which runs before the
+gate denies the request:
+
+```php
+add_filter( 'wp_app_rest_public_read', function ( $allow, $object_name, $request ) {
+    if ( 'trip' === $object_name && my_app_request_has_valid_share_token( $request ) ) {
+        return true;
+    }
+    return $allow;
+}, 10, 3 );
+```
+
+Keep the default (`false`) for everything else so app data stays private.
+
+
 ## Related Documentation
 
 - [Configuration](configuration.md) - Access control config options

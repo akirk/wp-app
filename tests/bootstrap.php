@@ -486,4 +486,74 @@ if ( ! function_exists( 'add_rewrite_rule' ) ) {
 	}
 }
 
+// --- REST access-gate stubs (for RestAccessTest) ---
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	class WP_Error {
+		public $code;
+		public $message;
+		public $data;
+
+		public function __construct( $code = '', $message = '', $data = [] ) {
+			$this->code    = $code;
+			$this->message = $message;
+			$this->data    = $data;
+		}
+	}
+}
+
+if ( ! function_exists( 'is_wp_error' ) ) {
+	function is_wp_error( $thing ) {
+		return $thing instanceof \WP_Error;
+	}
+}
+
+if ( ! function_exists( 'rest_authorization_required_code' ) ) {
+	function rest_authorization_required_code() {
+		return is_user_logged_in() ? 403 : 401;
+	}
+}
+
+if ( ! class_exists( 'WP_REST_Request' ) ) {
+	class WP_REST_Request {}
+}
+
+if ( ! class_exists( 'WP_REST_Posts_Controller' ) ) {
+	class WP_REST_Posts_Controller {
+		public $post_type;
+
+		public function __construct( $post_type ) {
+			$this->post_type = $post_type;
+		}
+
+		public function get_items_permissions_check( $request ) {
+			return true;
+		}
+
+		public function get_item_permissions_check( $request ) {
+			return true;
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_REST_Terms_Controller' ) ) {
+	class WP_REST_Terms_Controller {
+		public $taxonomy;
+
+		public function __construct( $taxonomy ) {
+			$this->taxonomy = $taxonomy;
+		}
+
+		public function get_items_permissions_check( $request ) {
+			return true;
+		}
+
+		public function get_item_permissions_check( $request ) {
+			return true;
+		}
+	}
+}
+
+
 require_once __DIR__ . '/../vendor/autoload.php';
+
