@@ -55,7 +55,7 @@ my-app/
 - Keep `__construct()` focused on creating/configuring `WpApp`, assigning storage objects, and attaching WordPress hooks.
 - Do not call `register_post_type()`, `register_taxonomy()`, `flush_rewrite_rules()`, `wp_add_dashboard_widget()`, REST route registration, or other WordPress-hooked feature registration directly from `__construct()`.
 - Register custom post types and taxonomies on the WordPress `init` hook.
-- When a custom post type or taxonomy uses `show_in_rest => true` (the block editor needs it), declare it with `\WpApp\Rest\Access::protect_post_type()` / `::protect_taxonomy()` (before the matching `register_*`) — Access then gates its REST reads to the app's capability. Otherwise published entries are readable anonymously over `/wp/v2/<type>` regardless of `public => false`. See docs/access-control.md.
+- When a custom post type or taxonomy uses `show_in_rest => true` (the block editor needs it), wire its `rest_controller_class` to `\WpApp\Rest\Access::protect_post_type()` / `::protect_taxonomy()` — that gates its REST reads to the app's capability. Otherwise published entries are readable anonymously over `/wp/v2/<type>` regardless of `public => false`. See docs/access-control.md. (Requires `akirk/wp-app ^1.5`.)
 - Register dashboard widgets on the WordPress `wp_dashboard_setup` hook.
 - Define WpApp routes in `setup_routes()` and WpApp menu/masterbar entries in `setup_menu()`.
 - Run activation-only work, including custom table creation and rewrite flushing, from the plugin activation hook.
@@ -109,26 +109,25 @@ class App extends BaseApp {
 ### REST-Gated Custom Post Type
 
 A `show_in_rest` post type is readable anonymously over `/wp/v2/<type>` unless its
-REST reads are gated (front-end `require_login` does not cover REST). Route the
-controller through `Access` so reads require the app's capability:
+REST reads are gated (front-end `require_login` does not cover REST). Set each
+type's `rest_controller_class` to `Access::protect_*`, which records the capability
+and returns the gated controller class:
 
 ```php
 use WpApp\Rest\Access;
 
 public function register_post_types(): void {
-    // Declare REST-backed types; Access injects the gated controller for them.
-    Access::protect_post_type( 'note', 'read' );
-    Access::protect_taxonomy( 'note_tag', 'read' );
-
     register_post_type( 'note', [
-        'public'       => false,
-        'show_in_rest' => true,
-        'supports'     => [ 'title', 'editor', 'author', 'custom-fields' ],
+        'public'                => false,
+        'show_in_rest'          => true,
+        'rest_controller_class' => Access::protect_post_type( 'note', 'read' ),
+        'supports'              => [ 'title', 'editor', 'author', 'custom-fields' ],
     ] );
 
     register_taxonomy( 'note_tag', 'note', [
-        'public'       => false,
-        'show_in_rest' => true,
+        'public'                => false,
+        'show_in_rest'          => true,
+        'rest_controller_class' => Access::protect_taxonomy( 'note_tag', 'read' ),
     ] );
 }
 ```

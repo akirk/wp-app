@@ -192,47 +192,43 @@ app stores data in a custom post type or taxonomy registered with
   read the post; an `auth_callback` only gates **writes**.
 
 So an app whose front end is login-only still leaks its notes/recipes/records over
-REST unless the REST layer is gated too. Do that with the framework's gated
-controllers, which require the same capability for reads while leaving the block
+REST unless the REST layer is gated too. Do that by pointing each type's
+`rest_controller_class` at the framework's gate — `Access::protect_post_type()` /
+`Access::protect_taxonomy()` record the required capability and return the gated
+controller class, which requires that capability for reads while leaving the block
 editor (which reads as a logged-in user) working:
 
 ```php
 use WpApp\Rest\Access;
 
 add_action( 'init', function () {
-    // Declare the app's REST-backed types. Access injects the gated controller
-    // (and show_in_rest) into their registration automatically — so the
-    // register_*() calls below need no rest_controller_class of their own.
-    Access::protect_post_type( 'note', 'read' );
-    Access::protect_taxonomy( 'note_tag', 'read' );
-
     register_post_type( 'note', [
-        'public'       => false,
-        'show_in_rest' => true, // needed for the block editor
-        'supports'     => [ 'title', 'editor', 'author', 'custom-fields' ],
-        // ...
+        'public'                => false,
+        'show_in_rest'          => true, // needed for the block editor
+        'rest_controller_class' => Access::protect_post_type( 'note', 'read' ),
+        'supports'              => [ 'title', 'editor', 'author', 'custom-fields' ],
     ] );
 
     register_taxonomy( 'note_tag', 'note', [
-        'public'       => false,
-        'show_in_rest' => true,
+        'public'                => false,
+        'show_in_rest'          => true,
+        'rest_controller_class' => Access::protect_taxonomy( 'note_tag', 'read' ),
     ] );
 } );
 ```
 
-Call `protect_*` **before** the matching `register_*` (both run on `init`).
-
 Pass the same capability you gave the app: `'read'` for a login-only app,
 `'edit_posts'` for an editor-only app, and so on. Pass `null` to require only that
 the caller be logged in. After this, anonymous reads return `401`; a logged-in user
-without the capability gets `403`.
+without the capability gets `403`. (Requires this plugin to depend on
+`akirk/wp-app ^1.5` or newer, where `WpApp\Rest\Access` exists.)
 
 **Compliance check:** every app-owned post type / taxonomy registered with
-`show_in_rest => true` should have a matching `Access::protect_post_type()` /
-`Access::protect_taxonomy()` declaration. Because that declaration is the single
-place the gate is wired, auditing a plugin is a grep: the count of app-owned
-`show_in_rest` registrations should equal the count of `Access::protect_*` calls
-(minus any type deliberately left public).
+`show_in_rest => true` should wire its `rest_controller_class` through
+`Access::protect_post_type()` / `Access::protect_taxonomy()`. Auditing a plugin is
+then a grep: each `show_in_rest` registration should have a matching
+`Access::protect_*` on its `rest_controller_class` (minus any type deliberately
+left public).
 
 ### Deliberately public reads (share links)
 
