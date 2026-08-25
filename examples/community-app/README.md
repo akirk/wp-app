@@ -78,20 +78,24 @@ class CommunityAppStorage extends BaseStorage {
 
 ### 3. WordPress dbDelta
 
-Database tables created in activation hook using WordPress native `dbDelta()`:
+Tables are declared in the storage class, keyed by unprefixed table name;
+`BaseStorage::create_tables()` wraps them in `CREATE TABLE` and runs
+WordPress's native `dbDelta()` from the activation hook:
 
 ```php
+class CommunityAppStorage extends BaseStorage {
+    protected function get_schema() {
+        return array(
+            'webapp_progress' => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                user_id bigint(20) unsigned NOT NULL,
+                PRIMARY KEY  (id)",
+        );
+    }
+}
+
 public function activate() {
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    global $wpdb;
-
-    $sql = "CREATE TABLE {$wpdb->prefix}webapp_progress (
-        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-        user_id bigint(20) unsigned NOT NULL,
-        PRIMARY KEY  (id)
-    ) {$wpdb->get_charset_collate()};";
-
-    dbDelta( $sql );
+    $this->storage->create_tables();
+    flush_rewrite_rules();
 }
 ```
 

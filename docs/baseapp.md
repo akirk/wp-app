@@ -76,12 +76,12 @@ BaseStorage provides database abstraction with schema management using WordPress
 ```php
 class MyAppStorage extends BaseStorage {
 
+	// Keyed by unprefixed table name. create_tables() adds the table prefix and
+	// wraps each definition in CREATE TABLE with the site's charset before
+	// handing them to dbDelta().
 	protected function get_schema() {
-		$charset_collate = $this->wpdb->get_charset_collate();
-
 		return [
-			"CREATE TABLE {$this->wpdb->prefix}myapp_items (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			'myapp_items' => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				user_id bigint(20) unsigned NOT NULL,
 				title varchar(255) NOT NULL,
 				content longtext,
@@ -90,18 +90,15 @@ class MyAppStorage extends BaseStorage {
 				updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY  (id),
 				KEY user_id (user_id),
-				KEY status (status)
-			) $charset_collate;",
+				KEY status (status)",
 
-			"CREATE TABLE {$this->wpdb->prefix}myapp_meta (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			'myapp_meta'  => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				item_id bigint(20) unsigned NOT NULL,
 				meta_key varchar(255) NOT NULL,
 				meta_value longtext,
 				PRIMARY KEY  (id),
 				KEY item_id (item_id),
-				KEY meta_key (meta_key)
-			) $charset_collate;",
+				KEY meta_key (meta_key)",
 		];
 	}
 }

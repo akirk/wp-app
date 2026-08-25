@@ -1,12 +1,12 @@
 <?php
 /**
- * My Web App - User Dashboard Template
+ * Community App - User Dashboard Template
  * Clean app template without WordPress theme interference
  */
 
 // Redirect if not logged in
 if ( ! is_user_logged_in() ) {
-    wp_redirect( wp_login_url( home_url( '/my-web-app/dashboard' ) ) );
+    wp_redirect( wp_login_url( home_url( '/community/dashboard' ) ) );
     exit;
 }
 
@@ -36,21 +36,9 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
     "SELECT * FROM {$wpdb->prefix}webapp_posts WHERE author_id = %d ORDER BY created_at DESC LIMIT 5",
     $current_user->ID
 ) );
-
-// Get user progress
-$progress = $wpdb->get_row( $wpdb->prepare(
-    "SELECT * FROM {$wpdb->prefix}webapp_progress WHERE user_id = %d",
-    $current_user->ID
-) );
-
-// Get user's posts
-$user_posts = $wpdb->get_results( $wpdb->prepare(
-    "SELECT * FROM {$wpdb->prefix}webapp_posts WHERE author_id = %d ORDER BY created_at DESC LIMIT 5",
-    $current_user->ID
-) );
 ?>
 
-<div class="my-web-app-container">
+<div class="community-app-container">
     <div class="dashboard-header">
         <div class="user-profile">
             <?php echo get_avatar( $current_user->ID, 80 ); ?>
@@ -82,10 +70,10 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
         <div class="dashboard-section">
             <h2>Quick Actions</h2>
             <div class="action-buttons">
-                <a href="<?php echo esc_url( home_url( '/my-web-app/posts/create' ) ); ?>" class="button button-primary">
+                <a href="<?php echo esc_url( home_url( '/community/posts/create' ) ); ?>" class="button button-primary">
                     <span class="dashicon">+</span> Create New Post
                 </a>
-                <a href="<?php echo esc_url( home_url( '/my-web-app/profile/' . $current_user->ID ) ); ?>" class="button">
+                <a href="<?php echo esc_url( home_url( '/community/profile/' . $current_user->ID ) ); ?>" class="button">
                     View My Profile
                 </a>
                 <button onclick="earnTestPoints()" class="button" id="earn-points-btn">
@@ -100,7 +88,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
                 <div class="posts-list">
                     <?php foreach ( $user_posts as $post ) : ?>
                         <div class="post-item">
-                            <h3><a href="<?php echo esc_url( home_url( '/my-web-app/posts/' . $post->id ) ); ?>"><?php echo esc_html( $post->title ); ?></a></h3>
+                            <h3><a href="<?php echo esc_url( home_url( '/community/posts/' . $post->id ) ); ?>"><?php echo esc_html( $post->title ); ?></a></h3>
                             <p class="post-meta">
                                 <span class="post-date"><?php echo esc_html( date( 'M j, Y', strtotime( $post->created_at ) ) ); ?></span>
                                 <span class="post-status status-<?php echo esc_attr( $post->status ); ?>"><?php echo esc_html( ucfirst( $post->status ) ); ?></span>
@@ -110,12 +98,12 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
                     <?php endforeach; ?>
                 </div>
                 <p class="view-all">
-                    <a href="<?php echo esc_url( home_url( '/my-web-app/posts' ) ); ?>">View all posts →</a>
+                    <a href="<?php echo esc_url( home_url( '/community/posts' ) ); ?>">View all posts →</a>
                 </p>
             <?php else : ?>
                 <div class="empty-state">
                     <p>You haven't created any posts yet.</p>
-                    <a href="<?php echo esc_url( home_url( '/my-web-app/posts/create' ) ); ?>" class="button button-primary">Create Your First Post</a>
+                    <a href="<?php echo esc_url( home_url( '/community/posts/create' ) ); ?>" class="button button-primary">Create Your First Post</a>
                 </div>
             <?php endif; ?>
         </div>
@@ -162,7 +150,7 @@ $user_posts = $wpdb->get_results( $wpdb->prepare(
 </div>
 
 <style>
-.my-web-app-container {
+.community-app-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 40px 20px;
@@ -403,7 +391,7 @@ function earnTestPoints() {
     const formData = new FormData();
     formData.append('points', '10');
 
-    fetch('<?php echo esc_url( rest_url( 'my-web-app/v1/add-points' ) ); ?>', {
+    fetch('<?php echo esc_url( rest_url( 'community/v1/add-points' ) ); ?>', {
         method: 'POST',
         headers: {
             'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'

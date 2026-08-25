@@ -38,23 +38,22 @@ class CommunityAppStorage extends BaseStorage {
 	 *
 	 * @return array Array of SQL CREATE TABLE statements.
 	 */
+	/**
+	 * Table definitions, keyed by unprefixed table name. BaseStorage wraps each
+	 * in CREATE TABLE with the site's charset and runs dbDelta on activation.
+	 */
 	protected function get_schema() {
-		$charset_collate = $this->wpdb->get_charset_collate();
-
 		return array(
-			"CREATE TABLE {$this->wpdb->prefix}webapp_progress (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			'webapp_progress' => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				user_id bigint(20) unsigned NOT NULL,
 				level int(11) DEFAULT 1,
 				points int(11) DEFAULT 0,
 				achievements longtext,
 				last_activity datetime DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY  (id),
-				UNIQUE KEY user_id (user_id)
-			) $charset_collate;",
+				UNIQUE KEY user_id (user_id)",
 
-			"CREATE TABLE {$this->wpdb->prefix}webapp_posts (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			'webapp_posts'    => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				author_id bigint(20) unsigned NOT NULL,
 				title varchar(255) NOT NULL,
 				content longtext,
@@ -63,8 +62,7 @@ class CommunityAppStorage extends BaseStorage {
 				updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY  (id),
 				KEY author_id (author_id),
-				KEY status (status)
-			) $charset_collate;",
+				KEY status (status)",
 		);
 	}
 
@@ -94,6 +92,20 @@ class CommunityAppStorage extends BaseStorage {
 		return $progress;
 	}
 
+	public function create_post( $author_id, $title, $content ) {
+		$this->wpdb->insert(
+			$this->wpdb->prefix . 'webapp_posts',
+			array(
+				'author_id' => $author_id,
+				'title'     => $title,
+				'content'   => $content,
+			),
+			array( '%d', '%s', '%s' )
+		);
+
+		return (int) $this->wpdb->insert_id;
+	}
+
 	public function add_points( $user_id, $points ) {
 		return $this->wpdb->query(
 			$this->wpdb->prepare(
@@ -112,8 +124,11 @@ class CommunityAppStorage extends BaseStorage {
  */
 class CommunityApp extends BaseApp {
 
+	public static $instance;
+
 	public function __construct() {
-		$this->storage = new CommunityAppStorage();
+		self::$instance = $this;
+		$this->storage  = new CommunityAppStorage();
 
 		$this->app = new WpApp(
 			plugin_dir_path( __FILE__ ) . 'templates',
@@ -140,10 +155,12 @@ class CommunityApp extends BaseApp {
 		$this->app->route( 'dashboard' );
 		$this->app->route( 'profile/{user_id}' );
 		$this->app->route( 'posts' );
-		$this->app->route( 'posts/{post_id}' );
 		$this->app->route( 'posts/create' );
+		// Without an explicit template this would map to posts.php like the list.
+		$this->app->route( 'posts/{post_id}', 'post.php' );
 		$this->app->route( 'leaderboard' );
 
+		add_action( 'init', array( $this, 'maybe_handle_create_post' ) );
 		add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
 		add_action( 'template_redirect', array( $this, 'maybe_setup_assets' ) );
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
@@ -156,6 +173,41 @@ class CommunityApp extends BaseApp {
 		if ( is_user_logged_in() ) {
 			$this->app->add_user_menu_item( 'dashboard', 'Dashboard', home_url( '/community/dashboard' ) );
 		}
+	}
+
+	/**
+	 * Handle the form on /community/posts/create: insert the post, award the
+	 * configured points and send the author to the new post.
+	 */
+	public function maybe_handle_create_post() {
+		if ( ! isset( $_POST['community_create_post'] ) || ! is_user_logged_in() ) {
+			return;
+		}
+
+		check_admin_referer( 'community_create_post' );
+
+		$title   = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
+		$content = isset( $_POST['content'] ) ? sanitize_textarea_field( wp_unslash( $_POST['content'] ) ) : '';
+
+		if ( '' === $title || '' === $content ) {
+			// Not "error": WordPress reserves that query var and strips it.
+			wp_safe_redirect( add_query_arg( 'missing', '1', home_url( '/community/posts/create' ) ) );
+			exit;
+		}
+
+		$post_id = $this->storage->create_post( get_current_user_id(), $title, $content );
+		$this->storage->add_points( get_current_user_id(), intval( $this->app->get_config( 'points_per_post', 10 ) ) );
+
+		wp_safe_redirect( home_url( '/community/posts/' . $post_id ) );
+		exit;
+	}
+
+	/**
+	 * Whether the leaderboard is enabled in the app settings. Templates cannot
+	 * reach the app instance, so this is what they ask.
+	 */
+	public static function is_leaderboard_enabled() {
+		return (bool) self::$instance->app->get_config( 'enable_leaderboard', true );
 	}
 
 	public function maybe_setup_assets() {
@@ -264,8 +316,9 @@ class CommunityApp extends BaseApp {
 	}
 
 	public function admin_page() {
-		$total_users = $this->wpdb->get_var( "SELECT COUNT(*) FROM {$this->wpdb->prefix}webapp_progress" );
-		$total_posts = $this->wpdb->get_var( "SELECT COUNT(*) FROM {$this->wpdb->prefix}webapp_posts" );
+		global $wpdb;
+		$total_users = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}webapp_progress" );
+		$total_posts = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}webapp_posts" );
 		?>
 		<div class="wrap">
 			<h1>Community App Dashboard</h1>

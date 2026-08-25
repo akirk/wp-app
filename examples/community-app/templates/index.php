@@ -1,6 +1,6 @@
 <?php
 /**
- * My Web App - Home Template
+ * Community App - Home Template
  * Clean app template without WordPress theme interference
  */
 
@@ -10,16 +10,16 @@ $current_user = wp_get_current_user();
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title( 'My Web App' ); ?></title>
+    <title><?php echo wp_app_title( 'Home' ); ?></title>
     <?php wp_app_head(); ?>
 </head>
 <body class="wp-app-body">
 
 <?php wp_app_body_open(); ?>
 
-<div class="my-web-app-container">
+<div class="community-app-container">
     <div class="app-header">
-        <h1>Welcome to My Web App</h1>
+        <h1>Welcome to the Community</h1>
         <p class="app-tagline">Connect, create, and compete with other users!</p>
     </div>
 
@@ -53,19 +53,19 @@ $current_user = wp_get_current_user();
             <div class="feature-card">
                 <h3>Your Dashboard</h3>
                 <p>View your progress, manage your posts, and track your achievements.</p>
-                <a href="<?php echo esc_url( home_url( '/my-web-app/dashboard' ) ); ?>" class="button button-primary">Go to Dashboard</a>
+                <a href="<?php echo esc_url( home_url( '/community/dashboard' ) ); ?>" class="button button-primary">Go to Dashboard</a>
             </div>
 
             <div class="feature-card">
                 <h3>Community Posts</h3>
                 <p>Read posts from other users and share your own content.</p>
-                <a href="<?php echo esc_url( home_url( '/my-web-app/posts' ) ); ?>" class="button">Browse Posts</a>
+                <a href="<?php echo esc_url( home_url( '/community/posts' ) ); ?>" class="button">Browse Posts</a>
             </div>
 
             <div class="feature-card">
                 <h3>Leaderboard</h3>
                 <p>See how you rank against other users in the community.</p>
-                <a href="<?php echo esc_url( home_url( '/my-web-app/leaderboard' ) ); ?>" class="button">View Leaderboard</a>
+                <a href="<?php echo esc_url( home_url( '/community/leaderboard' ) ); ?>" class="button">View Leaderboard</a>
             </div>
         </div>
 
@@ -75,7 +75,7 @@ $current_user = wp_get_current_user();
             <p>Create an account to start building your profile, posting content, and competing with other users!</p>
 
             <div class="auth-buttons">
-                <a href="<?php echo esc_url( wp_login_url( home_url( '/my-web-app' ) ) ); ?>" class="button button-primary">Log In</a>
+                <a href="<?php echo esc_url( wp_login_url( home_url( '/community' ) ) ); ?>" class="button button-primary">Log In</a>
                 <a href="<?php echo esc_url( wp_registration_url() ); ?>" class="button">Sign Up</a>
             </div>
         </div>
@@ -93,7 +93,7 @@ $current_user = wp_get_current_user();
 </div>
 
 <style>
-.my-web-app-container {
+.community-app-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 40px 20px;
@@ -250,7 +250,7 @@ $current_user = wp_get_current_user();
 <script>
 // Load user progress via WordPress REST API if logged in
 <?php if ( is_user_logged_in() ) : ?>
-fetch('<?php echo esc_url( rest_url( 'my-web-app/v1/user-progress/' . get_current_user_id() ) ); ?>', {
+fetch('<?php echo esc_url( rest_url( 'community/v1/user-progress/' . get_current_user_id() ) ); ?>', {
     method: 'GET',
     headers: {
         'X-WP-Nonce': '<?php echo wp_create_nonce( 'wp_rest' ); ?>'

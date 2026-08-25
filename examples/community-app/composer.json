@@ -1,5 +1,5 @@
 {
-    "name": "my-company/my-web-app-plugin",
+    "name": "akirk/community-app-example",
     "description": "WordPress plugin that uses akirk/wp-app to create a web application",
     "type": "wordpress-plugin",
     "require": {
