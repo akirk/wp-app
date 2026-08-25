@@ -12,11 +12,12 @@ class RestAccessTest extends TestCase {
 		$GLOBALS['__wp_app_test_filters']          = [];
 		$GLOBALS['__wp_app_test_current_user_can'] = false;
 		$GLOBALS['__wp_app_test_is_user_logged_in'] = false;
+		$GLOBALS['__wp_app_test_cap_calls'] = [];
 		Access::reset();
 	}
 
-	private function request() {
-		return new \WP_REST_Request();
+	private function request( $params = [] ) {
+		return new \WP_REST_Request( $params );
 	}
 
 	public function test_protect_returns_controller_class_names() {
@@ -118,5 +119,54 @@ class RestAccessTest extends TestCase {
 		Access::protect_post_type( "note", "read" );
 		$args = Access::filter_post_type_args( [ "rest_controller_class" => "My\Custom" ], "note" );
 		$this->assertSame( "My\Custom", $args["rest_controller_class"] );
+	}
+
+	public function test_item_check_passes_object_id_to_current_user_can() {
+		// Item cap is a meta cap; collection cap is a coarse primitive cap.
+		Access::protect_post_type( 'trip', 'read_trip', 'read' );
+		$GLOBALS['__wp_app_test_is_user_logged_in'] = true;
+		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read_trip' => true, 'read' => true ];
+
+		$controller = new Private_Posts_Controller( 'trip' );
+
+		// Single-item read: capability checked WITH the object id.
+		$this->assertTrue( $controller->get_item_permissions_check( $this->request( [ 'id' => 42 ] ) ) );
+		$this->assertSame( [ 'read_trip', [ 42 ] ], end( $GLOBALS['__wp_app_test_cap_calls'] ) );
+
+		// Collection read: coarse cap, no id.
+		$GLOBALS['__wp_app_test_cap_calls'] = [];
+		$this->assertTrue( $controller->get_items_permissions_check( $this->request() ) );
+		$this->assertSame( [ 'read', [] ], end( $GLOBALS['__wp_app_test_cap_calls'] ) );
+	}
+
+	public function test_item_check_denies_when_meta_cap_fails_for_that_object() {
+		Access::protect_post_type( 'trip', 'read_trip', 'read' );
+		$GLOBALS['__wp_app_test_is_user_logged_in'] = true;
+		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read' => true ]; // has collection cap, not read_trip
+
+		$controller = new Private_Posts_Controller( 'trip' );
+
+		$this->assertInstanceOf( \WP_Error::class, $controller->get_item_permissions_check( $this->request( [ 'id' => 42 ] ) ) );
+		$this->assertTrue( $controller->get_items_permissions_check( $this->request() ) );
+	}
+
+	public function test_collection_capability_defaults_to_item_capability() {
+		Access::protect_post_type( 'note', 'read' ); // single cap -> both item and collection
+		$GLOBALS['__wp_app_test_is_user_logged_in'] = true;
+		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read' => true ];
+
+		$controller = new Private_Posts_Controller( 'note' );
+		$this->assertTrue( $controller->get_items_permissions_check( $this->request() ) );
+		$this->assertTrue( $controller->get_item_permissions_check( $this->request( [ 'id' => 7 ] ) ) );
+	}
+
+	public function test_taxonomy_item_check_passes_term_id() {
+		Access::protect_taxonomy( 'trip_tag', 'read_trip', 'read' );
+		$GLOBALS['__wp_app_test_is_user_logged_in'] = true;
+		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read_trip' => true, 'read' => true ];
+
+		$controller = new Private_Terms_Controller( 'trip_tag' );
+		$this->assertTrue( $controller->get_item_permissions_check( $this->request( [ 'id' => 9 ] ) ) );
+		$this->assertSame( [ 'read_trip', [ 9 ] ], end( $GLOBALS['__wp_app_test_cap_calls'] ) );
 	}
 }

@@ -10,16 +10,24 @@
  * too.
  *
  * Declare the app's REST-backed types with {@see Access::protect_post_type()} /
- * {@see Access::protect_taxonomy()}. Access records the capability each one
- * needs and, via `register_post_type_args`/`register_taxonomy_args`, injects the
- * gated controller ({@see Private_Posts_Controller}/{@see Private_Terms_Controller})
+ * {@see Access::protect_taxonomy()}. Access records the capability each one needs
+ * and, via `register_post_type_args`/`register_taxonomy_args`, injects the gated
+ * controller ({@see Private_Posts_Controller}/{@see Private_Terms_Controller})
  * automatically — so the `register_post_type()`/`register_taxonomy()` calls need
  * no `rest_controller_class` of their own. Call `protect_*` *before* the matching
  * `register_*` (both run on `init`).
  *
- * Anonymous reads then get a 401; a logged-in user without the capability gets a
- * 403; the block editor (which reads as a logged-in user) keeps working.
- * Deliberate public reads (e.g. a share-token link) can opt back in via the
+ * Single-item reads are checked with the object id, so a WordPress *meta*
+ * capability (e.g. `read_post`, or a custom `read_my_thing` mapped via
+ * `map_meta_cap`) is honoured per object — ownership and share-token rules that
+ * the app already expresses in its capability mapping apply to REST too. A
+ * collection has no single id, so it is checked with a separate, coarser
+ * capability (defaults to the item capability; pass an explicit collection
+ * capability when the item capability is a meta cap that needs an object).
+ *
+ * Anonymous reads get a 401; a logged-in user without the capability gets a 403;
+ * the block editor (which reads as a logged-in user) keeps working. Deliberate
+ * public reads (e.g. a share-token link) can also opt back in via the
  * `wp_app_rest_public_read` filter.
  *
  * @package WpApp
@@ -33,16 +41,16 @@ if ( class_exists( 'WpApp\Rest\Access' ) ) {
 
 class Access {
 	/**
-	 * Post type => required capability (null means "any logged-in user").
+	 * Post type => [ 'item' => cap|null, 'collection' => cap|null ].
 	 *
-	 * @var array<string,string|null>
+	 * @var array<string,array<string,string|null>>
 	 */
 	private static $post_type_caps = [];
 
 	/**
-	 * Taxonomy => required capability (null means "any logged-in user").
+	 * Taxonomy => [ 'item' => cap|null, 'collection' => cap|null ].
 	 *
-	 * @var array<string,string|null>
+	 * @var array<string,array<string,string|null>>
 	 */
 	private static $taxonomy_caps = [];
 
@@ -54,22 +62,21 @@ class Access {
 	private static $filters_hooked = false;
 
 	/**
-	 * Gate REST reads of a post type to a capability.
+	 * Gate REST reads of a post type and return the controller class to use.
 	 *
-	 * Call before `register_post_type()`; Access injects the gated controller
-	 * and `show_in_rest => true` into that registration automatically.
-	 *
-	 * @param string      $post_type  Post type key.
-	 * @param string|null $capability Capability required to read via REST. Pass
-	 *                                the app's `require_capability` value (e.g.
-	 *                                'read' for a login-only app, 'edit_posts'
-	 *                                for an editor-only app). Null requires only
-	 *                                that the caller be logged in.
-	 * @return string Controller class name (for callers who prefer to wire
-	 *                `rest_controller_class` themselves).
+	 * @param string      $post_type             Post type key.
+	 * @param string|null $capability            Capability required to read a single
+	 *                                            item. Checked with the object id, so a
+	 *                                            meta cap is honoured per object. Null
+	 *                                            requires only a logged-in user.
+	 * @param string|null $collection_capability Capability required to read the
+	 *                                            collection (no id). Defaults to
+	 *                                            $capability; pass a coarser primitive
+	 *                                            cap when $capability is a meta cap.
+	 * @return string Controller class name.
 	 */
-	public static function protect_post_type( $post_type, $capability = null ) {
-		self::$post_type_caps[ $post_type ] = $capability;
+	public static function protect_post_type( $post_type, $capability = null, $collection_capability = null ) {
+		self::$post_type_caps[ $post_type ] = self::normalize_caps( $capability, $collection_capability );
 		self::ensure_controllers_loaded();
 		self::hook_filters();
 
@@ -77,18 +84,33 @@ class Access {
 	}
 
 	/**
-	 * Gate REST reads of a taxonomy to a capability.
+	 * Gate REST reads of a taxonomy and return the controller class to use.
 	 *
-	 * @param string      $taxonomy   Taxonomy key.
-	 * @param string|null $capability Capability required to read via REST.
+	 * @param string      $taxonomy              Taxonomy key.
+	 * @param string|null $capability            Capability required to read a single term.
+	 * @param string|null $collection_capability Capability required to read the term list.
 	 * @return string Controller class name.
 	 */
-	public static function protect_taxonomy( $taxonomy, $capability = null ) {
-		self::$taxonomy_caps[ $taxonomy ] = $capability;
+	public static function protect_taxonomy( $taxonomy, $capability = null, $collection_capability = null ) {
+		self::$taxonomy_caps[ $taxonomy ] = self::normalize_caps( $capability, $collection_capability );
 		self::ensure_controllers_loaded();
 		self::hook_filters();
 
 		return Private_Terms_Controller::class;
+	}
+
+	/**
+	 * Normalize item/collection capabilities.
+	 *
+	 * @param string|null $capability            Item capability.
+	 * @param string|null $collection_capability Collection capability (defaults to item).
+	 * @return array{item:string|null,collection:string|null}
+	 */
+	private static function normalize_caps( $capability, $collection_capability ) {
+		return [
+			'item'       => $capability,
+			'collection' => ( null !== $collection_capability ) ? $collection_capability : $capability,
+		];
 	}
 
 	/**
@@ -147,45 +169,100 @@ class Access {
 	}
 
 	/**
-	 * Capability registered for a post type, or null if it is only login-gated.
-	 *
-	 * @param string $post_type Post type key.
-	 * @return string|null
-	 */
-	public static function capability_for_post_type( $post_type ) {
-		return isset( self::$post_type_caps[ $post_type ] ) ? self::$post_type_caps[ $post_type ] : null;
-	}
-
-	/**
-	 * Capability registered for a taxonomy, or null if it is only login-gated.
-	 *
-	 * @param string $taxonomy Taxonomy key.
-	 * @return string|null
-	 */
-	public static function capability_for_taxonomy( $taxonomy ) {
-		return isset( self::$taxonomy_caps[ $taxonomy ] ) ? self::$taxonomy_caps[ $taxonomy ] : null;
-	}
-
-	/**
-	 * Read-permission gate for a protected post type.
+	 * Item read-permission gate for a protected post type (checked with the id).
 	 *
 	 * @param string           $post_type Post type key.
 	 * @param \WP_REST_Request $request   Current request.
 	 * @return true|\WP_Error
 	 */
-	public static function guard_post_type( $post_type, $request ) {
-		return self::guard( self::capability_for_post_type( $post_type ), $post_type, $request );
+	public static function guard_post_type_item( $post_type, $request ) {
+		$caps = self::caps_for( self::$post_type_caps, $post_type );
+		return self::guard( $caps['item'], $post_type, $request, self::request_object_id( $request ) );
 	}
 
 	/**
-	 * Read-permission gate for a protected taxonomy.
+	 * Collection read-permission gate for a protected post type (no id).
+	 *
+	 * @param string           $post_type Post type key.
+	 * @param \WP_REST_Request $request   Current request.
+	 * @return true|\WP_Error
+	 */
+	public static function guard_post_type_collection( $post_type, $request ) {
+		$caps = self::caps_for( self::$post_type_caps, $post_type );
+		return self::guard( $caps['collection'], $post_type, $request, null );
+	}
+
+	/**
+	 * Item read-permission gate for a protected taxonomy (checked with the id).
 	 *
 	 * @param string           $taxonomy Taxonomy key.
 	 * @param \WP_REST_Request $request  Current request.
 	 * @return true|\WP_Error
 	 */
-	public static function guard_taxonomy( $taxonomy, $request ) {
-		return self::guard( self::capability_for_taxonomy( $taxonomy ), $taxonomy, $request );
+	public static function guard_taxonomy_item( $taxonomy, $request ) {
+		$caps = self::caps_for( self::$taxonomy_caps, $taxonomy );
+		return self::guard( $caps['item'], $taxonomy, $request, self::request_object_id( $request ) );
+	}
+
+	/**
+	 * Collection read-permission gate for a protected taxonomy (no id).
+	 *
+	 * @param string           $taxonomy Taxonomy key.
+	 * @param \WP_REST_Request $request  Current request.
+	 * @return true|\WP_Error
+	 */
+	public static function guard_taxonomy_collection( $taxonomy, $request ) {
+		$caps = self::caps_for( self::$taxonomy_caps, $taxonomy );
+		return self::guard( $caps['collection'], $taxonomy, $request, null );
+	}
+
+	/**
+	 * Item capability registered for a post type (or null for login-only).
+	 *
+	 * @param string $post_type Post type key.
+	 * @return string|null
+	 */
+	public static function capability_for_post_type( $post_type ) {
+		return self::caps_for( self::$post_type_caps, $post_type )['item'];
+	}
+
+	/**
+	 * Item capability registered for a taxonomy (or null for login-only).
+	 *
+	 * @param string $taxonomy Taxonomy key.
+	 * @return string|null
+	 */
+	public static function capability_for_taxonomy( $taxonomy ) {
+		return self::caps_for( self::$taxonomy_caps, $taxonomy )['item'];
+	}
+
+	/**
+	 * Look up the item/collection caps for a registered object.
+	 *
+	 * @param array  $registry Post-type or taxonomy registry.
+	 * @param string $key      Object key.
+	 * @return array{item:string|null,collection:string|null}
+	 */
+	private static function caps_for( $registry, $key ) {
+		return isset( $registry[ $key ] ) ? $registry[ $key ] : [
+			'item'       => null,
+			'collection' => null,
+		];
+	}
+
+	/**
+	 * Resolve the object id from a single-item request, or null for a collection.
+	 *
+	 * @param \WP_REST_Request $request Current request.
+	 * @return int|null
+	 */
+	private static function request_object_id( $request ) {
+		if ( ! is_object( $request ) || ! method_exists( $request, 'get_param' ) ) {
+			return null;
+		}
+
+		$id = $request->get_param( 'id' );
+		return $id ? (int) $id : null;
 	}
 
 	/**
@@ -195,9 +272,10 @@ class Access {
 	 * @param string|null      $capability  Required capability, or null for login-only.
 	 * @param string           $object_name Post type or taxonomy key (for the filter).
 	 * @param \WP_REST_Request $request     Current request.
+	 * @param int|null         $object_id   Object id for a single-item read, else null.
 	 * @return true|\WP_Error
 	 */
-	private static function guard( $capability, $object_name, $request ) {
+	private static function guard( $capability, $object_name, $request, $object_id = null ) {
 		/**
 		 * Allow an otherwise-gated app object to be read anonymously.
 		 *
@@ -213,7 +291,10 @@ class Access {
 		}
 
 		if ( $capability ) {
-			if ( current_user_can( $capability ) ) {
+			$allowed = ( null !== $object_id )
+				? current_user_can( $capability, $object_id )
+				: current_user_can( $capability );
+			if ( $allowed ) {
 				return true;
 			}
 		} elseif ( is_user_logged_in() ) {

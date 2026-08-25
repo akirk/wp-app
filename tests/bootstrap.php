@@ -222,8 +222,10 @@ if ( ! function_exists( 'wp_create_nonce' ) ) {
 }
 
 if ( ! function_exists( 'current_user_can' ) ) {
-	function current_user_can( $capability ) {
-		global $__wp_app_test_current_user_can;
+	function current_user_can( $capability, ...$args ) {
+		global $__wp_app_test_current_user_can, $__wp_app_test_cap_calls;
+
+		$__wp_app_test_cap_calls[] = array( $capability, $args );
 
 		if ( is_array( $__wp_app_test_current_user_can ?? null ) ) {
 			return ! empty( $__wp_app_test_current_user_can[ $capability ] );
@@ -515,7 +517,17 @@ if ( ! function_exists( 'rest_authorization_required_code' ) ) {
 }
 
 if ( ! class_exists( 'WP_REST_Request' ) ) {
-	class WP_REST_Request {}
+	class WP_REST_Request {
+		private $params;
+
+		public function __construct( $params = array() ) {
+			$this->params = $params;
+		}
+
+		public function get_param( $key ) {
+			return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null;
+		}
+	}
 }
 
 if ( ! class_exists( 'WP_REST_Posts_Controller' ) ) {

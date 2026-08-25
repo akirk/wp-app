@@ -30,7 +30,7 @@ class Private_Terms_Controller extends \WP_REST_Terms_Controller {
 	 * @return true|\WP_Error
 	 */
 	public function get_items_permissions_check( $request ) {
-		$gate = Access::guard_taxonomy( $this->taxonomy, $request );
+		$gate = Access::guard_taxonomy_collection( $this->taxonomy, $request );
 		if ( is_wp_error( $gate ) ) {
 			return $gate;
 		}
@@ -45,7 +45,7 @@ class Private_Terms_Controller extends \WP_REST_Terms_Controller {
 	 * @return true|\WP_Error
 	 */
 	public function get_item_permissions_check( $request ) {
-		$gate = Access::guard_taxonomy( $this->taxonomy, $request );
+		$gate = Access::guard_taxonomy_item( $this->taxonomy, $request );
 		if ( is_wp_error( $gate ) ) {
 			return $gate;
 		}

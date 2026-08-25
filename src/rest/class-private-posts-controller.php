@@ -32,7 +32,7 @@ class Private_Posts_Controller extends \WP_REST_Posts_Controller {
 	 * @return true|\WP_Error
 	 */
 	public function get_items_permissions_check( $request ) {
-		$gate = Access::guard_post_type( $this->post_type, $request );
+		$gate = Access::guard_post_type_collection( $this->post_type, $request );
 		if ( is_wp_error( $gate ) ) {
 			return $gate;
 		}
@@ -47,7 +47,7 @@ class Private_Posts_Controller extends \WP_REST_Posts_Controller {
 	 * @return true|\WP_Error
 	 */
 	public function get_item_permissions_check( $request ) {
-		$gate = Access::guard_post_type( $this->post_type, $request );
+		$gate = Access::guard_post_type_item( $this->post_type, $request );
 		if ( is_wp_error( $gate ) ) {
 			return $gate;
 		}

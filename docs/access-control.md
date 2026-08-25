@@ -223,6 +223,23 @@ the caller be logged in. After this, anonymous reads return `401`; a logged-in u
 without the capability gets `403`. (Requires this plugin to depend on
 `akirk/wp-app ^1.5` or newer, where `WpApp\Rest\Access` exists.)
 
+### Per-object capabilities (meta caps)
+
+Single-item reads are checked **with the object id**, so you can gate on a
+WordPress *meta* capability and let your existing `map_meta_cap` rules (ownership,
+share tokens, …) apply to REST automatically. Pass the meta cap as the item
+capability and a coarser primitive cap for the collection (which has no id):
+
+```php
+// Item read -> current_user_can( 'read_trip', $trip_id ) -> your map_meta_cap.
+// Collection -> current_user_can( 'read' ) (login-level; a listing can't be
+// per-object at the permission stage).
+Access::protect_taxonomy( 'trip', 'read_trip', 'read' );
+```
+
+With a single primitive capability (e.g. `'read'`) the collection capability
+defaults to the same value, so most apps pass just one.
+
 **Compliance check:** every app-owned post type / taxonomy registered with
 `show_in_rest => true` should wire its `rest_controller_class` through
 `Access::protect_post_type()` / `Access::protect_taxonomy()`. Auditing a plugin is
