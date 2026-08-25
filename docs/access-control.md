@@ -270,3 +270,4 @@ Keep the default (`false`) for everything else so app data stays private.
 - [Configuration](configuration.md) - Access control config options
 - [Routing](routing.md) - Per-route capabilities
 - [BaseApp Pattern](baseapp.md) - Organized access control setup
+- [Abilities](abilities.md) - Reusing the app capability in ability permission callbacks

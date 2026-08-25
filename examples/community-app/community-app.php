@@ -92,6 +92,46 @@ class CommunityAppStorage extends BaseStorage {
 		return $progress;
 	}
 
+	/**
+	 * Paged list of published posts, newest first, with author display names.
+	 */
+	public function list_posts( $page = 1, $per_page = 10 ) {
+		$page     = max( 1, (int) $page );
+		$per_page = min( 50, max( 1, (int) $per_page ) );
+		$offset   = ( $page - 1 ) * $per_page;
+
+		return $this->wpdb->get_results(
+			$this->wpdb->prepare(
+				"SELECT p.id, p.title, p.author_id, u.display_name AS author, p.created_at
+				 FROM {$this->wpdb->prefix}webapp_posts p
+				 LEFT JOIN {$this->wpdb->users} u ON u.ID = p.author_id
+				 WHERE p.status = 'published'
+				 ORDER BY p.created_at DESC
+				 LIMIT %d OFFSET %d",
+				$per_page,
+				$offset
+			)
+		);
+	}
+
+	public function count_posts() {
+		return (int) $this->wpdb->get_var(
+			"SELECT COUNT(*) FROM {$this->wpdb->prefix}webapp_posts WHERE status = 'published'"
+		);
+	}
+
+	public function get_post( $post_id ) {
+		return $this->wpdb->get_row(
+			$this->wpdb->prepare(
+				"SELECT p.*, u.display_name AS author
+				 FROM {$this->wpdb->prefix}webapp_posts p
+				 LEFT JOIN {$this->wpdb->users} u ON u.ID = p.author_id
+				 WHERE p.id = %d AND p.status = 'published'",
+				$post_id
+			)
+		);
+	}
+
 	public function create_post( $author_id, $title, $content ) {
 		$this->wpdb->insert(
 			$this->wpdb->prefix . 'webapp_posts',
@@ -162,6 +202,8 @@ class CommunityApp extends BaseApp {
 
 		add_action( 'init', array( $this, 'maybe_handle_create_post' ) );
 		add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
+		add_action( 'wp_abilities_api_categories_init', array( $this, 'register_ability_category' ) );
+		add_action( 'wp_abilities_api_init', array( $this, 'register_abilities' ) );
 		add_action( 'template_redirect', array( $this, 'maybe_setup_assets' ) );
 		add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
 	}
@@ -291,6 +333,199 @@ class CommunityApp extends BaseApp {
 				'success' => true,
 				'message' => "Added {$points} points!",
 			)
+		);
+	}
+
+	/**
+	 * Abilities: the app's API for callers that read descriptions instead of
+	 * code (assistants, automation, other apps). See docs/abilities.md for the
+	 * design rules these follow. Both hooks only fire on WordPress with the
+	 * Abilities API, so older installs simply have no abilities.
+	 */
+	public function register_ability_category() {
+		wp_register_ability_category(
+			'community',
+			array(
+				'label'       => 'Community',
+				'description' => 'Posts and member progress in the Community app.',
+			)
+		);
+	}
+
+	public function register_abilities() {
+		// Every ability requires what the app itself requires, so an ability is
+		// never a way around the app's access control.
+		$can_use_app = function () {
+			return current_user_can( $this->app->get_required_capability() ?: 'read' );
+		};
+
+		$post_summary = array(
+			'type'       => 'object',
+			'properties' => array(
+				'id'         => array( 'type' => 'integer', 'description' => 'Post ID. Pass to community/get-post for the full text.' ),
+				'title'      => array( 'type' => 'string' ),
+				'author'     => array( 'type' => 'string', 'description' => 'Display name of the author.' ),
+				'author_id'  => array( 'type' => 'integer', 'description' => 'WordPress user ID of the author.' ),
+				'created_at' => array( 'type' => 'string', 'format' => 'date-time' ),
+			),
+		);
+
+		wp_register_ability(
+			'community/list-posts',
+			array(
+				'label'               => 'List community posts',
+				'description'         => 'Returns a page of published community posts, newest first, as summaries (id, title, author, created_at) without the body text. Use community/get-post with an id to read a post. Returns total so the caller knows whether to fetch further pages.',
+				'category'            => 'community',
+				'input_schema'        => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'page'     => array( 'type' => 'integer', 'minimum' => 1, 'default' => 1 ),
+						'per_page' => array( 'type' => 'integer', 'minimum' => 1, 'maximum' => 50, 'default' => 10 ),
+					),
+					'additionalProperties' => false,
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'posts' => array( 'type' => 'array', 'items' => $post_summary ),
+						'total' => array( 'type' => 'integer', 'description' => 'Number of published posts across all pages.' ),
+						'page'  => array( 'type' => 'integer' ),
+					),
+				),
+				'execute_callback'    => function ( $input ) {
+					$input = is_array( $input ) ? $input : array();
+					$page  = isset( $input['page'] ) ? (int) $input['page'] : 1;
+					return array(
+						'posts' => array_map( array( $this, 'format_post_summary' ), $this->storage->list_posts( $page, isset( $input['per_page'] ) ? (int) $input['per_page'] : 10 ) ),
+						'total' => $this->storage->count_posts(),
+						'page'  => $page,
+					);
+				},
+				'permission_callback' => $can_use_app,
+				'meta'                => array(
+					'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),
+				),
+			)
+		);
+
+		wp_register_ability(
+			'community/get-post',
+			array(
+				'label'               => 'Get community post',
+				'description'         => 'Returns one published community post by ID including its full content. Returns error code not_found if there is no published post with that ID; report that rather than creating a replacement.',
+				'category'            => 'community',
+				'input_schema'        => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'id' => array( 'type' => 'integer', 'description' => 'Post ID, as returned by community/list-posts.' ),
+					),
+					'required'             => array( 'id' ),
+					'additionalProperties' => false,
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => $post_summary['properties'] + array(
+						'content' => array( 'type' => 'string', 'description' => 'Plain-text body of the post.' ),
+					),
+				),
+				'execute_callback'    => function ( $input ) {
+					$post = $this->storage->get_post( (int) $input['id'] );
+					if ( ! $post ) {
+						return new WP_Error( 'not_found', 'No published post has that ID.' );
+					}
+					return $this->format_post_summary( $post ) + array( 'content' => $post->content );
+				},
+				'permission_callback' => $can_use_app,
+				'meta'                => array(
+					'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),
+				),
+			)
+		);
+
+		wp_register_ability(
+			'community/create-post',
+			array(
+				'label'               => 'Create community post',
+				'description'         => 'Publishes a new community post by the current user and awards them the configured points. Returns the new post id; pass it to community/get-post. Calling twice creates two posts, so confirm with the user before creating.',
+				'category'            => 'community',
+				'input_schema'        => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'title'   => array( 'type' => 'string', 'minLength' => 1, 'maxLength' => 255 ),
+						'content' => array( 'type' => 'string', 'minLength' => 1, 'description' => 'Plain text; HTML is stripped.' ),
+					),
+					'required'             => array( 'title', 'content' ),
+					'additionalProperties' => false,
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'id'  => array( 'type' => 'integer', 'description' => 'ID of the created post.' ),
+						'url' => array( 'type' => 'string', 'format' => 'uri', 'description' => 'Where the post can be viewed in the app.' ),
+					),
+				),
+				'execute_callback'    => function ( $input ) {
+					$title   = sanitize_text_field( $input['title'] );
+					$content = sanitize_textarea_field( $input['content'] );
+					if ( '' === $title || '' === $content ) {
+						return new WP_Error( 'invalid_input', 'Title and content must not be empty after stripping HTML.' );
+					}
+					$post_id = $this->storage->create_post( get_current_user_id(), $title, $content );
+					$this->storage->add_points( get_current_user_id(), intval( $this->app->get_config( 'points_per_post', 10 ) ) );
+					return array(
+						'id'  => $post_id,
+						'url' => home_url( '/community/posts/' . $post_id ),
+					);
+				},
+				'permission_callback' => $can_use_app,
+				'meta'                => array(
+					'annotations' => array( 'readonly' => false, 'destructive' => false, 'idempotent' => false ),
+				),
+			)
+		);
+
+		wp_register_ability(
+			'community/get-my-progress',
+			array(
+				'label'               => 'Get my community progress',
+				'description'         => 'Returns the current user\'s level, points and last activity in the Community app. Takes no input; other members\' progress is not available through abilities.',
+				'category'            => 'community',
+				'input_schema'        => array(
+					'type'                 => 'object',
+					'properties'           => array(),
+					'additionalProperties' => false,
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'level'         => array( 'type' => 'integer' ),
+						'points'        => array( 'type' => 'integer' ),
+						'last_activity' => array( 'type' => 'string', 'format' => 'date-time' ),
+					),
+				),
+				'execute_callback'    => function () {
+					$progress = $this->storage->get_user_progress( get_current_user_id() );
+					return array(
+						'level'         => (int) $progress->level,
+						'points'        => (int) $progress->points,
+						'last_activity' => $progress->last_activity,
+					);
+				},
+				'permission_callback' => $can_use_app,
+				'meta'                => array(
+					'annotations' => array( 'readonly' => true, 'destructive' => false, 'idempotent' => true ),
+				),
+			)
+		);
+	}
+
+	public function format_post_summary( $post ) {
+		return array(
+			'id'         => (int) $post->id,
+			'title'      => $post->title,
+			'author'     => (string) $post->author,
+			'author_id'  => (int) $post->author_id,
+			'created_at' => $post->created_at,
 		);
 	}
 

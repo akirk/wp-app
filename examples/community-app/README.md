@@ -6,6 +6,7 @@ A complete example demonstrating the WpApp framework with the BaseApp pattern, i
 - **BaseStorage**: Custom storage layer for database operations
 - **dbDelta**: WordPress-native database table creation
 - **REST API**: Custom endpoints for frontend interactions
+- **Abilities**: `community/list-posts`, `get-post`, `create-post` and `get-my-progress`, registered through the WordPress Abilities API so assistants and other apps can use the app without reading its code (see [docs/abilities.md](../../docs/abilities.md))
 - **Admin integration**: WordPress admin pages for app management
 
 ## Quick Start with WordPress Playground

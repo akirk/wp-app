@@ -100,3 +100,6 @@ Run this from your plugin directory. It will start a local WordPress instance wi
 - [Masterbar](masterbar.md) - Admin bar customization
 - [Access Control](access-control.md) - Authentication and permissions
 - [BaseApp Pattern](baseapp.md) - Structured architecture for larger apps
+- [Offline PWA Support](offline-pwa.md) - Installable apps and offline caching
+- [Client-Side Encryption](encryption.md) - Encrypted-field app pattern
+- [Abilities](abilities.md) - Exposing your app to assistants and other apps

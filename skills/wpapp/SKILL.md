@@ -238,6 +238,22 @@ $app->add_top_level_menu_item( 'id', 'Label', $url ); // Top-level
 $app->add_user_menu_item( 'id', 'Label', $url );      // User dropdown
 ```
 
+## Abilities
+
+Expose the app's data through the WordPress Abilities API so assistants, automation and other apps can use it without reading the code. Register categories on `wp_abilities_api_categories_init` and abilities on `wp_abilities_api_init`, guarded by `function_exists( 'wp_register_ability' )`. Use the app's route slug as namespace and category (`community/list-posts`) and reuse `$app->get_required_capability()` in `permission_callback`. Leave `meta.public` unset: the permission callback is the gate, and AI Assistant / MCP Connect expose the ability to signed-in users who pass it.
+
+Design rules — the description and schemas are the whole API for the caller:
+
+- One ability per verb-noun (`list-posts`, `get-post`, `create-post`); never an `action` switch or a run-anything escape hatch.
+- The description says what is returned and what to do on failure, not just what happens.
+- Every property has a description; inputs set `additionalProperties: false`; closed sets use `enum`; always give `output_schema`.
+- IDs say which ability produced them and which accept them ("as returned by community/list-posts").
+- Annotate accurately: `readonly`, `destructive`, `idempotent`.
+- Failures are `WP_Error` with stable codes (`not_found`), never `false`/`null`/`[]`.
+- `list-*` pages (`page`, `per_page` with a maximum) and returns summaries; `get-*` returns the full record.
+
+Full guidance and a worked example: `docs/abilities.md`, `examples/community-app/`.
+
 ## Verification
 
 - After modifying PHP, run or request a syntax check before navigating the app.
@@ -252,3 +268,4 @@ For comprehensive guides, see the `docs/` directory:
 - `docs/masterbar.md` - Admin bar customization
 - `docs/access-control.md` - Capabilities and roles
 - `docs/baseapp.md` - BaseApp and BaseStorage patterns
+- `docs/abilities.md` - Exposing the app through the Abilities API and designing good abilities
