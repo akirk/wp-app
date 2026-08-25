@@ -161,17 +161,15 @@ $app->route( 'admin', 'admin.php', [], 'manage_options' );
 
 ```php
 class Storage extends BaseStorage {
+    // Keyed by unprefixed table name; create_tables() adds the prefix and
+    // wraps each definition in CREATE TABLE with the site's charset.
     protected function get_schema() {
-        $charset_collate = $this->wpdb->get_charset_collate();
-
         return [
-            "CREATE TABLE {$this->wpdb->prefix}myapp_items (
-                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            'myapp_items' => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
                 user_id bigint(20) unsigned NOT NULL,
                 data longtext,
                 PRIMARY KEY  (id),
-                KEY user_id (user_id)
-            ) $charset_collate;",
+                KEY user_id (user_id)",
         ];
     }
 }

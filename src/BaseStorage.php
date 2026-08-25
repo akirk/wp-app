@@ -41,12 +41,19 @@ abstract class BaseStorage {
 	}
 
 	/**
-	 * Get database schema as SQL CREATE TABLE statements
+	 * Get the database schema.
 	 *
-	 * Child classes should override this method to return their schema.
-	 * Each SQL statement should be a complete CREATE TABLE statement.
+	 * Child classes return their tables keyed by unprefixed table name, with
+	 * the column and key definitions as the value; create_tables() wraps each
+	 * in CREATE TABLE with the site's charset and prefix:
 	 *
-	 * @return array Array of SQL CREATE TABLE statements.
+	 *     return [
+	 *         'my_items' => "id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	 *             title varchar(255) NOT NULL,
+	 *             PRIMARY KEY  (id)",
+	 *     ];
+	 *
+	 * @return array<string,string> Column definitions keyed by table name.
 	 */
 	abstract protected function get_schema();
 
