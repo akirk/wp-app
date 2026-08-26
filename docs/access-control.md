@@ -1,6 +1,6 @@
 # Access Control
 
-WpApp uses WordPress capabilities to control access to your app and individual routes. If you make use of post types, taxonomies, or the REST API, don't forget to [secure that, too](#rest-api-access-control).
+WpApp uses WordPress capabilities to control access to your app and individual routes. If you make use of post types, taxonomies, or the REST API, please take a look at the [REST API Access Control](#rest-api-access-control) section to learn how to secure those as well.
 
 ## App-Wide Access Control
 
