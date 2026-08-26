@@ -63,22 +63,21 @@ class WpApp {
             $this->masterbar->admin_bar_app_link( $config['admin_bar_app_link'] );
         }
 
-        // Access control configuration
+        // Access control configuration.
+        // require_capability (or its alias minimal_capability) always wins:
+        // any capability check implies a logged-in user. require_login only
+        // decides between 'read' (logged in) and no requirement (public) when
+        // no explicit capability is configured. It defaults to true.
+        $capability = null;
         if ( isset( $config['require_capability'] ) ) {
-            $this->require_capability( $config['require_capability'] );
+            $capability = $config['require_capability'];
+        } elseif ( isset( $config['minimal_capability'] ) ) {
+            $capability = $config['minimal_capability'];
         }
 
-        if ( isset( $config['minimal_capability'] ) ) {
-            $this->require_capability( $config['minimal_capability'] );
-        }
-
-        if ( isset( $config['require_login'] ) ) {
-            if ( $config['require_login'] ) {
-                $this->require_capability( 'read' );
-            }
-        } elseif ( ! isset( $config['require_capability'] ) && ! isset( $config['minimal_capability'] ) ) {
-            // require_login defaults to true: require at least a logged-in user
-            // unless an explicit capability requirement is already configured.
+        if ( $capability ) {
+            $this->require_capability( $capability );
+        } elseif ( ! isset( $config['require_login'] ) || $config['require_login'] ) {
             $this->require_capability( 'read' );
         }
 
