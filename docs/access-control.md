@@ -1,12 +1,6 @@
 # Access Control
 
-WpApp uses WordPress capabilities to control access to your app and individual routes.
-
-> **Note:** everything in this page up to the REST section gates the app's own
-> pages. If your app stores data in a post type or taxonomy with
-> `show_in_rest => true`, WordPress also serves that data at `/wp-json/`, and the
-> app settings do not cover it. Read [REST API Access Control](#rest-api-access-control)
-> before shipping — the framework provides the gate, but you have to wire it.
+WpApp uses WordPress capabilities to control access to your app and individual routes. If you make use of post types, taxonomies or the REST API, don't forget to [secure that, too](#rest-api-access-control).
 
 ## App-Wide Access Control
 
