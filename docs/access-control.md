@@ -197,16 +197,39 @@ $admin_app->init();
 ## REST API Access Control
 
 `require_login` / `require_capability` gate the app's **front end** — its routes and
-templates. They do **not** gate the WordPress REST API. This matters whenever your
-app stores data in a custom post type or taxonomy registered with
-`show_in_rest => true` (which the block editor requires):
+templates. They do **not** gate the WordPress REST API, because the REST API is not
+part of your app: it is a second, independent door into the same data, served by
+WordPress core at `/wp-json/`. Whenever your app stores data in a custom post type
+or taxonomy registered with `show_in_rest => true` (which the block editor
+requires), that door is open too, and it needs its own lock.
 
-- Core serves every **published** post of a `show_in_rest` post type to anonymous
-  callers at `/wp/v2/<type>`, and every term of a `show_in_rest` taxonomy at
-  `/wp/v2/<taxonomy>` — it keys off `show_in_rest` alone, **not** `public` or
-  `publicly_queryable`. Setting `public => false` does not hide anything here.
-- `register_post_meta( ..., 'show_in_rest' => true )` is readable by anyone who can
-  read the post; an `auth_callback` only gates **writes**.
+The framework provides that lock — `WpApp\Rest\Access`, described below — but it
+cannot apply it for you, because only you know which of your types are private.
+Treat REST access as part of the app's access design, not an afterthought: for each
+post type and taxonomy the app registers, decide who may read it over REST and wire
+the gate accordingly.
+
+### What WordPress protects by default
+
+Core's REST API was designed for a public blog, where published content is meant to
+be seen by everyone. So the rule is simple:
+
+- **Writes** are always checked against the user's capabilities.
+- **Reads** of anything *published* are open to everyone, logged in or not.
+
+For a private app that is the wrong default: an app record — a note, a trip, a
+contact — is usually published the moment it is created, so to core it is public.
+
+Three things about this are easy to get wrong:
+
+1. **`public => false` doesn't help.** REST exposure is controlled by
+   `show_in_rest` only. A post type hidden from the front end, search and the admin
+   menu is still fully listed at `/wp-json/wp/v2/<type>`.
+2. **You can't just turn `show_in_rest` off**, because the block editor needs it to
+   load and save. Gate the reads instead of removing them.
+3. **Post meta follows the post.** A meta field registered with `show_in_rest =>
+   true` is readable by anyone who can read the post; its `auth_callback` only
+   applies to writes.
 
 So an app whose front end is login-only still leaks its notes/recipes/records over
 REST unless the REST layer is gated too. Do that by pointing each type's
