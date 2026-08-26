@@ -40,7 +40,7 @@ $app = new WpApp( __DIR__ . '/templates', 'minimal', [
 	'show_masterbar_for_anonymous' => true,  // Show navigation for logged-out users
 	'show_wp_logo'                 => false, // Hide WordPress logo
 	'show_site_name'               => true,  // Show your site name
-	'require_login'                => true,  // Require login (alias for require_capability => 'read')
+	'require_login'                => true,  // Require login (default; a require_capability implies it)
 ] );
 $app->init();
 ```
@@ -267,7 +267,7 @@ $this->app = new WpApp(
 	plugin_dir_path( __FILE__ ) . 'templates',
 	'my-app',
 	array(
-		'require_login' => true, // Alias for require_capability => 'read'
+		'require_login' => true, // Shorthand for require_capability => 'read'
 	)
 );
 ```

@@ -6,16 +6,13 @@ WpApp uses WordPress capabilities to control access to your app and individual r
 
 ### Require Login
 
-Apps require a logged-in user by default (equivalent to `require_capability => 'read'`). To make an app public, set `require_login => false`:
+Apps require a logged-in user by default. To make an app public, set `require_login => false`:
 
 ```php
 // Explicit (also the default)
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'require_login' => true,
 ] );
-
-// Or via method
-$app->require_capability( 'read' );
 
 // Public app - opt out of the default
 $public_app = new WpApp( __DIR__ . '/templates', 'my-app', [
@@ -37,6 +34,26 @@ $app->require_capability( 'manage_options' );
 // Custom capability
 $app->require_capability( 'access_my_app' );
 ```
+
+### How `require_login` and `require_capability` work together
+
+`require_login` is the simple switch: does a visitor need to be logged in at all?
+`require_capability` is the precise one: which WordPress capability must the user
+have? They resolve to a single requirement:
+
+| `require_login` | `require_capability` | Result |
+|-----------------|----------------------|--------|
+| `true` (default) | not set | logged-in user (`read`) |
+| `false` | not set | public, no login |
+| any | `'manage_options'` | `manage_options` |
+
+A capability always wins. Checking a capability only makes sense for a logged-in
+user, so `require_capability` implies `require_login => true`; setting
+`require_login => false` alongside a capability has no effect. The reverse also
+holds: `require_login => true` never lowers an explicit capability to `read`.
+
+`require_login => true` is therefore just shorthand for `require_capability =>
+'read'` — every WordPress user, including subscribers, has `read`.
 
 ## Common WordPress Capabilities
 

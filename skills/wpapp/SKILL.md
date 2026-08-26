@@ -198,7 +198,7 @@ class Storage extends BaseStorage {
 |--------|---------|-------------|
 | `app_name` | Auto-generated from URL path | Display name for your app in the admin bar |
 | `require_login` | `true` | Require authentication (set `false` for a public app) |
-| `require_capability` | `null` | Required WordPress capability |
+| `require_capability` | `null` | Required WordPress capability (overrides `require_login`; implies login) |
 | `show_masterbar_for_anonymous` | `true` | Show nav for logged-out users |
 | `show_wp_logo` | `true` | Show WordPress logo |
 | `show_site_name` | `true` | Show site name |

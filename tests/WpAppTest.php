@@ -181,7 +181,7 @@ class WpAppTest extends TestCase {
 		$this->assertSame( 'manage_options', $app->get_required_capability() );
 	}
 
-	public function test_require_login_true_overrides_require_capability() {
+	public function test_require_login_true_does_not_downgrade_require_capability() {
 		$app = new WpApp(
 			'/test/templates',
 			'my-app',
@@ -191,6 +191,19 @@ class WpAppTest extends TestCase {
 			]
 		);
 
-		$this->assertSame( 'read', $app->get_required_capability() );
+		$this->assertSame( 'manage_options', $app->get_required_capability() );
+	}
+
+	public function test_require_capability_implies_login_even_if_require_login_false() {
+		$app = new WpApp(
+			'/test/templates',
+			'my-app',
+			[
+				'require_capability' => 'manage_options',
+				'require_login'      => false,
+			]
+		);
+
+		$this->assertSame( 'manage_options', $app->get_required_capability() );
 	}
 }

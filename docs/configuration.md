@@ -45,8 +45,8 @@ Global masterbar behavior can also be configured in **Settings > WP Apps**. The 
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `require_login` | bool | `true` | Require users to be logged in (shortcut for `require_capability => 'read'`). Set to `false` to make the app public |
-| `require_capability` | string | `null` | WordPress capability required to access the app |
+| `require_login` | bool | `true` | Require users to be logged in (shorthand for `require_capability => 'read'`). Set to `false` to make the app public |
+| `require_capability` | string | `null` | WordPress capability required to access the app. Takes precedence over `require_login`: a capability always implies a logged-in user. See [Access Control](access-control.md#how-require_login-and-require_capability-work-together) |
 
 ### My Apps Plugin Integration
 
