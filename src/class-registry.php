@@ -2,6 +2,34 @@
 
 namespace WpApp;
 
+// Load the rest of this copy of wp-app from here rather than trusting the
+// Composer files autoload. Several plugins can bundle wp-app; the first
+// autoloader to run wins, and its generated file list may predate files
+// added in a newer version (a vendor copy updated without dump-autoload,
+// or an older plugin whose list is simply shorter). Every file guards its
+// own declarations, so this is idempotent and keeps all classes and
+// functions coming from the same copy.
+//
+// This runs before the class guard below on purpose: PHP declares this
+// file's class at compile time, so the guard is already true for the
+// first copy loaded and would skip the loader.
+foreach ( [
+    'class-openstation.php',
+    'class-settings.php',
+    'class-pwa.php',
+    'class-router.php',
+    'class-masterbar.php',
+    'class-wpapp.php',
+    'class-client-encrypted-fields.php',
+    'BaseStorage.php',
+    'abstract-baseapp.php',
+    'functions.php',
+    'rest/class-access.php',
+] as $wp_app_file ) {
+    require_once __DIR__ . '/' . $wp_app_file;
+}
+unset( $wp_app_file );
+
 if ( class_exists( 'WpApp\Registry' ) ) {
     return;
 }
@@ -95,10 +123,6 @@ class Registry {
             Settings::init();
         }
 
-        // Load explicitly rather than trusting the Composer files autoload:
-        // a vendor copy whose src/ was updated without dump-autoload would
-        // otherwise never include the class.
-        require_once __DIR__ . '/class-openstation.php';
         Openstation::init();
 
         self::$hooks_initialized = true;
