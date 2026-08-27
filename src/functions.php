@@ -38,6 +38,7 @@ if ( ! function_exists( 'wp_app_head' ) ) {
         }
 
         if ( function_exists( 'wp_head' ) ) {
+            wp_app_remove_core_title_tag();
             wp_head();
         } else {
             // Basic meta tags (fallback when WordPress is not present)
@@ -60,6 +61,20 @@ if ( ! function_exists( 'wp_app_head' ) ) {
         wp_app_do_scoped_action( 'wp_app_head_meta' );
         wp_app_do_scoped_action( 'wp_app_head_styles' );
         wp_app_do_scoped_action( 'wp_app_head_scripts' );
+    }
+}
+
+if ( ! function_exists( 'wp_app_remove_core_title_tag' ) ) {
+    /**
+     * Keep core from printing the site's <title> in wp_head().
+     *
+     * App templates write their own <title> with wp_app_title(); with a theme
+     * that supports title-tag, wp_head() would add a second one.
+     */
+    function wp_app_remove_core_title_tag() {
+        remove_action( 'wp_head', '_wp_render_title_tag', 1 );
+        // Block themes replace the classic title tag with this one.
+        remove_action( 'wp_head', '_block_template_render_title_tag', 1 );
     }
 }
 
