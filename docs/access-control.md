@@ -1,6 +1,6 @@
 # Access Control
 
-WpApp uses WordPress capabilities to control access to your app and individual routes. If you make use of post types, taxonomies, or the REST API, please take a look at the [REST API Access Control](#rest-api-access-control) section to learn how to secure those as well.
+WpApp uses WordPress capabilities to control access to your app and individual routes. If the app registers post types or taxonomies, declare them with the `post_types` / `taxonomies` options so their REST reads are gated too — see [REST API Access Control](#rest-api-access-control).
 
 ## App-Wide Access Control
 
@@ -203,11 +203,11 @@ WordPress core at `/wp-json/`. Whenever your app stores data in a custom post ty
 or taxonomy registered with `show_in_rest => true` (which the block editor
 requires), that door is open too, and it needs its own lock.
 
-The framework provides that lock — `WpApp\Rest\Access`, described below — but it
-cannot apply it for you, because only you know which of your types are private.
-Treat REST access as part of the app's access design, not an afterthought: for each
-post type and taxonomy the app registers, decide who may read it over REST and wire
-the gate accordingly.
+The framework provides that lock, but it cannot know which types are yours: tell
+it with the `post_types` / `taxonomies` app options (described below), and it gates
+their REST reads with the app's capability. Treat REST access as part of the app's
+access design, not an afterthought: for each post type and taxonomy the app
+registers, decide who may read it over REST and declare it accordingly.
 
 ### What WordPress protects by default
 
@@ -232,9 +232,14 @@ Three things about this are easy to get wrong:
    applies to writes.
 
 So an app whose front end is login-only still leaks its notes/recipes/records over
-REST unless the REST layer is gated too. Do that by pointing each type's
-The shortest way is to list them in the app config; the app's capability is applied
-and the gated controller is injected into `register_post_type()` automatically:
+REST unless the REST layer is gated too.
+
+### Declaring the app's types
+
+List the post types and taxonomies the app owns in its config. The framework then
+gates their REST reads with the app's capability, injecting `show_in_rest => true`
+and its gated controller into your `register_post_type()` / `register_taxonomy()`
+calls — those calls need no REST-specific arguments at all:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'notes', [
@@ -242,13 +247,41 @@ $app = new WpApp( __DIR__ . '/templates', 'notes', [
     'post_types'         => [ 'note' ],
     'taxonomies'         => [ 'note_tag' ],
 ] );
+
+add_action( 'init', function () {
+    register_post_type( 'note', [
+        'public'   => false,
+        'supports' => [ 'title', 'editor', 'author', 'custom-fields' ],
+    ] );
+    register_taxonomy( 'note_tag', 'note', [ 'public' => false ] );
+} );
 ```
 
-Or explicitly, when a type needs a different capability than the app:
-`rest_controller_class` at the framework's gate — `Access::protect_post_type()` /
-`Access::protect_taxonomy()` record the required capability and return the gated
-controller class, which requires that capability for reads while leaving the block
-editor (which reads as a logged-in user) working:
+The capability is the one the app requires: `'read'` for a login-only app
+(`require_login => true`, the default), `'edit_posts'` for an editor-only app, and
+so on. A public app (`require_login => false`) gates its types to logged-in users.
+After this, anonymous reads return `401`; a logged-in user without the capability
+gets `403`. The block editor keeps working, since it reads as a logged-in user.
+
+To give a type a capability different from the app's, use the map form:
+
+```php
+'post_types' => [
+    'note'    => 'read',          // any logged-in reader
+    'invoice' => 'manage_options', // administrators only
+],
+```
+
+Declaring types this way also marks them as app-owned for launchers: OpenStation
+hides their admin menus from its dock, because the app window is where that content
+is managed (see [Launcher Integration](configuration.md#launcher-integration)).
+
+### Gating a type by hand
+
+`WpApp\Rest\Access` is the layer behind the config option, and can be called
+directly — for a type registered outside the app's config, or when you need the
+per-object form below. `Access::protect_post_type()` / `Access::protect_taxonomy()`
+record the required capability and return the gated controller class:
 
 ```php
 use WpApp\Rest\Access;
@@ -258,22 +291,13 @@ add_action( 'init', function () {
         'public'                => false,
         'show_in_rest'          => true, // needed for the block editor
         'rest_controller_class' => Access::protect_post_type( 'note', 'read' ),
-        'supports'              => [ 'title', 'editor', 'author', 'custom-fields' ],
-    ] );
-
-    register_taxonomy( 'note_tag', 'note', [
-        'public'                => false,
-        'show_in_rest'          => true,
-        'rest_controller_class' => Access::protect_taxonomy( 'note_tag', 'read' ),
     ] );
 } );
 ```
 
-Pass the same capability you gave the app: `'read'` for a login-only app,
-`'edit_posts'` for an editor-only app, and so on. Pass `null` to require only that
-the caller be logged in. After this, anonymous reads return `401`; a logged-in user
-without the capability gets `403`. (Requires this plugin to depend on
-`akirk/wp-app ^1.5` or newer, where `WpApp\Rest\Access` exists.)
+Pass `null` as the capability to require only that the caller be logged in.
+(Requires this plugin to depend on `akirk/wp-app ^1.5` or newer, where
+`WpApp\Rest\Access` exists.)
 
 ### Per-object capabilities (meta caps)
 
@@ -286,19 +310,17 @@ capability and a coarser primitive cap for the collection (which has no id):
 // Item read -> current_user_can( 'read_trip', $trip_id ) -> your map_meta_cap.
 // Collection -> current_user_can( 'read' ) (login-level; a listing can't be
 // per-object at the permission stage).
-Access::protect_taxonomy( 'trip', 'read_trip', 'read' );
+Access::protect_post_type( 'trip', 'read_trip', 'read' );
 ```
 
 With a single primitive capability (e.g. `'read'`) the collection capability
 defaults to the same value, so most apps pass just one.
 
-Declaring a post type either way also marks it as app-owned for launchers: OpenStation hides its admin menu from the dock, because the app window is where that content is managed.
-
 **Compliance check:** every app-owned post type / taxonomy registered with
-`show_in_rest => true` should wire its `rest_controller_class` through
-`Access::protect_post_type()` / `Access::protect_taxonomy()`. Auditing a plugin is
-then a grep: each `show_in_rest` registration should have a matching
-`Access::protect_*` on its `rest_controller_class` (minus any type deliberately
+`show_in_rest => true` should be listed in the app's `post_types` / `taxonomies`,
+or wire its `rest_controller_class` through `Access::protect_post_type()` /
+`Access::protect_taxonomy()`. Auditing a plugin is then a grep: each
+`show_in_rest` registration should match one of those (minus any type deliberately
 left public).
 
 ### Deliberately public reads (share links)

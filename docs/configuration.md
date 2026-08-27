@@ -13,11 +13,11 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'admin_bar_app_link'           => true,
 	'require_login'                => true,
 	'require_capability'           => null,
+	'post_types'                   => [],
+	'taxonomies'                   => [],
 	'clear_admin_bar'              => false,
 	'launcher'                     => true,
 	'app_icon'                     => null,
-	'post_types'                   => [],
-	'taxonomies'                   => [],
 ] );
 ```
 
@@ -50,6 +50,17 @@ Global masterbar behavior can also be configured in **Settings > WP Apps**. The 
 | `require_login` | bool | `true` | Require users to be logged in (shorthand for `require_capability => 'read'`). Set to `false` to make the app public |
 | `require_capability` | string | `null` | WordPress capability required to access the app. Takes precedence over `require_login`: a capability always implies a logged-in user. See [Access Control](access-control.md#how-require_login-and-require_capability-work-together) |
 
+### App Content
+
+Post types and taxonomies the app registers are its own data. Declaring them gates their REST reads with the app's capability (`require_login` / `require_capability` only cover the front end, not `/wp-json/`) and injects `show_in_rest` and the gated controller into `register_post_type()` / `register_taxonomy()`, so those calls need no REST arguments. See [REST API Access Control](access-control.md#rest-api-access-control).
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `post_types` | string[]\|array | `[]` | Post types the app owns. A list uses the app's capability; a map `[ 'book' => 'edit_posts' ]` sets a capability per type |
+| `taxonomies` | string[]\|array | `[]` | Taxonomies the app owns; same handling as `post_types` |
+
+Launchers treat these as the app's content: OpenStation hides their admin menus from its dock, since the app window is where they are managed.
+
 ### Launcher Integration
 
 Apps are announced to launchers automatically: the [My Apps](https://wordpress.org/plugins/my-apps/) plugin (via the `my_apps_plugins` filter) and [OpenStation](https://wordpress.org/plugins/desktop-mode/) (formerly Desktop Mode, via `openstation_register_icon()`). One pair of options covers both:
@@ -58,12 +69,10 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 |--------|------|---------|-------------|
 | `launcher` | bool\|string | `true` | `false` to stay out of all launchers, `true` to register with the app name, or a string for a custom launcher name |
 | `app_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`). Without it, OpenStation shows a letter badge generated from the name |
-| `post_types` | string[]\|array | `[]` | Post types the app owns. REST reads are gated with the app's capability (see [REST API Access Control](access-control.md#rest-api-access-control)), and OpenStation hides their admin menus from its dock. A map `[ 'book' => 'edit_posts' ]` sets a capability per type |
-| `taxonomies` | string[]\|array | `[]` | Taxonomies the app owns; same handling as `post_types` |
 
 `my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 
-Apps also appear in the OpenStation dock, with their masterbar menu items as window tabs. Post types declared via `post_types` (or directly with `Access::protect_post_type()`) count as app-owned and their admin menus are hidden from the dock, since the app window is where that content is managed. Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
+Apps also appear in the OpenStation dock, with their masterbar menu items as window tabs; the admin menus of the app's own [post types](#app-content) are hidden from the dock. Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
 
 ## Method Configuration
 
@@ -169,6 +178,23 @@ WpApp also applies conservative defaults for app backgrounds, links, focus outli
 add_filter( 'wp_app_output_default_color_styles', '__return_false' );
 ```
 
+### App with Its Own Post Types
+
+Declare the post types and taxonomies the app registers. Their REST reads are gated with the app's capability, the `register_post_type()` call needs no `show_in_rest` or `rest_controller_class`, and OpenStation keeps their admin menus out of its dock:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'library', [
+	'require_capability' => 'edit_posts',
+	'post_types'         => [ 'book' ],
+	'taxonomies'         => [ 'genre' ],
+] );
+
+add_action( 'init', function () {
+	register_post_type( 'book', [ 'public' => false, 'supports' => [ 'title', 'editor' ] ] );
+	register_taxonomy( 'genre', 'book', [ 'public' => false ] );
+} );
+```
+
 ### App with Launcher Integration
 
 Register your app with My Apps and OpenStation under a custom name and icon:
@@ -185,16 +211,6 @@ Dashicons can be used by passing the class name:
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'app_icon' => 'dashicons-admin-site',
-] );
-```
-
-Declare the post types and taxonomies the app registers. Their REST reads are then gated with the app's capability (the `register_post_type()` call needs no `rest_controller_class`), and OpenStation keeps their admin menus out of its dock:
-
-```php
-$app = new WpApp( __DIR__ . '/templates', 'library', [
-	'require_capability' => 'edit_posts',
-	'post_types'         => [ 'book' ],
-	'taxonomies'         => [ 'genre' ],
 ] );
 ```
 
