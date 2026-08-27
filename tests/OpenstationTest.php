@@ -41,20 +41,19 @@ class OpenstationTest extends TestCase {
 		$this->assertArrayNotHasKey( 'icon_svg', $args );
 	}
 
-	public function test_icon_args_fall_back_to_letter_svg_and_custom_title() {
+	public function test_icon_args_fall_back_to_letter_svg() {
 		$args = Openstation::get_icon_args(
 			'my-app',
 			[
-				'name'        => 'My App',
-				'url'         => 'https://example.org/my-app/',
-				'openstation' => 'Desktop Title',
+				'name' => 'My App',
+				'url'  => 'https://example.org/my-app/',
 			]
 		);
 
-		$this->assertSame( 'Desktop Title', $args['title'] );
+		$this->assertSame( 'My App', $args['title'] );
 		$this->assertArrayNotHasKey( 'icon', $args );
 		$this->assertStringContainsString( '<svg', $args['icon_svg'] );
-		$this->assertStringContainsString( '>DT<', $args['icon_svg'] );
+		$this->assertStringContainsString( '>MA<', $args['icon_svg'] );
 	}
 
 	public function test_icon_id_keeps_nested_path_segments_distinct() {
@@ -71,7 +70,7 @@ class OpenstationTest extends TestCase {
 
 	public function test_register_icons_registers_each_app_and_respects_config() {
 		( new WpApp( '/t', 'first-app', [ 'my_apps_icon' => 'dashicons-star-filled' ] ) )->init();
-		( new WpApp( '/t', 'second-app', [ 'openstation' => false ] ) )->init();
+		( new WpApp( '/t', 'second-app', [ 'launcher' => false ] ) )->init();
 		( new WpApp( '/t', 'third-app', [ 'require_capability' => 'edit_posts' ] ) )->init();
 
 		Openstation::register_icons();
@@ -87,24 +86,27 @@ class OpenstationTest extends TestCase {
 		$this->assertSame( 20, $GLOBALS['__wp_app_test_icons'][1]['args']['position'] );
 	}
 
-	public function test_openstation_defaults_to_my_apps_setting() {
-		( new WpApp( '/t', 'named-app', [ 'my_apps' => 'Launcher Name' ] ) )->init();
-		( new WpApp( '/t', 'hidden-app', [ 'my_apps' => false ] ) )->init();
-		( new WpApp(
-            '/t',
-            'override-app',
-            [
-				'my_apps'     => false,
-				'openstation' => 'Desktop Only',
+	public function test_legacy_my_apps_options_are_aliases() {
+		$named = new WpApp(
+			'/t',
+			'named-app',
+			[
+				'my_apps'      => 'Launcher Name',
+				'my_apps_icon' => 'dashicons-star-filled',
 			]
-        ) )->init();
+		);
+		$named->init();
+		( new WpApp( '/t', 'hidden-app', [ 'my_apps' => false ] ) )->init();
+
+		$my_apps = $named->register_my_apps( [] );
+		$this->assertSame( 'Launcher Name', $my_apps['named-app']['name'] );
 
 		Openstation::register_icons();
 
 		$icons = $GLOBALS['__wp_app_test_icons'];
-		$this->assertSame( [ 'named-app', 'override-app' ], array_column( $icons, 'id' ) );
+		$this->assertSame( [ 'named-app' ], array_column( $icons, 'id' ) );
 		$this->assertSame( 'Launcher Name', $icons[0]['args']['title'] );
-		$this->assertSame( 'Desktop Only', $icons[1]['args']['title'] );
+		$this->assertSame( 'dashicons-star-filled', $icons[0]['args']['icon'] );
 	}
 
 	public function test_launcher_and_app_icon_feed_both_launchers() {

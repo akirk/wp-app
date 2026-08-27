@@ -106,7 +106,7 @@ class Openstation {
         $position      = 10;
 
         foreach ( Registry::get_app_metadata() as $app_path => $metadata ) {
-            if ( isset( $metadata['openstation'] ) && false === $metadata['openstation'] ) {
+            if ( isset( $metadata['launcher'] ) && false === $metadata['launcher'] ) {
                 continue;
             }
             if ( ! Registry::can_user_access_app( $app_path ) ) {
@@ -143,9 +143,7 @@ class Openstation {
      * @return array Arguments for openstation_register_icon().
      */
     public static function get_icon_args( $app_path, $metadata ) {
-        $name = isset( $metadata['openstation'] ) && is_string( $metadata['openstation'] ) && '' !== $metadata['openstation']
-            ? $metadata['openstation']
-            : ( isset( $metadata['name'] ) ? (string) $metadata['name'] : $app_path );
+        $name = isset( $metadata['name'] ) && '' !== $metadata['name'] ? (string) $metadata['name'] : $app_path;
 
         $url = isset( $metadata['url'] ) ? (string) $metadata['url'] : home_url( '/' . $app_path . '/' );
 

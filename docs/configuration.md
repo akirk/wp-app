@@ -57,13 +57,7 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 | `launcher` | bool\|string | `true` | `false` to stay out of all launchers, `true` to register with the app name, or a string for a custom launcher name |
 | `app_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`). Without it, OpenStation shows a letter badge generated from the name |
 
-Per-launcher overrides, each defaulting to the generic option above:
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `my_apps` | bool\|string | `launcher` | My Apps only: `false`, `true`, or a custom name |
-| `my_apps_icon` | string | `app_icon` | My Apps only: icon URL or Dashicon class |
-| `openstation` | bool\|string | `my_apps` | OpenStation only: `false`, `true`, or a custom icon title |
+`my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 
 Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
 
@@ -195,15 +189,6 @@ To stay out of all launchers:
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'launcher' => false,
-] );
-```
-
-To register with one launcher only, override per launcher:
-
-```php
-$app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'my_apps'     => false,
-	'openstation' => 'Desktop Only',
 ] );
 ```
 

@@ -20,9 +20,6 @@ class WpApp {
     private $app_name_textdomain = null;
     private $launcher            = true;
     private $app_icon            = null;
-    private $my_apps             = null;
-    private $my_apps_icon        = null;
-    private $openstation         = null;
     private $pwa_config          = null;
     private $wp_app_requirement  = null;
 
@@ -98,25 +95,18 @@ class WpApp {
             $this->app_name_textdomain = $config['app_name_textdomain'];
         }
 
-        // Launcher integration (My Apps + OpenStation); per-launcher keys override
+        // Launcher integration (My Apps + OpenStation).
+        // my_apps / my_apps_icon are the pre-OpenStation names of the same options.
         if ( isset( $config['launcher'] ) ) {
             $this->launcher = $config['launcher'];
+        } elseif ( isset( $config['my_apps'] ) ) {
+            $this->launcher = $config['my_apps'];
         }
 
         if ( isset( $config['app_icon'] ) ) {
             $this->app_icon = $config['app_icon'];
-        }
-
-        if ( isset( $config['my_apps'] ) ) {
-            $this->my_apps = $config['my_apps'];
-        }
-
-        if ( isset( $config['my_apps_icon'] ) ) {
-            $this->my_apps_icon = $config['my_apps_icon'];
-        }
-
-        if ( isset( $config['openstation'] ) ) {
-            $this->openstation = $config['openstation'];
+        } elseif ( isset( $config['my_apps_icon'] ) ) {
+            $this->app_icon = $config['my_apps_icon'];
         }
 
         if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
@@ -161,7 +151,7 @@ class WpApp {
         add_action( 'wp_loaded', [ $this, 'on_wp_loaded' ] );
 
         // Register with My Apps plugin if enabled
-        if ( $this->get_my_apps_setting() !== false ) {
+        if ( $this->launcher !== false ) {
             add_filter( 'my_apps_plugins', [ $this, 'register_my_apps' ] );
         }
 
@@ -267,9 +257,9 @@ class WpApp {
             $this->router->get_app_path(),
             array_merge(
                 [
-                    'name'           => $this->get_launcher_name( $this->get_my_apps_setting() ),
+                    'name'           => $this->get_launcher_name(),
                     'url'            => home_url( '/' . $this->router->get_app_path() . '/' ),
-                    'openstation'    => $this->get_openstation_setting(),
+                    'launcher'       => $this->launcher,
                     'wp_app_package' => [
                         'expected'        => $this->get_wp_app_requirement(),
                         'expected_source' => $this->get_wp_app_requirement_source(),
@@ -501,7 +491,7 @@ class WpApp {
     public function register_my_apps( $apps ) {
         $app_path = $this->router->get_app_path();
 
-        $name = $this->get_launcher_name( $this->get_my_apps_setting() );
+        $name = $this->get_launcher_name();
 
         $apps[ $app_path ] = array_merge(
             isset( $apps[ $app_path ] ) && is_array( $apps[ $app_path ] ) ? $apps[ $app_path ] : [],
@@ -516,48 +506,25 @@ class WpApp {
     }
 
     /**
-     * Effective My Apps setting: the explicit `my_apps` option, else `launcher`.
+     * Display name for launcher entries: the `launcher` string, else the app name.
      *
-     * @return bool|string
-     */
-    private function get_my_apps_setting() {
-        return null === $this->my_apps ? $this->launcher : $this->my_apps;
-    }
-
-    /**
-     * Effective OpenStation setting: the explicit `openstation` option, else
-     * the My Apps setting (which itself falls back to `launcher`).
-     *
-     * @return bool|string
-     */
-    private function get_openstation_setting() {
-        return null === $this->openstation ? $this->get_my_apps_setting() : $this->openstation;
-    }
-
-    /**
-     * Display name for a launcher entry.
-     *
-     * @param bool|string $setting Launcher setting; a string is a custom name.
      * @return string
      */
-    private function get_launcher_name( $setting ) {
-        return is_string( $setting ) && '' !== $setting ? $setting : $this->get_app_name();
+    private function get_launcher_name() {
+        return is_string( $this->launcher ) && '' !== $this->launcher ? $this->launcher : $this->get_app_name();
     }
 
     /**
      * Get normalized icon data for My Apps-compatible consumers.
      *
-     * Uses `my_apps_icon` when set, else the generic `app_icon`.
-     *
      * @return array Icon data using one of the My Apps icon keys.
      */
     private function get_my_apps_icon_data() {
-        $icon = null === $this->my_apps_icon ? $this->app_icon : $this->my_apps_icon;
-        if ( ! is_string( $icon ) || '' === trim( $icon ) ) {
+        if ( ! is_string( $this->app_icon ) || '' === trim( $this->app_icon ) ) {
             return [];
         }
 
-        $icon = trim( $icon );
+        $icon = trim( $this->app_icon );
 
         if ( 0 === strpos( $icon, 'dashicons-' ) ) {
             return [ 'dashicon' => $icon ];
