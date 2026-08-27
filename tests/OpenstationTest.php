@@ -87,6 +87,26 @@ class OpenstationTest extends TestCase {
 		$this->assertSame( 20, $GLOBALS['__wp_app_test_icons'][1]['args']['position'] );
 	}
 
+	public function test_openstation_defaults_to_my_apps_setting() {
+		( new WpApp( '/t', 'named-app', [ 'my_apps' => 'Launcher Name' ] ) )->init();
+		( new WpApp( '/t', 'hidden-app', [ 'my_apps' => false ] ) )->init();
+		( new WpApp(
+            '/t',
+            'override-app',
+            [
+				'my_apps'     => false,
+				'openstation' => 'Desktop Only',
+			]
+        ) )->init();
+
+		Openstation::register_icons();
+
+		$icons = $GLOBALS['__wp_app_test_icons'];
+		$this->assertSame( [ 'named-app', 'override-app' ], array_column( $icons, 'id' ) );
+		$this->assertSame( 'Launcher Name', $icons[0]['args']['title'] );
+		$this->assertSame( 'Desktop Only', $icons[1]['args']['title'] );
+	}
+
 	public function test_register_icons_skips_apps_the_user_cannot_access() {
 		( new WpApp( '/t', 'gated-app', [ 'require_capability' => 'manage_options' ] ) )->init();
 		$GLOBALS['__wp_app_test_current_user_can'] = [ 'manage_options' => false ];

@@ -16,7 +16,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'clear_admin_bar'              => false,
 	'my_apps'                      => true,
 	'my_apps_icon'                 => null,
-	'openstation'                  => true,
+	'openstation'                  => null,
 ] );
 ```
 
@@ -66,7 +66,7 @@ The icon uses `my_apps_icon` when set; otherwise a letter badge is generated fro
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `openstation` | bool\|string | `true` | `false` to disable, `true` to enable with the app name (or `my_apps` name), or a string for a custom icon title |
+| `openstation` | bool\|string\|null | `null` | `null` inherits the `my_apps` setting (`false` disables, a string becomes the icon title). Set `true`, `false`, or a string to override it for OpenStation only |
 
 ## Method Configuration
 
@@ -201,7 +201,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 
 ### App with OpenStation Integration
 
-OpenStation integration is on by default and reuses `my_apps_icon`. To give the desktop icon its own title, or to keep an app off the desktop:
+OpenStation integration follows the `my_apps` setting by default and reuses `my_apps_icon`, so an app configured for My Apps needs nothing extra. To give the desktop icon its own title, or to keep an app off the desktop while leaving it in My Apps:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
