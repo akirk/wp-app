@@ -64,6 +64,8 @@ Try the examples instantly in your browser with WordPress Playground:
 
 WordPress isn't just for blogs. It's a powerful foundation for web applications.
 
+See the [WP Apps showcase](https://wpapps.kirk.at/) for real apps built on this framework, such as a travel app, a cookbook, and a family wiki.
+
 **For developers:**
 - **Built-in User Management** - Authentication, roles, and permissions out of the box
 - **Admin Interface** - Professional backend without building from scratch
