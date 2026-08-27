@@ -95,9 +95,11 @@ class Registry {
             Settings::init();
         }
 
-        if ( class_exists( __NAMESPACE__ . '\Openstation' ) ) {
-            Openstation::init();
-        }
+        // Load explicitly rather than trusting the Composer files autoload:
+        // a vendor copy whose src/ was updated without dump-autoload would
+        // otherwise never include the class.
+        require_once __DIR__ . '/class-openstation.php';
+        Openstation::init();
 
         self::$hooks_initialized = true;
     }

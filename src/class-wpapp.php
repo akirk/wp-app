@@ -20,6 +20,7 @@ class WpApp {
     private $app_name_textdomain = null;
     private $launcher            = true;
     private $app_icon            = null;
+    private $post_types          = [];
     private $pwa_config          = null;
     private $wp_app_requirement  = null;
 
@@ -107,6 +108,11 @@ class WpApp {
             $this->app_icon = $config['app_icon'];
         } elseif ( isset( $config['my_apps_icon'] ) ) {
             $this->app_icon = $config['my_apps_icon'];
+        }
+
+        // Post types owned by the app: launchers hide their admin menus.
+        if ( isset( $config['post_types'] ) ) {
+            $this->post_types = array_values( array_filter( array_map( 'strval', (array) $config['post_types'] ) ) );
         }
 
         if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
@@ -260,6 +266,7 @@ class WpApp {
                     'name'           => $this->get_launcher_name(),
                     'url'            => home_url( '/' . $this->router->get_app_path() . '/' ),
                     'launcher'       => $this->launcher,
+                    'post_types'     => $this->post_types,
                     'wp_app_package' => [
                         'expected'        => $this->get_wp_app_requirement(),
                         'expected_source' => $this->get_wp_app_requirement_source(),
@@ -362,32 +369,24 @@ class WpApp {
     }
 
     /**
-     * Get metadata for the loaded wp-app package.
+     * Describe the wp-app copy that is actually running.
      *
-     * @return array Loaded package metadata.
+     * Several plugins can each bundle wp-app; the first Composer autoloader
+     * to run wins and every later copy is skipped by the class/function
+     * guards. Composer\InstalledVersions is unreliable here: each plugin's
+     * autoloader reloads it, so it reports the last plugin's copy, not the
+     * loaded one. The path of this very file and WP_APP_VERSION (defined by
+     * the first functions.php to load) are the only truthful sources.
+     *
+     * @return array{name:string,version:string|null,path:string}
      */
     private static function get_loaded_wp_app_package() {
-        $version = null;
         $path    = self::normalize_path( dirname( __DIR__ ) );
+        $version = defined( 'WP_APP_VERSION' ) ? (string) WP_APP_VERSION : null;
 
-        if ( class_exists( '\Composer\InstalledVersions' ) ) {
-            try {
-                if ( \Composer\InstalledVersions::isInstalled( 'akirk/wp-app' ) ) {
-                    $version       = \Composer\InstalledVersions::getPrettyVersion( 'akirk/wp-app' );
-                    $composer_path = \Composer\InstalledVersions::getInstallPath( 'akirk/wp-app' );
-
-                    if ( is_string( $composer_path ) && '' !== $composer_path ) {
-                        $path = self::normalize_path( $composer_path );
-                    }
-                }
-            } catch ( \Exception $e ) {
-                $version = null;
-            }
-        }
-
-        if ( null === $version && $path && is_readable( $path . DIRECTORY_SEPARATOR . 'composer.json' ) ) {
+        if ( null === $version && is_readable( $path . '/composer.json' ) ) {
             // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the local loaded package composer.json file.
-            $data = json_decode( file_get_contents( $path . DIRECTORY_SEPARATOR . 'composer.json' ), true );
+            $data = json_decode( file_get_contents( $path . '/composer.json' ), true );
 
             if ( is_array( $data ) && isset( $data['version'] ) && is_string( $data['version'] ) ) {
                 $version = $data['version'];
