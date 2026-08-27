@@ -218,6 +218,11 @@ class Masterbar {
             return $show;
         }
 
+        // Inside an OpenStation window the shell provides the chrome
+        if ( class_exists( __NAMESPACE__ . '\Openstation' ) && Openstation::is_chromeless_request() ) {
+            return false;
+        }
+
         // For logged-in users, always show admin bar
         if ( is_user_logged_in() ) {
             return true;
@@ -237,6 +242,10 @@ class Masterbar {
         }
 
         if ( $this->custom_masterbar_rendered ) {
+            return;
+        }
+
+        if ( class_exists( __NAMESPACE__ . '\Openstation' ) && Openstation::is_chromeless_request() ) {
             return;
         }
 

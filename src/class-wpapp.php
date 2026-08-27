@@ -20,6 +20,7 @@ class WpApp {
     private $app_name_textdomain = null;
     private $my_apps             = true;
     private $my_apps_icon        = null;
+    private $openstation         = true;
     private $pwa_config          = null;
     private $wp_app_requirement  = null;
 
@@ -102,6 +103,11 @@ class WpApp {
 
         if ( isset( $config['my_apps_icon'] ) ) {
             $this->my_apps_icon = $config['my_apps_icon'];
+        }
+
+        // OpenStation (Desktop Mode) integration
+        if ( isset( $config['openstation'] ) ) {
+            $this->openstation = $config['openstation'];
         }
 
         if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
@@ -254,6 +260,7 @@ class WpApp {
                 [
                     'name'           => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
                     'url'            => home_url( '/' . $this->router->get_app_path() . '/' ),
+                    'openstation'    => $this->openstation,
                     'wp_app_package' => [
                         'expected'        => $this->get_wp_app_requirement(),
                         'expected_source' => $this->get_wp_app_requirement_source(),

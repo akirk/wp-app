@@ -16,6 +16,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'clear_admin_bar'              => false,
 	'my_apps'                      => true,
 	'my_apps_icon'                 => null,
+	'openstation'                  => true,
 ] );
 ```
 
@@ -56,6 +57,16 @@ Integrates with the [My Apps](https://wordpress.org/plugins/my-apps/) plugin to 
 |--------|------|---------|-------------|
 | `my_apps` | bool\|string | `true` | `false` to disable, `true` to enable with default name, or a string for custom name |
 | `my_apps_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`) |
+
+### OpenStation Integration
+
+When the [OpenStation](https://wordpress.org/plugins/desktop-mode/) plugin (formerly Desktop Mode) is active, every app is registered as a desktop icon via `openstation_register_icon()`. Clicking the icon opens the app in an OpenStation window; on those requests the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. The pre-rename `desktop_mode_*` API is supported as a fallback.
+
+The icon uses `my_apps_icon` when set; otherwise a letter badge is generated from the app name. Apps with `require_capability` are only shown to users who have that capability.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `openstation` | bool\|string | `true` | `false` to disable, `true` to enable with the app name (or `my_apps` name), or a string for a custom icon title |
 
 ## Method Configuration
 
@@ -185,6 +196,16 @@ To disable My Apps integration:
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'my_apps' => false,
+] );
+```
+
+### App with OpenStation Integration
+
+OpenStation integration is on by default and reuses `my_apps_icon`. To give the desktop icon its own title, or to keep an app off the desktop:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'my-app', [
+	'openstation' => 'My Custom App',  // or false to disable
 ] );
 ```
 

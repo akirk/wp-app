@@ -95,6 +95,10 @@ class Registry {
             Settings::init();
         }
 
+        if ( class_exists( __NAMESPACE__ . '\Openstation' ) ) {
+            Openstation::init();
+        }
+
         self::$hooks_initialized = true;
     }
 
@@ -230,5 +234,9 @@ class Registry {
         self::$hooks_initialized = false;
         self::$app_capabilities  = [];
         self::$app_metadata      = [];
+
+        if ( class_exists( __NAMESPACE__ . '\Openstation' ) ) {
+            Openstation::reset();
+        }
     }
 }
