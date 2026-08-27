@@ -13,6 +13,12 @@ namespace WpApp;
 // This runs before the class guard below on purpose: PHP declares this
 // file's class at compile time, so the guard is already true for the
 // first copy loaded and would skip the loader.
+//
+// Composer's files autoload will try to `require` these same files again
+// right after this one, and a second compile of a file whose class is
+// already declared is a fatal error under opcache (the class_exists guard
+// never runs). Marking each file as loaded in Composer's registry, keyed
+// the way Composer keys it (md5 of "package:path"), makes it skip them.
 foreach ( [
     'class-openstation.php',
     'class-settings.php',
@@ -26,6 +32,7 @@ foreach ( [
     'functions.php',
     'rest/class-access.php',
 ] as $wp_app_file ) {
+    $GLOBALS['__composer_autoload_files'][ md5( 'akirk/wp-app:src/' . $wp_app_file ) ] = true;
     require_once __DIR__ . '/' . $wp_app_file;
 }
 unset( $wp_app_file );

@@ -39,6 +39,7 @@
     },
     "scripts": {
         "test": "phpunit",
+        "test:autoload": "php -d opcache.enable=1 -d opcache.enable_cli=1 -r 'require \"vendor/autoload.php\"; require \"vendor/autoload.php\"; echo \"autoload ok\\n\";'",
         "phpcs": "phpcs",
         "phpcbf": "phpcbf"
     },
