@@ -204,10 +204,11 @@ or taxonomy registered with `show_in_rest => true` (which the block editor
 requires), that door is open too, and it needs its own lock.
 
 The framework provides that lock, but it cannot know which types are yours: tell
-it with the `post_types` / `taxonomies` app options (described below), and it gates
-their REST reads with the app's capability. Treat REST access as part of the app's
-access design, not an afterthought: for each post type and taxonomy the app
-registers, decide who may read it over REST and declare it accordingly.
+it with the `post_types` / `taxonomies` app options (described below). For a type
+you also register with `show_in_rest => true`, this gates its REST reads with the
+app's capability. Treat REST access as part of the app's access design, not an
+afterthought: for each post type and taxonomy the app registers, decide who may
+read it over REST and declare it accordingly.
 
 ### What WordPress protects by default
 
@@ -236,10 +237,11 @@ REST unless the REST layer is gated too.
 
 ### Declaring the app's types
 
-List the post types and taxonomies the app owns in its config. The framework then
-gates their REST reads with the app's capability, injecting `show_in_rest => true`
-and its gated controller into your `register_post_type()` / `register_taxonomy()`
-calls — those calls need no REST-specific arguments at all:
+List the post types and taxonomies the app owns in its config, and register them
+with `show_in_rest => true` yourself (the block editor needs this on anyway). The
+framework then gates their REST reads with the app's capability and injects its
+gated controller — the `register_post_type()` / `register_taxonomy()` calls need
+no `rest_controller_class` of their own:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'notes', [
@@ -250,12 +252,19 @@ $app = new WpApp( __DIR__ . '/templates', 'notes', [
 
 add_action( 'init', function () {
     register_post_type( 'note', [
-        'public'   => false,
-        'supports' => [ 'title', 'editor', 'author', 'custom-fields' ],
+        'public'       => false,
+        'show_in_rest' => true,
+        'supports'     => [ 'title', 'editor', 'author', 'custom-fields' ],
     ] );
-    register_taxonomy( 'note_tag', 'note', [ 'public' => false ] );
+    register_taxonomy( 'note_tag', 'note', [ 'public' => false, 'show_in_rest' => true ] );
 } );
 ```
+
+Declaring a type here never turns `show_in_rest` on by itself — that stays your
+call in `register_post_type()` / `register_taxonomy()`. A type you keep closed to
+REST (no `show_in_rest`) is unaffected by declaring it: nothing opens up, so it's
+safe to declare purely for the dock-hiding benefit below even when the type has no
+REST endpoint of its own.
 
 The capability is the one the app requires: `'read'` for a login-only app
 (`require_login => true`, the default), `'edit_posts'` for an editor-only app, and
@@ -274,20 +283,9 @@ To give a type a capability different from the app's, use the map form:
 
 Declaring types this way also marks them as app-owned for launchers: OpenStation
 hides their admin menus from its dock, because the app window is where that content
-is managed (see [Launcher Integration](configuration.md#launcher-integration)).
-
-**Don't declare a type "just in case."** `post_types` / `taxonomies` unconditionally
-set `show_in_rest => true` on every listed type — even one you had registered
-without REST support at all. For a type that's already closed off (no
-`show_in_rest`, `show_ui => false`) and has its own purpose-built REST endpoints
-with their own permission checks, declaring it here doesn't add safety: it opens a
-brand-new `/wp-json/wp/v2/<type>` surface whose *writes* fall through to core's
-generic `WP_REST_Posts_Controller` capability checks (`edit_posts`/`publish_posts`
-for the default `post` capability type), bypassing whatever validation your own
-endpoints do. And the dock-hiding benefit only matters if the type has an admin
-menu to hide (`show_ui => true`) — a `show_ui => false` type is already invisible to
-the dock. Declare a type here only when you actually want its reads exposed over
-core REST (e.g. for the block editor) and need them gated.
+is managed (see [Launcher Integration](configuration.md#launcher-integration)). That
+benefit only matters for a type with `show_ui => true` — a `show_ui => false` type
+has no admin menu to hide in the first place, but declaring it is still harmless.
 
 ### Gating a type by hand
 

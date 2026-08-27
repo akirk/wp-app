@@ -228,7 +228,13 @@ class OpenstationTest extends TestCase {
 		$this->assertSame( 'edit_posts', Access::capability_for_taxonomy( 'desk' ) );
 		$this->assertNull( Access::capability_for_post_type( 'leaflet' ) );
 
-		$args = Access::filter_post_type_args( [ 'public' => false ], 'book' );
+		$args = Access::filter_post_type_args(
+            [
+				'public'       => false,
+				'show_in_rest' => true,
+			],
+			'book'
+        );
 		$this->assertTrue( $args['show_in_rest'] );
 		$this->assertNotEmpty( $args['rest_controller_class'] );
 

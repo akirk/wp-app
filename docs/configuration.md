@@ -52,7 +52,7 @@ Global masterbar behavior can also be configured in **Settings > WP Apps**. The 
 
 ### App Content
 
-Post types and taxonomies the app registers are its own data. Declaring them gates their REST reads with the app's capability (`require_login` / `require_capability` only cover the front end, not `/wp-json/`) and injects `show_in_rest` and the gated controller into `register_post_type()` / `register_taxonomy()`, so those calls need no REST arguments. See [REST API Access Control](access-control.md#rest-api-access-control).
+Post types and taxonomies the app registers are its own data. For a type also registered with `show_in_rest => true` (needed for the block editor), declaring it here gates its REST reads with the app's capability (`require_login` / `require_capability` only cover the front end, not `/wp-json/`) and injects the gated controller, so that `register_post_type()` / `register_taxonomy()` call needs no `rest_controller_class` of its own. Declaring a type never turns `show_in_rest` on by itself — a type you keep closed to REST is unaffected either way. See [REST API Access Control](access-control.md#rest-api-access-control).
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -60,15 +60,6 @@ Post types and taxonomies the app registers are its own data. Declaring them gat
 | `taxonomies` | string[]\|array | `[]` | Taxonomies the app owns; same handling as `post_types` |
 
 Launchers treat these as the app's content: OpenStation hides their admin menus from its dock, since the app window is where they are managed.
-
-Don't declare a type here "just in case" — both options unconditionally turn on
-`show_in_rest`, opening a `/wp-json/wp/v2/<type>` endpoint whose writes fall through
-to core's generic capability checks rather than any validation your own REST
-endpoints do. The dock-hiding effect above only matters for a type with
-`show_ui => true`; a `show_ui => false` type has no admin menu to hide in the first
-place. Declare a type here only when you actually want its reads exposed over core
-REST and need them gated — see [Access Control](access-control.md#rest-api-access-control)
-for the full reasoning.
 
 ### Launcher Integration
 
@@ -189,7 +180,7 @@ add_filter( 'wp_app_output_default_color_styles', '__return_false' );
 
 ### App with Its Own Post Types
 
-Declare the post types and taxonomies the app registers. Their REST reads are gated with the app's capability, the `register_post_type()` call needs no `show_in_rest` or `rest_controller_class`, and OpenStation keeps their admin menus out of its dock:
+Declare the post types and taxonomies the app registers. For a type also registered with `show_in_rest => true`, its REST reads are gated with the app's capability and the `register_post_type()` call needs no `rest_controller_class`; OpenStation keeps admin menus of declared types out of its dock either way:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'library', [
@@ -199,8 +190,8 @@ $app = new WpApp( __DIR__ . '/templates', 'library', [
 ] );
 
 add_action( 'init', function () {
-	register_post_type( 'book', [ 'public' => false, 'supports' => [ 'title', 'editor' ] ] );
-	register_taxonomy( 'genre', 'book', [ 'public' => false ] );
+	register_post_type( 'book', [ 'public' => false, 'show_in_rest' => true, 'supports' => [ 'title', 'editor' ] ] );
+	register_taxonomy( 'genre', 'book', [ 'public' => false, 'show_in_rest' => true ] );
 } );
 ```
 

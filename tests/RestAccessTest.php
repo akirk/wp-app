@@ -9,10 +9,10 @@ use WpApp\Rest\Private_Terms_Controller;
 
 class RestAccessTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['__wp_app_test_filters']          = [];
-		$GLOBALS['__wp_app_test_current_user_can'] = false;
+		$GLOBALS['__wp_app_test_filters']           = [];
+		$GLOBALS['__wp_app_test_current_user_can']  = false;
 		$GLOBALS['__wp_app_test_is_user_logged_in'] = false;
-		$GLOBALS['__wp_app_test_cap_calls'] = [];
+		$GLOBALS['__wp_app_test_cap_calls']         = [];
 		Access::reset();
 	}
 
@@ -93,39 +93,81 @@ class RestAccessTest extends TestCase {
 		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read' => true ];
 		$this->assertTrue( $controller->get_items_permissions_check( $this->request() ) );
 	}
-	public function test_filter_injects_controller_and_show_in_rest_for_protected_post_type() {
-		Access::protect_post_type( "note", "read" );
-		$args = Access::filter_post_type_args( [ "public" => false ], "note" );
+	public function test_filter_injects_controller_for_protected_post_type_that_opts_into_rest() {
+		Access::protect_post_type( 'note', 'read' );
+		$args = Access::filter_post_type_args(
+            [
+				'public'       => false,
+				'show_in_rest' => true,
+			],
+			'note'
+        );
 
-		$this->assertTrue( $args["show_in_rest"] );
-		$this->assertSame( Private_Posts_Controller::class, $args["rest_controller_class"] );
+		$this->assertTrue( $args['show_in_rest'] );
+		$this->assertSame( Private_Posts_Controller::class, $args['rest_controller_class'] );
 	}
 
-	public function test_filter_injects_terms_controller_for_protected_taxonomy() {
-		Access::protect_taxonomy( "note_tag", "read" );
-		$args = Access::filter_taxonomy_args( [ "public" => false ], "note_tag" );
+	public function test_filter_injects_terms_controller_for_protected_taxonomy_that_opts_into_rest() {
+		Access::protect_taxonomy( 'note_tag', 'read' );
+		$args = Access::filter_taxonomy_args(
+            [
+				'public'       => false,
+				'show_in_rest' => true,
+			],
+			'note_tag'
+        );
 
-		$this->assertTrue( $args["show_in_rest"] );
-		$this->assertSame( Private_Terms_Controller::class, $args["rest_controller_class"] );
+		$this->assertTrue( $args['show_in_rest'] );
+		$this->assertSame( Private_Terms_Controller::class, $args['rest_controller_class'] );
+	}
+
+	public function test_filter_does_not_turn_on_show_in_rest_for_protected_type() {
+		Access::protect_post_type( 'note', 'read' );
+		$args = Access::filter_post_type_args( [ 'public' => false ], 'note' );
+
+		$this->assertArrayNotHasKey( 'show_in_rest', $args );
+		$this->assertArrayNotHasKey( 'rest_controller_class', $args );
+	}
+
+	public function test_filter_does_not_turn_on_show_in_rest_for_protected_taxonomy() {
+		Access::protect_taxonomy( 'note_tag', 'read' );
+		$args = Access::filter_taxonomy_args( [ 'public' => false ], 'note_tag' );
+
+		$this->assertArrayNotHasKey( 'show_in_rest', $args );
+		$this->assertArrayNotHasKey( 'rest_controller_class', $args );
 	}
 
 	public function test_filter_leaves_unprotected_types_untouched() {
-		$args = Access::filter_post_type_args( [ "public" => true ], "unrelated" );
-		$this->assertArrayNotHasKey( "rest_controller_class", $args );
-		$this->assertArrayNotHasKey( "show_in_rest", $args );
+		$args = Access::filter_post_type_args(
+            [
+				'public'       => true,
+				'show_in_rest' => true,
+			],
+			'unrelated'
+        );
+		$this->assertArrayNotHasKey( 'rest_controller_class', $args );
 	}
 
 	public function test_filter_does_not_override_explicit_controller() {
-		Access::protect_post_type( "note", "read" );
-		$args = Access::filter_post_type_args( [ "rest_controller_class" => "My\Custom" ], "note" );
-		$this->assertSame( "My\Custom", $args["rest_controller_class"] );
+		Access::protect_post_type( 'note', 'read' );
+		$args = Access::filter_post_type_args(
+            [
+				'show_in_rest'          => true,
+				'rest_controller_class' => 'My\Custom',
+			],
+			'note'
+        );
+		$this->assertSame( 'My\Custom', $args['rest_controller_class'] );
 	}
 
 	public function test_item_check_passes_object_id_to_current_user_can() {
 		// Item cap is a meta cap; collection cap is a coarse primitive cap.
 		Access::protect_post_type( 'trip', 'read_trip', 'read' );
 		$GLOBALS['__wp_app_test_is_user_logged_in'] = true;
-		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read_trip' => true, 'read' => true ];
+		$GLOBALS['__wp_app_test_current_user_can']  = [
+			'read_trip' => true,
+			'read'      => true,
+		];
 
 		$controller = new Private_Posts_Controller( 'trip' );
 
@@ -163,7 +205,10 @@ class RestAccessTest extends TestCase {
 	public function test_taxonomy_item_check_passes_term_id() {
 		Access::protect_taxonomy( 'trip_tag', 'read_trip', 'read' );
 		$GLOBALS['__wp_app_test_is_user_logged_in'] = true;
-		$GLOBALS['__wp_app_test_current_user_can']  = [ 'read_trip' => true, 'read' => true ];
+		$GLOBALS['__wp_app_test_current_user_can']  = [
+			'read_trip' => true,
+			'read'      => true,
+		];
 
 		$controller = new Private_Terms_Controller( 'trip_tag' );
 		$this->assertTrue( $controller->get_item_permissions_check( $this->request( [ 'id' => 9 ] ) ) );
