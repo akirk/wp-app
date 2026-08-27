@@ -61,6 +61,15 @@ Post types and taxonomies the app registers are its own data. Declaring them gat
 
 Launchers treat these as the app's content: OpenStation hides their admin menus from its dock, since the app window is where they are managed.
 
+Don't declare a type here "just in case" — both options unconditionally turn on
+`show_in_rest`, opening a `/wp-json/wp/v2/<type>` endpoint whose writes fall through
+to core's generic capability checks rather than any validation your own REST
+endpoints do. The dock-hiding effect above only matters for a type with
+`show_ui => true`; a `show_ui => false` type has no admin menu to hide in the first
+place. Declare a type here only when you actually want its reads exposed over core
+REST and need them gated — see [Access Control](access-control.md#rest-api-access-control)
+for the full reasoning.
+
 ### Launcher Integration
 
 Apps are announced to launchers automatically: the [My Apps](https://wordpress.org/plugins/my-apps/) plugin (via the `my_apps_plugins` filter) and [OpenStation](https://wordpress.org/plugins/desktop-mode/) (formerly Desktop Mode, via `openstation_register_icon()`). One pair of options covers both:
