@@ -280,6 +280,8 @@ Access::protect_taxonomy( 'trip', 'read_trip', 'read' );
 With a single primitive capability (e.g. `'read'`) the collection capability
 defaults to the same value, so most apps pass just one.
 
+Declaring a post type this way also marks it as app-owned for launchers: OpenStation hides its admin menu from the dock, because the app window is where that content is managed.
+
 **Compliance check:** every app-owned post type / taxonomy registered with
 `show_in_rest => true` should wire its `rest_controller_class` through
 `Access::protect_post_type()` / `Access::protect_taxonomy()`. Auditing a plugin is

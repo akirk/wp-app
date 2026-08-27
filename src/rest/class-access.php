@@ -326,6 +326,15 @@ class Access {
 	}
 
 	/**
+	 * Post types declared as app-owned via protect_post_type().
+	 *
+	 * @return string[] Post type keys.
+	 */
+	public static function get_protected_post_types() {
+		return array_keys( self::$post_type_caps );
+	}
+
+	/**
 	 * Reset all registrations (test helper).
 	 */
 	public static function reset() {

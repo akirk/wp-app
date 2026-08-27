@@ -210,9 +210,10 @@ class Openstation {
     }
 
     /**
-     * Hide the admin menu of post types an app declared as its own: the app
-     * window is where that content is managed, so the dock does not need
-     * a second tile for it.
+     * Hide the admin menu of app-owned post types. A post type declared via
+     * Access::protect_post_type() belongs to an app, and the app window is
+     * where that content is managed, so the dock does not need a second
+     * tile for it.
      *
      * @param string $placement 'dock' or 'hidden'.
      * @param string $menu_slug Admin menu slug, e.g. `edit.php?post_type=book`.
@@ -222,15 +223,13 @@ class Openstation {
         if ( 0 !== strpos( (string) $menu_slug, 'edit.php?post_type=' ) ) {
             return $placement;
         }
-
-        $post_type = substr( (string) $menu_slug, strlen( 'edit.php?post_type=' ) );
-        foreach ( Registry::get_app_metadata() as $metadata ) {
-            if ( ! empty( $metadata['post_types'] ) && in_array( $post_type, (array) $metadata['post_types'], true ) ) {
-                return 'hidden';
-            }
+        if ( ! class_exists( __NAMESPACE__ . '\\Rest\\Access' ) ) {
+            return $placement;
         }
 
-        return $placement;
+        $post_type = substr( (string) $menu_slug, strlen( 'edit.php?post_type=' ) );
+
+        return in_array( $post_type, Rest\Access::get_protected_post_types(), true ) ? 'hidden' : $placement;
     }
 
     /**

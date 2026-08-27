@@ -5,6 +5,7 @@ namespace WpApp\Tests;
 use PHPUnit\Framework\TestCase;
 use WpApp\Openstation;
 use WpApp\Registry;
+use WpApp\Rest\Access;
 use WpApp\WpApp;
 
 class OpenstationTest extends TestCase {
@@ -15,6 +16,7 @@ class OpenstationTest extends TestCase {
 		$GLOBALS['__wp_app_test_icons']         = [];
 		unset( $GLOBALS['__wp_app_test_current_user_can'] );
 		Registry::reset();
+		Access::reset();
 	}
 
 	public function test_detects_openstation_shell() {
@@ -197,8 +199,9 @@ class OpenstationTest extends TestCase {
 		$this->assertSame( [], $items[1]['submenu'] );
 	}
 
-	public function test_owned_post_type_menus_are_hidden_from_the_dock() {
-		( new WpApp( '/t', 'library', [ 'post_types' => [ 'book', 'author' ] ] ) )->init();
+	public function test_protected_post_type_menus_are_hidden_from_the_dock() {
+		Access::protect_post_type( 'book', 'read' );
+		Access::protect_post_type( 'author' );
 
 		$this->assertSame( 'hidden', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php?post_type=book' ) );
 		$this->assertSame( 'hidden', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php?post_type=author' ) );

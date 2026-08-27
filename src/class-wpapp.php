@@ -20,7 +20,6 @@ class WpApp {
     private $app_name_textdomain = null;
     private $launcher            = true;
     private $app_icon            = null;
-    private $post_types          = [];
     private $pwa_config          = null;
     private $wp_app_requirement  = null;
 
@@ -108,11 +107,6 @@ class WpApp {
             $this->app_icon = $config['app_icon'];
         } elseif ( isset( $config['my_apps_icon'] ) ) {
             $this->app_icon = $config['my_apps_icon'];
-        }
-
-        // Post types owned by the app: launchers hide their admin menus.
-        if ( isset( $config['post_types'] ) ) {
-            $this->post_types = array_values( array_filter( array_map( 'strval', (array) $config['post_types'] ) ) );
         }
 
         if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
@@ -266,7 +260,6 @@ class WpApp {
                     'name'           => $this->get_launcher_name(),
                     'url'            => home_url( '/' . $this->router->get_app_path() . '/' ),
                     'launcher'       => $this->launcher,
-                    'post_types'     => $this->post_types,
                     'wp_app_package' => [
                         'expected'        => $this->get_wp_app_requirement(),
                         'expected_source' => $this->get_wp_app_requirement_source(),
