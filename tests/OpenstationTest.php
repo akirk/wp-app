@@ -107,6 +107,32 @@ class OpenstationTest extends TestCase {
 		$this->assertSame( 'Desktop Only', $icons[1]['args']['title'] );
 	}
 
+	public function test_launcher_and_app_icon_feed_both_launchers() {
+		$app = new WpApp(
+			'/t',
+			'shared-app',
+			[
+				'launcher' => 'Shared Name',
+				'app_icon' => 'dashicons-lock',
+			]
+		);
+		$app->init();
+		( new WpApp( '/t', 'off-app', [ 'launcher' => false ] ) )->init();
+
+		$my_apps = $app->register_my_apps( [] );
+		$this->assertSame( 'Shared Name', $my_apps['shared-app']['name'] );
+		$this->assertSame( 'dashicons-lock', $my_apps['shared-app']['dashicon'] );
+
+		Openstation::register_icons();
+		$icons = $GLOBALS['__wp_app_test_icons'];
+		$this->assertSame( [ 'shared-app' ], array_column( $icons, 'id' ) );
+		$this->assertSame( 'Shared Name', $icons[0]['args']['title'] );
+		$this->assertSame( 'dashicons-lock', $icons[0]['args']['icon'] );
+
+		// Only the enabled app hooked the My Apps filter.
+		$this->assertCount( 1, $GLOBALS['__wp_app_test_filters']['my_apps_plugins'] );
+	}
+
 	public function test_register_icons_skips_apps_the_user_cannot_access() {
 		( new WpApp( '/t', 'gated-app', [ 'require_capability' => 'manage_options' ] ) )->init();
 		$GLOBALS['__wp_app_test_current_user_can'] = [ 'manage_options' => false ];

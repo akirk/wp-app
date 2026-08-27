@@ -73,7 +73,7 @@ function encrypted_contacts_register_app() {
 			[
 				'require_login' => true,
 				'app_name'      => 'Encrypted Contacts',
-				'my_apps_icon'  => 'dashicons-lock',
+				'app_icon'      => 'dashicons-lock',
 			]
 	);
 

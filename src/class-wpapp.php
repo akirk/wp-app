@@ -18,7 +18,9 @@ class WpApp {
     private $custom_roles        = [];
     private $app_name            = null;
     private $app_name_textdomain = null;
-    private $my_apps             = true;
+    private $launcher            = true;
+    private $app_icon            = null;
+    private $my_apps             = null;
     private $my_apps_icon        = null;
     private $openstation         = null;
     private $pwa_config          = null;
@@ -96,7 +98,15 @@ class WpApp {
             $this->app_name_textdomain = $config['app_name_textdomain'];
         }
 
-        // My Apps plugin integration
+        // Launcher integration (My Apps + OpenStation); per-launcher keys override
+        if ( isset( $config['launcher'] ) ) {
+            $this->launcher = $config['launcher'];
+        }
+
+        if ( isset( $config['app_icon'] ) ) {
+            $this->app_icon = $config['app_icon'];
+        }
+
         if ( isset( $config['my_apps'] ) ) {
             $this->my_apps = $config['my_apps'];
         }
@@ -105,7 +115,6 @@ class WpApp {
             $this->my_apps_icon = $config['my_apps_icon'];
         }
 
-        // OpenStation (Desktop Mode) integration; defaults to the my_apps setting
         if ( isset( $config['openstation'] ) ) {
             $this->openstation = $config['openstation'];
         }
@@ -152,7 +161,7 @@ class WpApp {
         add_action( 'wp_loaded', [ $this, 'on_wp_loaded' ] );
 
         // Register with My Apps plugin if enabled
-        if ( $this->my_apps !== false ) {
+        if ( $this->get_my_apps_setting() !== false ) {
             add_filter( 'my_apps_plugins', [ $this, 'register_my_apps' ] );
         }
 
@@ -258,9 +267,9 @@ class WpApp {
             $this->router->get_app_path(),
             array_merge(
                 [
-                    'name'           => is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name(),
+                    'name'           => $this->get_launcher_name( $this->get_my_apps_setting() ),
                     'url'            => home_url( '/' . $this->router->get_app_path() . '/' ),
-                    'openstation'    => null === $this->openstation ? $this->my_apps : $this->openstation,
+                    'openstation'    => $this->get_openstation_setting(),
                     'wp_app_package' => [
                         'expected'        => $this->get_wp_app_requirement(),
                         'expected_source' => $this->get_wp_app_requirement_source(),
@@ -492,7 +501,7 @@ class WpApp {
     public function register_my_apps( $apps ) {
         $app_path = $this->router->get_app_path();
 
-        $name = is_string( $this->my_apps ) ? $this->my_apps : $this->get_app_name();
+        $name = $this->get_launcher_name( $this->get_my_apps_setting() );
 
         $apps[ $app_path ] = array_merge(
             isset( $apps[ $app_path ] ) && is_array( $apps[ $app_path ] ) ? $apps[ $app_path ] : [],
@@ -507,16 +516,48 @@ class WpApp {
     }
 
     /**
+     * Effective My Apps setting: the explicit `my_apps` option, else `launcher`.
+     *
+     * @return bool|string
+     */
+    private function get_my_apps_setting() {
+        return null === $this->my_apps ? $this->launcher : $this->my_apps;
+    }
+
+    /**
+     * Effective OpenStation setting: the explicit `openstation` option, else
+     * the My Apps setting (which itself falls back to `launcher`).
+     *
+     * @return bool|string
+     */
+    private function get_openstation_setting() {
+        return null === $this->openstation ? $this->get_my_apps_setting() : $this->openstation;
+    }
+
+    /**
+     * Display name for a launcher entry.
+     *
+     * @param bool|string $setting Launcher setting; a string is a custom name.
+     * @return string
+     */
+    private function get_launcher_name( $setting ) {
+        return is_string( $setting ) && '' !== $setting ? $setting : $this->get_app_name();
+    }
+
+    /**
      * Get normalized icon data for My Apps-compatible consumers.
+     *
+     * Uses `my_apps_icon` when set, else the generic `app_icon`.
      *
      * @return array Icon data using one of the My Apps icon keys.
      */
     private function get_my_apps_icon_data() {
-        if ( ! is_string( $this->my_apps_icon ) || '' === trim( $this->my_apps_icon ) ) {
+        $icon = null === $this->my_apps_icon ? $this->app_icon : $this->my_apps_icon;
+        if ( ! is_string( $icon ) || '' === trim( $icon ) ) {
             return [];
         }
 
-        $icon = trim( $this->my_apps_icon );
+        $icon = trim( $icon );
 
         if ( 0 === strpos( $icon, 'dashicons-' ) ) {
             return [ 'dashicon' => $icon ];

@@ -14,9 +14,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'require_login'                => true,
 	'require_capability'           => null,
 	'clear_admin_bar'              => false,
-	'my_apps'                      => true,
-	'my_apps_icon'                 => null,
-	'openstation'                  => null,
+	'launcher'                     => true,
+	'app_icon'                     => null,
 ] );
 ```
 
@@ -49,24 +48,24 @@ Global masterbar behavior can also be configured in **Settings > WP Apps**. The 
 | `require_login` | bool | `true` | Require users to be logged in (shorthand for `require_capability => 'read'`). Set to `false` to make the app public |
 | `require_capability` | string | `null` | WordPress capability required to access the app. Takes precedence over `require_login`: a capability always implies a logged-in user. See [Access Control](access-control.md#how-require_login-and-require_capability-work-together) |
 
-### My Apps Plugin Integration
+### Launcher Integration
 
-Integrates with the [My Apps](https://wordpress.org/plugins/my-apps/) plugin to add your app to the launcher. Behind the scenes, this uses the `my_apps_plugins` filter.
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `my_apps` | bool\|string | `true` | `false` to disable, `true` to enable with default name, or a string for custom name |
-| `my_apps_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`) |
-
-### OpenStation Integration
-
-When the [OpenStation](https://wordpress.org/plugins/desktop-mode/) plugin (formerly Desktop Mode) is active, every app is registered as a desktop icon via `openstation_register_icon()`. Clicking the icon opens the app in an OpenStation window; on those requests the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. The pre-rename `desktop_mode_*` API is supported as a fallback.
-
-The icon uses `my_apps_icon` when set; otherwise a letter badge is generated from the app name. Apps with `require_capability` are only shown to users who have that capability.
+Apps are announced to launchers automatically: the [My Apps](https://wordpress.org/plugins/my-apps/) plugin (via the `my_apps_plugins` filter) and [OpenStation](https://wordpress.org/plugins/desktop-mode/) (formerly Desktop Mode, via `openstation_register_icon()`). One pair of options covers both:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `openstation` | bool\|string\|null | `null` | `null` inherits the `my_apps` setting (`false` disables, a string becomes the icon title). Set `true`, `false`, or a string to override it for OpenStation only |
+| `launcher` | bool\|string | `true` | `false` to stay out of all launchers, `true` to register with the app name, or a string for a custom launcher name |
+| `app_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`). Without it, OpenStation shows a letter badge generated from the name |
+
+Per-launcher overrides, each defaulting to the generic option above:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `my_apps` | bool\|string | `launcher` | My Apps only: `false`, `true`, or a custom name |
+| `my_apps_icon` | string | `app_icon` | My Apps only: icon URL or Dashicon class |
+| `openstation` | bool\|string | `my_apps` | OpenStation only: `false`, `true`, or a custom icon title |
+
+Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
 
 ## Method Configuration
 
@@ -172,14 +171,14 @@ WpApp also applies conservative defaults for app backgrounds, links, focus outli
 add_filter( 'wp_app_output_default_color_styles', '__return_false' );
 ```
 
-### App with My Apps Integration
+### App with Launcher Integration
 
-Register your app with the My Apps plugin launcher:
+Register your app with My Apps and OpenStation under a custom name and icon:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'my_apps'      => 'My Custom App',  // or true for default name
-	'my_apps_icon' => plugins_url( 'assets/icon.png', __FILE__ ),
+	'launcher' => 'My Custom App',  // or true for the app name
+	'app_icon' => plugins_url( 'assets/icon.png', __FILE__ ),
 ] );
 ```
 
@@ -187,25 +186,24 @@ Dashicons can be used by passing the class name:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'my_apps_icon' => 'dashicons-admin-site',
+	'app_icon' => 'dashicons-admin-site',
 ] );
 ```
 
-To disable My Apps integration:
+To stay out of all launchers:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'my_apps' => false,
+	'launcher' => false,
 ] );
 ```
 
-### App with OpenStation Integration
-
-OpenStation integration follows the `my_apps` setting by default and reuses `my_apps_icon`, so an app configured for My Apps needs nothing extra. To give the desktop icon its own title, or to keep an app off the desktop while leaving it in My Apps:
+To register with one launcher only, override per launcher:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'openstation' => 'My Custom App',  // or false to disable
+	'my_apps'     => false,
+	'openstation' => 'Desktop Only',
 ] );
 ```
 
