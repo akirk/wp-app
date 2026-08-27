@@ -16,6 +16,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'clear_admin_bar'              => false,
 	'launcher'                     => true,
 	'app_icon'                     => null,
+	'post_types'                   => [],
 ] );
 ```
 
@@ -56,10 +57,11 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 |--------|------|---------|-------------|
 | `launcher` | bool\|string | `true` | `false` to stay out of all launchers, `true` to register with the app name, or a string for a custom launcher name |
 | `app_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`). Without it, OpenStation shows a letter badge generated from the name |
+| `post_types` | string[] | `[]` | Post types the app manages. OpenStation hides their admin menus from its dock, since the app window is where that content is edited |
 
 `my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 
-Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
+Apps also appear in the OpenStation dock, with their masterbar menu items as window tabs. Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
 
 ## Method Configuration
 
@@ -181,6 +183,14 @@ Dashicons can be used by passing the class name:
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'app_icon' => 'dashicons-admin-site',
+] );
+```
+
+If the app registers its own post types, declare them so OpenStation does not show a second dock tile for their admin menu:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'library', [
+	'post_types' => [ 'book' ],
 ] );
 ```
 

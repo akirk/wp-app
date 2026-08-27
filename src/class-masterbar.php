@@ -219,7 +219,7 @@ class Masterbar {
         }
 
         // Inside an OpenStation window the shell provides the chrome
-        if ( class_exists( __NAMESPACE__ . '\Openstation' ) && Openstation::is_chromeless_request() ) {
+        if ( self::is_chromeless_request() ) {
             return false;
         }
 
@@ -245,7 +245,9 @@ class Masterbar {
             return;
         }
 
-        if ( class_exists( __NAMESPACE__ . '\Openstation' ) && Openstation::is_chromeless_request() ) {
+        // Inside an OpenStation window the shell provides the chrome and shows
+        // the app's menu items as window tabs (see Openstation::get_submenu()).
+        if ( self::is_chromeless_request() ) {
             return;
         }
 
@@ -591,6 +593,13 @@ class Masterbar {
     }
 
     /**
+     * Whether the request is rendered inside an OpenStation window.
+     */
+    private static function is_chromeless_request() {
+        return class_exists( __NAMESPACE__ . '\Openstation' ) && Openstation::is_chromeless_request();
+    }
+
+    /**
      * Render custom masterbar for anonymous users
      */
     private function render_custom_masterbar() {
@@ -651,6 +660,11 @@ class Masterbar {
      * Render the fake masterbar (legacy method, kept for backwards compatibility)
      */
     public function render() {
+        // Inside an OpenStation window the shell provides the chrome.
+        if ( self::is_chromeless_request() ) {
+            return '';
+        }
+
         return $this->render_custom_masterbar();
     }
 
@@ -1081,7 +1095,7 @@ class Masterbar {
      * Render fallback masterbar if WordPress admin bar is not shown
      */
     public function maybe_render_fallback() {
-        if ( ! $this->is_app_request() || $this->custom_masterbar_rendered ) {
+        if ( ! $this->is_app_request() || $this->custom_masterbar_rendered || self::is_chromeless_request() ) {
             return;
         }
 

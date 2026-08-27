@@ -35,6 +35,10 @@ class Openstation {
             add_action( 'init', [ __CLASS__, 'register_icons' ], 20 );
         }
 
+        add_filter( 'openstation_dock_items', [ __CLASS__, 'add_dock_items' ] );
+        add_filter( 'desktop_mode_dock_items', [ __CLASS__, 'add_dock_items' ] );
+        add_filter( 'openstation_dock_placement', [ __CLASS__, 'hide_owned_post_type_menus' ], 10, 2 );
+        add_filter( 'desktop_mode_dock_placement', [ __CLASS__, 'hide_owned_post_type_menus' ], 10, 2 );
         add_filter( 'body_class', [ __CLASS__, 'add_body_class' ] );
         add_action( 'wp_app_before_render', [ __CLASS__, 'enqueue_iframe_bridge' ] );
     }
@@ -123,6 +127,110 @@ class Openstation {
 
             call_user_func( $register_icon, self::get_icon_id( $app_path ), $args );
         }
+    }
+
+    /**
+     * Add every accessible app to the dock. The app's masterbar menu items
+     * become the window's tabs, the way an admin menu's submenu does.
+     *
+     * @param array[] $items Dock items.
+     * @return array[]
+     */
+    public static function add_dock_items( $items ) {
+        if ( ! is_array( $items ) ) {
+            $items = [];
+        }
+
+        foreach ( Registry::get_app_metadata() as $app_path => $metadata ) {
+            if ( isset( $metadata['launcher'] ) && false === $metadata['launcher'] ) {
+                continue;
+            }
+            if ( ! Registry::can_user_access_app( $app_path ) ) {
+                continue;
+            }
+
+            $items[] = self::get_dock_item( $app_path, $metadata );
+        }
+
+        return $items;
+    }
+
+    /**
+     * Build the dock item for an app.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $metadata App metadata from the Registry.
+     * @return array Dock item in the shape of openstation_dock_items entries.
+     */
+    public static function get_dock_item( $app_path, $metadata ) {
+        $icon_args = self::get_icon_args( $app_path, $metadata );
+        $icon      = isset( $icon_args['icon'] ) ? $icon_args['icon'] : 'data:image/svg+xml;base64,' . base64_encode( $icon_args['icon_svg'] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- SVG data URI for the dock.
+
+        return [
+            'id'         => 'wp-app-' . self::get_icon_id( $app_path ),
+            'title'      => $icon_args['title'],
+            'icon'       => $icon,
+            'url'        => $icon_args['url'],
+            'badge'      => null,
+            'submenu'    => self::get_submenu( $app_path ),
+            'selfLabel'  => $icon_args['title'],
+            'multi'      => false,
+            'placement'  => 'dock',
+            'isCore'     => false,
+            'pluginFile' => null,
+            'pluginName' => null,
+        ];
+    }
+
+    /**
+     * Window tabs for an app: its masterbar menu items with a link.
+     *
+     * @param string $app_path App URL path.
+     * @return array[] Entries of title and chromeless url.
+     */
+    public static function get_submenu( $app_path ) {
+        $masterbar = class_exists( __NAMESPACE__ . '\\Masterbar' ) ? Masterbar::get_instance_for_app( $app_path ) : null;
+        if ( ! $masterbar ) {
+            return [];
+        }
+
+        $flag    = self::get_chromeless_flag();
+        $submenu = [];
+        foreach ( $masterbar->get_preview_menu_items() as $item ) {
+            if ( empty( $item['href'] ) || empty( $item['title'] ) ) {
+                continue;
+            }
+            $submenu[] = [
+                'title' => (string) $item['title'],
+                'url'   => add_query_arg( $flag, '1', (string) $item['href'] ),
+            ];
+        }
+
+        return $submenu;
+    }
+
+    /**
+     * Hide the admin menu of post types an app declared as its own: the app
+     * window is where that content is managed, so the dock does not need
+     * a second tile for it.
+     *
+     * @param string $placement 'dock' or 'hidden'.
+     * @param string $menu_slug Admin menu slug, e.g. `edit.php?post_type=book`.
+     * @return string
+     */
+    public static function hide_owned_post_type_menus( $placement, $menu_slug ) {
+        if ( 0 !== strpos( (string) $menu_slug, 'edit.php?post_type=' ) ) {
+            return $placement;
+        }
+
+        $post_type = substr( (string) $menu_slug, strlen( 'edit.php?post_type=' ) );
+        foreach ( Registry::get_app_metadata() as $metadata ) {
+            if ( ! empty( $metadata['post_types'] ) && in_array( $post_type, (array) $metadata['post_types'], true ) ) {
+                return 'hidden';
+            }
+        }
+
+        return $placement;
     }
 
     /**

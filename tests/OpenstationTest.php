@@ -135,6 +135,78 @@ class OpenstationTest extends TestCase {
 		$this->assertCount( 1, $GLOBALS['__wp_app_test_filters']['my_apps_plugins'] );
 	}
 
+	public function test_chromeless_request_hides_masterbar_and_exposes_menu_as_tabs() {
+		global $wp_query;
+
+		$app = new WpApp( '/t', 'slim-app', [ 'app_name' => 'Slim App' ] );
+		$app->init();
+		$app->masterbar()->add_menu_item( 'settings', 'Settings', 'https://example.org/slim-app/settings/' );
+		$app->masterbar()->add_menu_item( 'label-only', 'Label Only' );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test fixture.
+		$wp_query                            = (object) [
+			'query_vars' => [
+				'wp_app_request' => '',
+				'wp_app_path'    => 'slim-app',
+			],
+		];
+		$GLOBALS['__wp_app_test_chromeless'] = true;
+
+		$this->assertFalse( $app->masterbar()->should_show_admin_bar( true ) );
+
+		ob_start();
+		$app->masterbar()->render_custom_masterbar_if_needed();
+		$app->masterbar()->maybe_render_fallback();
+		$html = ob_get_clean();
+		$this->assertSame( '', trim( $html ) );
+		$this->assertSame( '', $app->masterbar()->render() );
+
+		$items = Openstation::add_dock_items( [] );
+		$this->assertCount( 1, $items );
+		$this->assertSame( 'wp-app-slim-app', $items[0]['id'] );
+		$this->assertSame( 'Slim App', $items[0]['title'] );
+		$this->assertSame( 'Slim App', $items[0]['selfLabel'] );
+		$this->assertStringContainsString( 'openstation_chromeless=1', $items[0]['url'] );
+		$this->assertSame(
+			[
+				[
+					'title' => 'Settings',
+					'url'   => 'https://example.org/slim-app/settings/?openstation_chromeless=1',
+				],
+			],
+			$items[0]['submenu']
+		);
+
+		$GLOBALS['__wp_app_test_chromeless'] = false;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test fixture.
+		$wp_query = null;
+	}
+
+	public function test_dock_items_skip_disabled_and_inaccessible_apps() {
+		( new WpApp( '/t', 'off-app', [ 'launcher' => false ] ) )->init();
+		( new WpApp( '/t', 'gated-app', [ 'require_capability' => 'manage_options' ] ) )->init();
+		( new WpApp( '/t', 'open-app' ) )->init();
+		$GLOBALS['__wp_app_test_current_user_can'] = [
+			'manage_options' => false,
+			'read'           => true,
+		];
+
+		$items = Openstation::add_dock_items( [ [ 'id' => 'existing' ] ] );
+
+		$this->assertSame( [ 'existing', 'wp-app-open-app' ], array_column( $items, 'id' ) );
+		$this->assertSame( [], $items[1]['submenu'] );
+	}
+
+	public function test_owned_post_type_menus_are_hidden_from_the_dock() {
+		( new WpApp( '/t', 'library', [ 'post_types' => [ 'book', 'author' ] ] ) )->init();
+
+		$this->assertSame( 'hidden', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php?post_type=book' ) );
+		$this->assertSame( 'hidden', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php?post_type=author' ) );
+		$this->assertSame( 'dock', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php?post_type=page' ) );
+		$this->assertSame( 'dock', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php' ) );
+		$this->assertSame( 'dock', Openstation::hide_owned_post_type_menus( 'dock', 'options-general.php' ) );
+	}
+
 	public function test_register_icons_skips_apps_the_user_cannot_access() {
 		( new WpApp( '/t', 'gated-app', [ 'require_capability' => 'manage_options' ] ) )->init();
 		$GLOBALS['__wp_app_test_current_user_can'] = [ 'manage_options' => false ];

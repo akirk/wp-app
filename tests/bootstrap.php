@@ -440,6 +440,19 @@ if ( ! function_exists( 'submit_button' ) ) {
 	}
 }
 
+if ( ! function_exists( 'openstation_is_chromeless_request' ) ) {
+	// Stub of the OpenStation shell API; toggled per test.
+	function openstation_is_chromeless_request() {
+		return ! empty( $GLOBALS['__wp_app_test_chromeless'] );
+	}
+}
+
+if ( ! function_exists( 'is_admin_bar_showing' ) ) {
+	function is_admin_bar_showing() {
+		return ! empty( $GLOBALS['__wp_app_test_admin_bar_showing'] );
+	}
+}
+
 if ( ! function_exists( 'openstation_register_icon' ) ) {
 	// Stub of the OpenStation shell API; records registrations for assertions.
 	function openstation_register_icon( $id, $args = [] ) {
