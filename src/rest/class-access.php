@@ -11,11 +11,14 @@
  *
  * Declare the app's REST-backed types with {@see Access::protect_post_type()} /
  * {@see Access::protect_taxonomy()}. Access records the capability each one needs
- * and, via `register_post_type_args`/`register_taxonomy_args`, injects the gated
- * controller ({@see Private_Posts_Controller}/{@see Private_Terms_Controller})
- * automatically — so the `register_post_type()`/`register_taxonomy()` calls need
- * no `rest_controller_class` of their own. Call `protect_*` *before* the matching
- * `register_*` (both run on `init`).
+ * and, via `register_post_type_args`/`register_taxonomy_args`, swaps in the gated
+ * controller ({@see Private_Posts_Controller}/{@see Private_Terms_Controller}) for
+ * any declared type whose own `register_post_type()`/`register_taxonomy()` call
+ * already sets `show_in_rest => true` — so that call needs no
+ * `rest_controller_class` of its own. Declaring a type never turns
+ * `show_in_rest` on by itself: a type that doesn't ask for REST support stays
+ * fully closed, exactly as if it had never been declared. Call `protect_*`
+ * *before* the matching `register_*` (both run on `init`).
  *
  * Single-item reads are checked with the object id, so a WordPress *meta*
  * capability (e.g. `read_post`, or a custom `read_my_thing` mapped via
@@ -127,18 +130,24 @@ class Access {
 	}
 
 	/**
-	 * Inject the gated controller + show_in_rest for a protected post type.
+	 * Inject the gated controller for a protected post type that already
+	 * asks for REST support.
+	 *
+	 * Never turns `show_in_rest` on: that decision belongs to the
+	 * `register_post_type()` call. A type declared here but registered
+	 * without `show_in_rest => true` stays fully closed to core REST, same
+	 * as if it had never been declared — declaring it only matters once the
+	 * app also opts the type into REST itself.
 	 *
 	 * @param array  $args      Post type arguments.
 	 * @param string $post_type Post type key.
 	 * @return array
 	 */
 	public static function filter_post_type_args( $args, $post_type ) {
-		if ( ! array_key_exists( $post_type, self::$post_type_caps ) ) {
+		if ( ! array_key_exists( $post_type, self::$post_type_caps ) || empty( $args['show_in_rest'] ) ) {
 			return $args;
 		}
 
-		$args['show_in_rest'] = true;
 		if ( empty( $args['rest_controller_class'] ) ) {
 			self::ensure_controllers_loaded();
 			$args['rest_controller_class'] = Private_Posts_Controller::class;
@@ -148,18 +157,19 @@ class Access {
 	}
 
 	/**
-	 * Inject the gated controller + show_in_rest for a protected taxonomy.
+	 * Inject the gated controller for a protected taxonomy that already asks
+	 * for REST support. See {@see self::filter_post_type_args()} for why
+	 * `show_in_rest` itself is never turned on here.
 	 *
 	 * @param array  $args     Taxonomy arguments.
 	 * @param string $taxonomy Taxonomy key.
 	 * @return array
 	 */
 	public static function filter_taxonomy_args( $args, $taxonomy ) {
-		if ( ! array_key_exists( $taxonomy, self::$taxonomy_caps ) ) {
+		if ( ! array_key_exists( $taxonomy, self::$taxonomy_caps ) || empty( $args['show_in_rest'] ) ) {
 			return $args;
 		}
 
-		$args['show_in_rest'] = true;
 		if ( empty( $args['rest_controller_class'] ) ) {
 			self::ensure_controllers_loaded();
 			$args['rest_controller_class'] = Private_Terms_Controller::class;
