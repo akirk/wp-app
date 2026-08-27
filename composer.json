@@ -18,6 +18,7 @@
     },
     "autoload": {
         "files": [
+            "src/class-openstation.php",
             "src/class-registry.php",
             "src/class-settings.php",
             "src/class-pwa.php",

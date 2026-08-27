@@ -187,6 +187,10 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 $app->show_masterbar_for_anonymous( false );
 ```
 
+### Inside OpenStation
+
+When an app is opened in an [OpenStation](https://wordpress.org/plugins/desktop-mode/) window, the shell already shows the site and user menu, so neither the WordPress admin bar nor the custom masterbar is rendered there. Instead the app's menu items with a link are exposed as the window's tabs, the same way an admin menu's submenu is, and the `<body>` gets a `wp-app-chromeless` class. See [Launcher Integration](configuration.md#launcher-integration).
+
 ## Clearing WordPress Items
 
 ### Remove Specific Items

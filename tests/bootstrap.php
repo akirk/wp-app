@@ -175,8 +175,14 @@ if ( ! function_exists( 'admin_url' ) ) {
 }
 
 if ( ! function_exists( 'add_query_arg' ) ) {
-	function add_query_arg( $args, $url = '' ) {
-		$args = is_array( $args ) ? $args : [];
+	function add_query_arg( ...$params ) {
+		if ( is_array( $params[0] ) ) {
+			$args = $params[0];
+			$url  = $params[1] ?? '';
+		} else {
+			$args = [ $params[0] => $params[1] ];
+			$url  = $params[2] ?? '';
+		}
 
 		return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $args );
 	}
@@ -431,6 +437,33 @@ if ( ! function_exists( 'settings_fields' ) ) {
 if ( ! function_exists( 'submit_button' ) ) {
 	function submit_button( $text = 'Save Changes' ) {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr( $text ) . '"></p>';
+	}
+}
+
+if ( ! function_exists( 'openstation_is_chromeless_request' ) ) {
+	// Stub of the OpenStation shell API; toggled per test.
+	function openstation_is_chromeless_request() {
+		return ! empty( $GLOBALS['__wp_app_test_chromeless'] );
+	}
+}
+
+if ( ! function_exists( 'is_admin_bar_showing' ) ) {
+	function is_admin_bar_showing() {
+		return ! empty( $GLOBALS['__wp_app_test_admin_bar_showing'] );
+	}
+}
+
+if ( ! function_exists( 'openstation_register_icon' ) ) {
+	// Stub of the OpenStation shell API; records registrations for assertions.
+	function openstation_register_icon( $id, $args = [] ) {
+		global $__wp_app_test_icons;
+
+		$__wp_app_test_icons[] = [
+			'id'   => $id,
+			'args' => $args,
+		];
+
+		return true;
 	}
 }
 

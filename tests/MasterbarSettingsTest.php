@@ -832,6 +832,8 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertSame( $plugin_dir . '/composer.json', $apps['package-test-app']['wp_app_package']['expected_source'] );
         $this->assertSame( 'akirk/wp-app', $apps['package-test-app']['wp_app_package']['loaded']['name'] );
         $this->assertNotEmpty( $apps['package-test-app']['wp_app_package']['loaded']['path'] );
+        $this->assertSame( WP_APP_VERSION, $apps['package-test-app']['wp_app_package']['loaded']['version'] );
+        $this->assertSame( dirname( __DIR__ ), $apps['package-test-app']['wp_app_package']['loaded']['path'] );
     }
 
     public function test_settings_page_renders_wp_app_package_metadata() {
@@ -855,6 +857,9 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( '<code>~2.0</code>', $html );
         $this->assertStringContainsString( '<dt>Active wp-app</dt>', $html );
         $this->assertStringNotContainsString( '<dt>Loaded from</dt>', $html );
+        $this->assertStringContainsString( '<dt>Launchers</dt>', $html );
+        $this->assertStringContainsString( 'OpenStation:', $html );
+        $this->assertStringContainsString( 'active, apps registered as desktop icons', $html );
     }
 
     public function test_settings_page_shows_when_another_plugins_wp_app_package_is_active() {

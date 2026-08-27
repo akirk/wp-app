@@ -1183,9 +1183,45 @@ class Settings {
                     <?php /* translators: %s: Filesystem path to the loaded wp-app package. */ ?>
                     <span class="description"><?php echo esc_html( sprintf( __( 'from %s' ), $loaded_path ) ); ?></span>
                 </dd>
+                <dt><?php echo esc_html__( 'Launchers' ); ?></dt>
+                <dd>
+                    <?php foreach ( self::get_launcher_status() as $launcher ) : ?>
+                        <?php echo esc_html( $launcher['label'] ); ?>:
+                        <code><?php echo esc_html( $launcher['status'] ); ?></code>
+                        <br>
+                    <?php endforeach; ?>
+                </dd>
             </dl>
         </details>
         <?php
+    }
+
+    /**
+     * Status of each launcher integration for the loaded wp-app copy.
+     *
+     * @return array<int, array{label:string,status:string}>
+     */
+    public static function get_launcher_status() {
+        $my_apps_active = class_exists( 'My_Apps\\My_Apps' ) || function_exists( 'my_apps_get_apps' );
+
+        if ( ! Openstation::is_available() ) {
+            $openstation_status = __( 'plugin not active' );
+        } elseif ( 'openstation' === Openstation::get_prefix() ) {
+            $openstation_status = __( 'active, apps registered as desktop icons' );
+        } else {
+            $openstation_status = __( 'active (legacy Desktop Mode API), apps registered as desktop icons' );
+        }
+
+        return [
+            [
+                'label'  => 'My Apps',
+                'status' => $my_apps_active ? __( 'active, apps registered via my_apps_plugins' ) : __( 'plugin not active' ),
+            ],
+            [
+                'label'  => 'OpenStation',
+                'status' => $openstation_status,
+            ],
+        ];
     }
 
     /**
