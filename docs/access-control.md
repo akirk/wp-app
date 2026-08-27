@@ -233,6 +233,18 @@ Three things about this are easy to get wrong:
 
 So an app whose front end is login-only still leaks its notes/recipes/records over
 REST unless the REST layer is gated too. Do that by pointing each type's
+The shortest way is to list them in the app config; the app's capability is applied
+and the gated controller is injected into `register_post_type()` automatically:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'notes', [
+    'require_capability' => 'read',
+    'post_types'         => [ 'note' ],
+    'taxonomies'         => [ 'note_tag' ],
+] );
+```
+
+Or explicitly, when a type needs a different capability than the app:
 `rest_controller_class` at the framework's gate — `Access::protect_post_type()` /
 `Access::protect_taxonomy()` record the required capability and return the gated
 controller class, which requires that capability for reads while leaving the block
@@ -280,7 +292,7 @@ Access::protect_taxonomy( 'trip', 'read_trip', 'read' );
 With a single primitive capability (e.g. `'read'`) the collection capability
 defaults to the same value, so most apps pass just one.
 
-Declaring a post type this way also marks it as app-owned for launchers: OpenStation hides its admin menu from the dock, because the app window is where that content is managed.
+Declaring a post type either way also marks it as app-owned for launchers: OpenStation hides its admin menu from the dock, because the app window is where that content is managed.
 
 **Compliance check:** every app-owned post type / taxonomy registered with
 `show_in_rest => true` should wire its `rest_controller_class` through

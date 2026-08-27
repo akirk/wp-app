@@ -81,6 +81,18 @@ class WpApp {
             $this->require_capability( 'read' );
         }
 
+        // Post types and taxonomies the app owns: REST reads are gated with the
+        // app's capability (or a per-type one), and launchers treat them as
+        // the app's content.
+        if ( class_exists( __NAMESPACE__ . '\\Rest\\Access' ) ) {
+            foreach ( self::normalize_owned_types( $config['post_types'] ?? [], $this->required_capability ) as $post_type => $cap ) {
+                Rest\Access::protect_post_type( $post_type, $cap );
+            }
+            foreach ( self::normalize_owned_types( $config['taxonomies'] ?? [], $this->required_capability ) as $taxonomy => $cap ) {
+                Rest\Access::protect_taxonomy( $taxonomy, $cap );
+            }
+        }
+
         // Clear admin bar if requested
         if ( isset( $config['clear_admin_bar'] ) && $config['clear_admin_bar'] ) {
             $this->clear_admin_bar();
@@ -116,6 +128,30 @@ class WpApp {
         if ( isset( $config['wp_app_requirement'] ) ) {
             $this->wp_app_requirement = (string) $config['wp_app_requirement'];
         }
+    }
+
+    /**
+     * Normalize the post_types / taxonomies config into key => capability.
+     *
+     * Accepts a list of keys (`[ 'book' ]`), which use the app's capability,
+     * or a map (`[ 'book' => 'edit_posts' ]`) with a capability per key.
+     *
+     * @param mixed       $types      Config value.
+     * @param string|null $capability The app's capability, or null for login only.
+     * @return array<string,string|null>
+     */
+    private static function normalize_owned_types( $types, $capability ) {
+        $normalized = [];
+        foreach ( (array) $types as $key => $value ) {
+            if ( is_int( $key ) ) {
+                if ( is_string( $value ) && '' !== $value ) {
+                    $normalized[ $value ] = $capability ? $capability : null;
+                }
+            } elseif ( is_string( $key ) && '' !== $key ) {
+                $normalized[ $key ] = is_string( $value ) && '' !== $value ? $value : null;
+            }
+        }
+        return $normalized;
     }
 
     /**

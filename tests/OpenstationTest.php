@@ -199,6 +199,44 @@ class OpenstationTest extends TestCase {
 		$this->assertSame( [], $items[1]['submenu'] );
 	}
 
+	public function test_post_types_config_protects_rest_and_hides_dock_menus() {
+		( new WpApp( '/t', 'library', [ 'post_types' => [ 'book' ] ] ) )->init();
+		( new WpApp(
+			'/t',
+			'newsroom',
+			[
+				'require_capability' => 'edit_posts',
+				'post_types'         => [
+					'article' => 'publish_posts',
+					'memo',
+				],
+				'taxonomies'         => [ 'desk' ],
+			]
+		) )->init();
+		( new WpApp(
+            '/t',
+            'public-app',
+            [
+				'require_login' => false,
+				'post_types'    => [ 'leaflet' ],
+			]
+        ) )->init();
+
+		$this->assertSame( 'read', Access::capability_for_post_type( 'book' ) );
+		$this->assertSame( 'publish_posts', Access::capability_for_post_type( 'article' ) );
+		$this->assertSame( 'edit_posts', Access::capability_for_post_type( 'memo' ) );
+		$this->assertSame( 'edit_posts', Access::capability_for_taxonomy( 'desk' ) );
+		$this->assertNull( Access::capability_for_post_type( 'leaflet' ) );
+
+		$args = Access::filter_post_type_args( [ 'public' => false ], 'book' );
+		$this->assertTrue( $args['show_in_rest'] );
+		$this->assertNotEmpty( $args['rest_controller_class'] );
+
+		foreach ( [ 'book', 'article', 'memo', 'leaflet' ] as $type ) {
+			$this->assertSame( 'hidden', Openstation::hide_owned_post_type_menus( 'dock', 'edit.php?post_type=' . $type ) );
+		}
+	}
+
 	public function test_protected_post_type_menus_are_hidden_from_the_dock() {
 		Access::protect_post_type( 'book', 'read' );
 		Access::protect_post_type( 'author' );

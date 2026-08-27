@@ -16,6 +16,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'clear_admin_bar'              => false,
 	'launcher'                     => true,
 	'app_icon'                     => null,
+	'post_types'                   => [],
+	'taxonomies'                   => [],
 ] );
 ```
 
@@ -56,10 +58,12 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 |--------|------|---------|-------------|
 | `launcher` | bool\|string | `true` | `false` to stay out of all launchers, `true` to register with the app name, or a string for a custom launcher name |
 | `app_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`). Without it, OpenStation shows a letter badge generated from the name |
+| `post_types` | string[]\|array | `[]` | Post types the app owns. REST reads are gated with the app's capability (see [REST API Access Control](access-control.md#rest-api-access-control)), and OpenStation hides their admin menus from its dock. A map `[ 'book' => 'edit_posts' ]` sets a capability per type |
+| `taxonomies` | string[]\|array | `[]` | Taxonomies the app owns; same handling as `post_types` |
 
 `my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 
-Apps also appear in the OpenStation dock, with their masterbar menu items as window tabs. Post types declared with `Access::protect_post_type()` (see [REST API Access Control](access-control.md#rest-api-access-control)) count as app-owned and their admin menus are hidden from the dock, since the app window is where that content is managed. Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
+Apps also appear in the OpenStation dock, with their masterbar menu items as window tabs. Post types declared via `post_types` (or directly with `Access::protect_post_type()`) count as app-owned and their admin menus are hidden from the dock, since the app window is where that content is managed. Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.
 
 ## Method Configuration
 
@@ -181,6 +185,16 @@ Dashicons can be used by passing the class name:
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'app_icon' => 'dashicons-admin-site',
+] );
+```
+
+Declare the post types and taxonomies the app registers. Their REST reads are then gated with the app's capability (the `register_post_type()` call needs no `rest_controller_class`), and OpenStation keeps their admin menus out of its dock:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'library', [
+	'require_capability' => 'edit_posts',
+	'post_types'         => [ 'book' ],
+	'taxonomies'         => [ 'genre' ],
 ] );
 ```
 
