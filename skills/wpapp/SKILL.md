@@ -204,8 +204,13 @@ class Storage extends BaseStorage {
 | `show_site_name` | `true` | Show site name |
 | `admin_bar_app_link` | `true` | Add app entry to admin bar |
 | `clear_admin_bar` | `false` | Remove all WP admin bar items |
-| `my_apps` | `true` | Register with My Apps plugin |
-| `my_apps_icon` | `null` | URL to an app icon or Dashicon class |
+| `launcher` | `true` | Register with My Apps / OpenStation (`false`, `true`, or a launcher name; `my_apps` is the old name) |
+| `app_icon` | `null` | URL to an app icon or Dashicon class (`my_apps_icon` is the old name) |
+| `app_icon_background` | `null` | Tile colour or gradient behind a Dashicon/letter icon, e.g. `linear-gradient(135deg, #1e3c72, #2a5298)` |
+| `app_icon_color` | `null` | Glyph colour for a Dashicon/letter icon, e.g. `#fff` |
+| `app_icon_shadow` | `null` | `true` for a soft glyph shadow, or a CSS `text-shadow` value |
+
+Plain Dashicons on the default white tile look generic; always pair a Dashicon with `app_icon_background` and `app_icon_color`.
 
 Use admin color variables in app CSS instead of hard-coding WordPress admin colors:
 

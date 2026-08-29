@@ -261,6 +261,11 @@ class Openstation {
 
         if ( ! empty( $metadata['dashicon'] ) ) {
             $args['icon'] = (string) $metadata['dashicon'];
+            foreach ( [ 'icon_background', 'icon_color' ] as $style_key ) {
+                if ( ! empty( $metadata[ $style_key ] ) && is_string( $metadata[ $style_key ] ) ) {
+                    $args[ $style_key ] = $metadata[ $style_key ];
+                }
+            }
         } elseif ( ! empty( $metadata['icon_url'] ) ) {
             $args['icon'] = (string) $metadata['icon_url'];
         } else {

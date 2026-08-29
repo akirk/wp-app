@@ -137,6 +137,50 @@ class OpenstationTest extends TestCase {
 		$this->assertCount( 1, $GLOBALS['__wp_app_test_filters']['my_apps_plugins'] );
 	}
 
+	public function test_icon_styles_feed_launchers_and_reject_unsafe_values() {
+		$app = new WpApp(
+			'/t',
+			'styled-app',
+			[
+				'app_icon'            => 'dashicons-food',
+				'app_icon_background' => 'linear-gradient(135deg, #f7971e, #ffd200)',
+				'app_icon_color'      => '#fff',
+				'app_icon_shadow'     => true,
+			]
+		);
+		$app->init();
+
+		$my_apps = $app->register_my_apps( [] );
+		$this->assertSame( 'dashicons-food', $my_apps['styled-app']['dashicon'] );
+		$this->assertSame( 'linear-gradient(135deg, #f7971e, #ffd200)', $my_apps['styled-app']['icon_background'] );
+		$this->assertSame( '#fff', $my_apps['styled-app']['icon_color'] );
+		$this->assertTrue( $my_apps['styled-app']['icon_shadow'] );
+
+		$metadata = Registry::get_app_metadata();
+		$this->assertSame( '#fff', $metadata['styled-app']['icon_color'] );
+
+		Openstation::register_icons();
+		$icons = $GLOBALS['__wp_app_test_icons'];
+		$this->assertSame( '#fff', $icons[0]['args']['icon_color'] );
+		$this->assertSame( 'linear-gradient(135deg, #f7971e, #ffd200)', $icons[0]['args']['icon_background'] );
+
+		$unsafe = new WpApp(
+			'/t',
+			'unsafe-app',
+			[
+				'app_icon'            => 'dashicons-lock',
+				'app_icon_background' => 'url(https://evil.example/x.png)',
+				'app_icon_color'      => 'red" onmouseover="alert(1)',
+				'app_icon_shadow'     => '0 2px 4px rgba(0,0,0,.4)',
+			]
+		);
+		$unsafe->init();
+		$my_apps = $unsafe->register_my_apps( [] );
+		$this->assertArrayNotHasKey( 'icon_background', $my_apps['unsafe-app'] );
+		$this->assertArrayNotHasKey( 'icon_color', $my_apps['unsafe-app'] );
+		$this->assertSame( '0 2px 4px rgba(0,0,0,.4)', $my_apps['unsafe-app']['icon_shadow'] );
+	}
+
 	public function test_chromeless_request_hides_masterbar_and_exposes_menu_as_tabs() {
 		global $wp_query;
 
