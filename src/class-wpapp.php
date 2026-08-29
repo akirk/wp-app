@@ -20,6 +20,9 @@ class WpApp {
     private $app_name_textdomain = null;
     private $launcher            = true;
     private $app_icon            = null;
+    private $app_icon_background = null;
+    private $app_icon_color      = null;
+    private $app_icon_shadow     = null;
     private $pwa_config          = null;
     private $wp_app_requirement  = null;
 
@@ -119,6 +122,17 @@ class WpApp {
             $this->app_icon = $config['app_icon'];
         } elseif ( isset( $config['my_apps_icon'] ) ) {
             $this->app_icon = $config['my_apps_icon'];
+        }
+
+        // Tile styling for Dashicon, emoji and letter icons.
+        if ( isset( $config['app_icon_background'] ) ) {
+            $this->app_icon_background = $config['app_icon_background'];
+        }
+        if ( isset( $config['app_icon_color'] ) ) {
+            $this->app_icon_color = $config['app_icon_color'];
+        }
+        if ( isset( $config['app_icon_shadow'] ) ) {
+            $this->app_icon_shadow = $config['app_icon_shadow'];
         }
 
         if ( isset( $config['pwa'] ) && false !== $config['pwa'] ) {
@@ -548,17 +562,88 @@ class WpApp {
      * @return array Icon data using one of the My Apps icon keys.
      */
     private function get_my_apps_icon_data() {
-        if ( ! is_string( $this->app_icon ) || '' === trim( $this->app_icon ) ) {
-            return [];
+        $data = [];
+
+        if ( is_string( $this->app_icon ) && '' !== trim( $this->app_icon ) ) {
+            $icon = trim( $this->app_icon );
+
+            if ( 0 === strpos( $icon, 'dashicons-' ) ) {
+                $data['dashicon'] = $icon;
+            } else {
+                $data['icon_url'] = $icon;
+            }
         }
 
-        $icon = trim( $this->app_icon );
+        return array_merge( $data, $this->get_icon_style_data() );
+    }
 
-        if ( 0 === strpos( $icon, 'dashicons-' ) ) {
-            return [ 'dashicon' => $icon ];
+    /**
+     * Get the icon tile styling (background, foreground, shadow) for launchers.
+     *
+     * Only styles that pass validation are returned, so a typo degrades to the
+     * launcher's default look instead of producing broken markup.
+     *
+     * @return array Zero or more of icon_background, icon_color, icon_shadow.
+     */
+    private function get_icon_style_data() {
+        $data = [];
+
+        $background = self::sanitize_icon_css_value( $this->app_icon_background );
+        if ( '' !== $background ) {
+            $data['icon_background'] = $background;
         }
 
-        return [ 'icon_url' => $icon ];
+        $color = self::sanitize_icon_css_value( $this->app_icon_color );
+        if ( '' !== $color ) {
+            $data['icon_color'] = $color;
+        }
+
+        if ( true === $this->app_icon_shadow ) {
+            $data['icon_shadow'] = true;
+        } else {
+            $shadow = self::sanitize_icon_css_value( $this->app_icon_shadow );
+            if ( '' !== $shadow ) {
+                $data['icon_shadow'] = $shadow;
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Restrict a CSS colour, gradient or shadow value to a safe character set.
+     *
+     * Allows hex colours, named colours, rgb()/hsl() functions, gradients and
+     * shadow lists; rejects anything that could break out of a style attribute
+     * or pull in external resources (url(), var(), expressions).
+     *
+     * @param mixed $value Raw config value.
+     * @return string Sanitized value, or an empty string when rejected.
+     */
+    public static function sanitize_icon_css_value( $value ) {
+        if ( ! is_string( $value ) ) {
+            return '';
+        }
+
+        $value = trim( preg_replace( '/\s+/', ' ', $value ) );
+
+        if ( '' === $value || strlen( $value ) > 300 ) {
+            return '';
+        }
+
+        if ( preg_match( '/[^a-z0-9#.,%()\/\s+-]/i', $value ) ) {
+            return '';
+        }
+
+        if ( substr_count( $value, '(' ) !== substr_count( $value, ')' ) ) {
+            return '';
+        }
+
+        if ( preg_match( '/(?:^|[^a-z-])(?:url|var|attr|expression|image-set|element|env)\s*\(/i', $value ) ) {
+            return '';
+        }
+
+        return $value;
     }
 
     /**

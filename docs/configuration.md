@@ -69,6 +69,11 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 |--------|------|---------|-------------|
 | `launcher` | bool\|string | `true` | `false` to stay out of all launchers, `true` to register with the app name, or a string for a custom launcher name |
 | `app_icon` | string | `null` | URL to the app icon (e.g., `plugins_url( 'icon.png', __FILE__ )`) or Dashicon class (e.g., `dashicons-admin-site`). Without it, OpenStation shows a letter badge generated from the name |
+| `app_icon_background` | string | `null` | Tile background behind a Dashicon or letter icon: a CSS colour (`#c0392b`, `hsl(210 80% 45%)`) or gradient (`linear-gradient(135deg, #f7971e, #ffd200)`). Launchers default to a white tile |
+| `app_icon_color` | string | `null` | Foreground colour of the Dashicon glyph or letter, e.g. `#fff` |
+| `app_icon_shadow` | bool\|string | `null` | `true` for a soft default text shadow under the glyph, or a CSS `text-shadow` value such as `0 2px 4px rgba(0,0,0,.4)` |
+
+The three styling options only apply to Dashicon and letter icons (images bring their own look). Values are restricted to colour, gradient and shadow syntax; anything else — `url()`, `var()`, stray punctuation — is dropped so the tile falls back to the launcher default. My Apps renders them in the launcher grid, and the masterbar app link uses background and colour for its small icon.
 
 `my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 
@@ -206,11 +211,14 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 ] );
 ```
 
-Dashicons can be used by passing the class name:
+Dashicons can be used by passing the class name. A plain Dashicon on a white tile looks generic, so give it a tile colour, glyph colour and optionally a shadow:
 
 ```php
 $app = new WpApp( __DIR__ . '/templates', 'my-app', [
-	'app_icon' => 'dashicons-admin-site',
+	'app_icon'            => 'dashicons-admin-site',
+	'app_icon_background' => 'linear-gradient(135deg, #1e3c72, #2a5298)',
+	'app_icon_color'      => '#fff',
+	'app_icon_shadow'     => true,
 ] );
 ```
 

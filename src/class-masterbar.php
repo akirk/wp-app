@@ -1036,6 +1036,10 @@ class Masterbar {
                 width: 18px;
             }
 
+            ' . $selector . ' .wp-app-link-icon.wp-app-link-icon-styled {
+                border-radius: 3px;
+            }
+
             ' . $selector . ' .wp-app-link-icon .dashicons {
                 font-family: dashicons !important;
                 font-size: 16px;
@@ -1048,6 +1052,7 @@ class Masterbar {
             }
 
             ' . $selector . ' .wp-app-link-icon .dashicons:before {
+                color: inherit;
                 font-family: dashicons !important;
             }
         ';
@@ -1392,15 +1397,17 @@ class Masterbar {
             $dashicon = isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '';
             $icon     = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
 
+            $style = self::get_app_icon_style_attr( $metadata );
+
             if ( '' !== $icon ) {
-                $title .= self::get_app_icon_html( $icon );
+                $title .= self::get_app_icon_html( $icon, $style );
             } elseif ( $dashicon ) {
-                $title .= self::get_app_icon_html( $dashicon );
+                $title .= self::get_app_icon_html( $dashicon, $style );
             } elseif ( $icon_url ) {
                 $title .= self::get_app_image_icon_html( $icon_url );
             } else {
                 $letter = strtoupper( substr( $app_name, 0, 1 ) );
-                $title .= '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true">' . esc_html( $letter ) . '</span>';
+                $title .= '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true"' . $style . '>' . esc_html( $letter ) . '</span>';
             }
         }
 
@@ -1452,12 +1459,39 @@ class Masterbar {
     /**
      * Get icon HTML for a text or Dashicon class override.
      */
-    private static function get_app_icon_html( $icon ) {
+    private static function get_app_icon_html( $icon, $style = '' ) {
         if ( preg_match( '/^dashicons-[a-z0-9-]+$/', $icon ) ) {
-            return '<span class="wp-app-link-icon wp-app-link-icon-dashicon" aria-hidden="true"><span class="dashicons ' . esc_attr( $icon ) . '"></span></span>';
+            $class = 'wp-app-link-icon wp-app-link-icon-dashicon' . ( '' !== $style ? ' wp-app-link-icon-styled' : '' );
+            return '<span class="' . $class . '" aria-hidden="true"' . $style . '><span class="dashicons ' . esc_attr( $icon ) . '"></span></span>';
         }
 
-        return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true">' . esc_html( $icon ) . '</span>';
+        return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true"' . $style . '>' . esc_html( $icon ) . '</span>';
+    }
+
+    /**
+     * Build the inline style attribute for an app's icon tile colours.
+     *
+     * @param array $metadata App metadata with optional icon_background / icon_color.
+     * @return string Empty string or a leading-space ` style="..."` attribute.
+     */
+    private static function get_app_icon_style_attr( $metadata ) {
+        $rules = [];
+
+        $background = isset( $metadata['icon_background'] ) ? WpApp::sanitize_icon_css_value( $metadata['icon_background'] ) : '';
+        if ( '' !== $background ) {
+            $rules[] = 'background: ' . $background;
+        }
+
+        $color = isset( $metadata['icon_color'] ) ? WpApp::sanitize_icon_css_value( $metadata['icon_color'] ) : '';
+        if ( '' !== $color ) {
+            $rules[] = 'color: ' . $color;
+        }
+
+        if ( empty( $rules ) ) {
+            return '';
+        }
+
+        return ' style="' . esc_attr( implode( '; ', $rules ) ) . '"';
     }
 
     /**
