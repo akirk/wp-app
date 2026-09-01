@@ -12,31 +12,27 @@ if ( class_exists( 'WpApp\Masterbar' ) ) {
  * WordPress-style Masterbar that mimics the WordPress admin bar
  */
 class Masterbar {
-	private $menu_items                                  = [];
-	private $user_menu_items                             = [];
-	private $show_wp_logo                                = true;
-	private $show_site_name                              = true;
-	private $disable_wp_admin_bar                        = true;
-	private $only_on_app_routes                          = false;
-	private $show_for_anonymous                          = true;
-	private $admin_bar_app_link                          = true;
-	private $app_url_path                                = null;
-	private $wpapp                                       = null;
-	private $custom_masterbar_rendered                   = false;
-	private static $instances                            = [];
-	private static $admin_bar_overflow_hooks_initialized = false;
-	private static $admin_bar_overflow_styles_output     = false;
-	private static $admin_bar_app_link_styles_output     = false;
+	private $menu_items                              = [];
+	private $user_menu_items                         = [];
+	private $show_wp_logo                            = true;
+	private $show_site_name                          = true;
+	private $disable_wp_admin_bar                    = true;
+	private $only_on_app_routes                      = false;
+	private $show_for_anonymous                      = true;
+	private $admin_bar_app_link                      = true;
+	private $app_url_path                            = null;
+	private $wpapp                                   = null;
+	private $custom_masterbar_rendered               = false;
+	private static $instances                        = [];
+	private static $shared_hooks_initialized         = false;
+	private static $admin_bar_overflow_styles_output = false;
+	private static $admin_bar_app_link_styles_output = false;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
 		$this->app_url_path = $app_url_path;
 		$this->wpapp        = $wpapp;
 		self::$instances[ $app_url_path ? $app_url_path : spl_object_hash( $this ) ] = $this;
-        self::maybe_initialize_admin_bar_overflow_hooks();
-
-        // Hook into our custom app head action to enqueue styles
-        add_action( 'wp_app_head', [ $this, 'output_styles' ] );
-        add_action( 'wp_app_head', [ $this, 'output_scripts' ] );
+        self::maybe_initialize_shared_hooks();
 
         // Control admin bar display
         add_filter( 'show_admin_bar', [ $this, 'should_show_admin_bar' ] );
@@ -271,12 +267,18 @@ class Masterbar {
     }
 
     /**
-     * Initialize mobile admin bar overflow hooks once for all WpApp instances.
+     * Register the hooks whose output is the same for every app, once for all
+     * WpApp instances rather than once per Masterbar.
      */
-    private static function maybe_initialize_admin_bar_overflow_hooks() {
-        if ( self::$admin_bar_overflow_hooks_initialized ) {
+    private static function maybe_initialize_shared_hooks() {
+        if ( self::$shared_hooks_initialized ) {
             return;
         }
+
+        // The masterbar styles and scripts are identical for every app, so they
+        // are registered once for the site rather than once per Masterbar.
+        add_action( 'wp_app_head', [ __CLASS__, 'output_styles' ] );
+        add_action( 'wp_app_head', [ __CLASS__, 'output_scripts' ] );
 
         add_action( 'admin_bar_menu', [ __CLASS__, 'add_admin_bar_overflow_menu' ], 1000 );
         add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
@@ -286,7 +288,7 @@ class Masterbar {
         add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
         add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
 
-        self::$admin_bar_overflow_hooks_initialized = true;
+        self::$shared_hooks_initialized = true;
     }
 
     /**
@@ -711,9 +713,9 @@ class Masterbar {
     /**
      * Output styles for the masterbar
      */
-    public function output_styles() {
+    public static function output_styles() {
         echo '<style id="wp-app-masterbar-styles">';
-        echo $this->get_default_styles();
+        echo self::get_default_styles();
 
         // Allow other plugins/themes to add masterbar styles
         do_action( 'wp_app_masterbar_styles' );
@@ -724,9 +726,9 @@ class Masterbar {
     /**
      * Output scripts for the masterbar
      */
-    public function output_scripts() {
+    public static function output_scripts() {
         echo '<script id="wp-app-masterbar-scripts">';
-        echo $this->get_default_scripts();
+        echo self::get_default_scripts();
 
         // Allow other plugins/themes to add masterbar scripts
         do_action( 'wp_app_masterbar_scripts' );
@@ -737,7 +739,7 @@ class Masterbar {
     /**
      * Get default CSS styles for the masterbar
      */
-    private function get_default_styles() {
+    private static function get_default_styles() {
         return '
             /* App-specific admin bar styling */
             #wpadminbar {
@@ -1061,7 +1063,7 @@ class Masterbar {
     /**
      * Get default JavaScript for the masterbar
      */
-    private function get_default_scripts() {
+    private static function get_default_scripts() {
         return '
             // Simple dropdown toggle for user menu
             document.addEventListener("DOMContentLoaded", function() {
