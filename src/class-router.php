@@ -438,6 +438,15 @@ class Router {
     /**
      * Get the URL path
      */
+    /**
+     * Directory this app loads its templates from.
+     *
+     * @return string
+     */
+    public function get_template_directory() {
+        return $this->template_directory;
+    }
+
     public function get_url_path() {
         return $this->url_path;
     }
