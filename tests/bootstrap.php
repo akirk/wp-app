@@ -25,6 +25,24 @@ if ( ! function_exists( 'did_action' ) ) {
 	}
 }
 
+if ( ! function_exists( '_doing_it_wrong' ) ) {
+	function _doing_it_wrong( $function_name, $message, $version ) {
+		global $__wp_app_test_doing_it_wrong;
+
+		$__wp_app_test_doing_it_wrong[] = [
+			'function' => $function_name,
+			'message'  => $message,
+			'version'  => $version,
+		];
+	}
+}
+
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES );
+	}
+}
+
 if ( ! function_exists( 'doing_action' ) ) {
 	function doing_action( $hook_name = null ) {
 		return false;
