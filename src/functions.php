@@ -4,6 +4,15 @@
  * Global functions for WpApp framework
  */
 
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+    require_once __DIR__ . '/class-cli.php';
+
+    if ( ! defined( 'WP_APP_CLI_REGISTERED' ) && class_exists( 'WpApp\Cli' ) ) {
+        define( 'WP_APP_CLI_REGISTERED', true );
+        WP_CLI::add_command( 'app', 'WpApp\Cli' );
+    }
+}
+
 if ( ! defined( 'WP_APP_VERSION' ) ) {
     define( 'WP_APP_VERSION', '1.6.3' );
 }
