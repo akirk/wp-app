@@ -260,6 +260,34 @@ if ( ! function_exists( 'wp_app_normalize_asset_scope' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_warn_missing_asset_scope' ) ) {
+    /**
+     * Complain when an asset is enqueued without naming an app.
+     *
+     * An omitted scope resolves to whatever is rendering at that moment, which
+     * is almost never what the caller means: at plugin load nothing is
+     * rendering, so the asset lands on the global hook and loads on every app's
+     * pages; during another app's render it lands on that app's hook. Neither
+     * looks wrong at the call site, so say so out loud instead.
+     *
+     * @param string $function Name of the function that was called.
+     */
+    function wp_app_warn_missing_asset_scope( $function ) {
+        if ( ! function_exists( '_doing_it_wrong' ) ) {
+            return;
+        }
+
+        _doing_it_wrong(
+            esc_html( $function ),
+            esc_html(
+                'Pass the app path as the $scope argument. Without it the scope is taken from whichever app is rendering, '
+                . "which puts the asset on every app's pages when nothing is. Pass 'global' if that is genuinely intended."
+            ),
+            '1.7.0'
+        );
+    }
+}
+
 if ( ! function_exists( 'wp_app_get_scoped_hook_name' ) ) {
     /**
      * Build a global or app-scoped hook name.
@@ -370,6 +398,10 @@ if ( ! function_exists( 'wp_app_enqueue_style' ) ) {
      * Enqueue a style for app pages
      */
     function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false, $scope = null ) {
+        if ( null === $scope ) {
+            wp_app_warn_missing_asset_scope( __FUNCTION__ );
+        }
+
         add_action(
             wp_app_get_scoped_hook_name( 'wp_app_head_styles', $scope ),
             function () use ( $handle, $src, $deps, $ver ) {
@@ -390,6 +422,10 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
      * Enqueue a script for app pages
      */
     function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true, $scope = null ) {
+        if ( null === $scope ) {
+            wp_app_warn_missing_asset_scope( __FUNCTION__ );
+        }
+
         $hook = wp_app_get_scoped_hook_name( $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts', $scope );
 
         add_action(
@@ -524,6 +560,10 @@ if ( ! function_exists( 'wp_app_add_inline_style' ) ) {
      * Add inline CSS for app pages
      */
     function wp_app_add_inline_style( $handle, $css, $scope = null ) {
+        if ( null === $scope ) {
+            wp_app_warn_missing_asset_scope( __FUNCTION__ );
+        }
+
         add_action(
             wp_app_get_scoped_hook_name( 'wp_app_head_styles', $scope ),
             function () use ( $handle, $css ) {
@@ -540,6 +580,10 @@ if ( ! function_exists( 'wp_app_add_inline_script' ) ) {
      * Add inline JavaScript for app pages
      */
     function wp_app_add_inline_script( $handle, $js, $in_footer = true, $scope = null ) {
+        if ( null === $scope ) {
+            wp_app_warn_missing_asset_scope( __FUNCTION__ );
+        }
+
         $hook = wp_app_get_scoped_hook_name( $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts', $scope );
 
         add_action(
