@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title( 'About' ); ?></title>
+    <title><?php wp_app_the_title( 'About' ); ?></title>
     <?php wp_app_head(); ?>
     <style>
         body {

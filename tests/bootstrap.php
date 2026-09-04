@@ -346,6 +346,21 @@ if ( ! function_exists( 'restore_previous_locale' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_bloginfo' ) ) {
+	function get_bloginfo( $show = '' ) {
+		global $__wp_app_test_bloginfo;
+
+		$defaults = [
+			'name'     => 'Test Blog',
+			'language' => 'en-US',
+		];
+
+		$values = is_array( $__wp_app_test_bloginfo ) ? $__wp_app_test_bloginfo : [];
+
+		return $values[ $show ] ?? $defaults[ $show ] ?? '';
+	}
+}
+
 if ( ! function_exists( 'get_language_attributes' ) ) {
 	function get_language_attributes() {
 		global $__wp_app_test_current_locale, $__wp_app_test_is_rtl;

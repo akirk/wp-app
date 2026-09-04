@@ -14,7 +14,7 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-	<title><?php echo wp_app_title( 'Page Not Found' ); ?></title>
+	<title><?php wp_app_the_title( 'Page Not Found' ); ?></title>
 	<?php wp_app_head(); ?>
 
 	<style>

@@ -10,7 +10,7 @@ $current_user = wp_get_current_user();
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title( 'Home' ); ?></title>
+    <title><?php wp_app_the_title( 'Home' ); ?></title>
     <?php wp_app_head(); ?>
 </head>
 <body class="wp-app-body">

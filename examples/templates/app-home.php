@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title(); ?></title>
+    <title><?php wp_app_the_title(); ?></title>
     <?php wp_app_head(); ?>
 </head>
 <body class="wp-app-body">
