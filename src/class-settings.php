@@ -101,8 +101,22 @@ class Settings {
             'show_icon'            => true,
             'generate_letter_icon' => true,
             'show_text'            => true,
-            'always_show'          => false,
+            'always_show'          => self::is_only_registered_app(),
         ];
+    }
+
+    /**
+     * Whether the site has exactly one registered app.
+     *
+     * A lone app is shown in the masterbar by default instead of being collapsed
+     * into an overflow menu that would hold a single entry. Saving the settings
+     * page stores the resulting value, so this only applies until an app has
+     * settings of its own.
+     *
+     * @return bool True when exactly one app is registered.
+     */
+    public static function is_only_registered_app() {
+        return 1 === count( self::get_registered_apps() );
     }
 
     /**
@@ -567,6 +581,11 @@ class Settings {
                                 <input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="1" <?php checked( ! empty( $settings['show_inactive_apps_in_overflow'] ) ); ?>>
                                 <?php echo esc_html__( 'Show inactive apps in the overflow menu on app pages' ); ?>
                             </label>
+                            <?php if ( self::is_only_registered_app() ) : ?>
+                                <p class="description">
+                                    <?php echo esc_html__( 'A single app is shown in the masterbar instead of being collapsed into a menu of its own. Uncheck Always show below to collapse it anyway.' ); ?>
+                                </p>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 </table>
