@@ -26,7 +26,8 @@ class Masterbar {
 	private static $instances                        = [];
 	private static $shared_hooks_initialized         = false;
 	private static $admin_bar_overflow_styles_output = false;
-	private static $admin_bar_app_link_styles_output = false;
+	private static $admin_bar_standalone_link_styles_output = false;
+	private static $admin_bar_app_link_styles_output        = false;
 
     public function __construct( $app_url_path = null, $wpapp = null ) {
 		$this->app_url_path = $app_url_path;
@@ -284,6 +285,9 @@ class Masterbar {
         add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
         add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
         add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_overflow_styles' ], 100 );
+        add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_standalone_link_styles' ], 100 );
+        add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_standalone_link_styles' ], 100 );
+        add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_standalone_link_styles' ], 100 );
         add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
         add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
         add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
@@ -328,17 +332,7 @@ class Masterbar {
         }
 
         if ( function_exists( 'current_user_can' ) && current_user_can( 'manage_options' ) ) {
-            $wp_admin_bar->add_node(
-                [
-                    'id'     => 'wp-app-admin-overflow-settings',
-                    'parent' => 'wp-app-admin-overflow',
-                    'title'  => __( 'WP Apps Settings' ),
-                    'href'   => function_exists( 'admin_url' ) ? admin_url( 'options-general.php?page=wp-apps' ) : home_url( '/wp-admin/options-general.php?page=wp-apps' ),
-                    'meta'   => [
-                        'class' => 'wp-app-admin-overflow-settings',
-                    ],
-                ]
-            );
+            $wp_admin_bar->add_node( self::get_admin_bar_settings_node( 'wp-app-admin-overflow' ) );
         }
     }
 
@@ -362,6 +356,29 @@ class Masterbar {
 
         echo '<style id="wp-app-admin-bar-overflow-styles">';
         echo self::get_admin_bar_overflow_styles();
+        echo '</style>';
+    }
+
+    /**
+     * Output CSS that keeps a lone app link in the mobile WordPress admin bar.
+     */
+    public static function output_admin_bar_standalone_link_styles() {
+        if ( self::$admin_bar_standalone_link_styles_output ) {
+            return;
+        }
+
+        if ( function_exists( 'is_admin_bar_showing' ) && ! is_admin_bar_showing() ) {
+            return;
+        }
+
+        if ( ! \WpApp\Settings::is_only_registered_app() || ! empty( self::get_admin_bar_overflow_links() ) ) {
+            return;
+        }
+
+        self::$admin_bar_standalone_link_styles_output = true;
+
+        echo '<style id="wp-app-admin-bar-standalone-link-styles">';
+        echo self::get_admin_bar_standalone_link_styles();
         echo '</style>';
     }
 
@@ -577,6 +594,78 @@ class Masterbar {
                 }
 
                 #wpadminbar li#wp-admin-bar-wp-app-admin-overflow .ab-submenu .ab-item {
+                    box-sizing: border-box;
+                    display: block;
+                    height: auto !important;
+                    line-height: 22px !important;
+                    max-width: calc(100vw - 16px);
+                    min-height: 44px;
+                    overflow: visible;
+                    padding-bottom: 10px;
+                    padding-top: 10px;
+                    text-overflow: ellipsis;
+                    white-space: normal;
+                    word-break: break-word;
+                }
+            }
+        ';
+    }
+
+    /**
+     * Get CSS for a lone app link that stands in for the overflow menu.
+     *
+     * WordPress hides every top level admin bar item below its mobile
+     * breakpoint, which is what the overflow menu opts back out of. An app link
+     * that replaced the overflow menu has to do the same, or it would be
+     * unreachable on a phone.
+     *
+     * @return string CSS.
+     */
+    public static function get_admin_bar_standalone_link_styles() {
+        return '
+            @media screen and (max-width: 782px) {
+                #wpadminbar li.wp-app-admin-link-standalone {
+                    display: block !important;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone > .ab-item {
+                    padding: 0 12px;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone.wp-app-admin-link-has-icon .wp-app-link-text {
+                    display: none;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone .wp-app-link-icon,
+                #wpadminbar li.wp-app-admin-link-standalone .wp-app-link-icon img {
+                    height: 28px;
+                    max-height: 28px;
+                    max-width: 28px;
+                    width: 28px;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone .wp-app-link-icon {
+                    font-size: 20px;
+                    line-height: 28px;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone .wp-app-link-icon .dashicons {
+                    font-size: 26px;
+                    height: 26px;
+                    line-height: 26px;
+                    width: 26px;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone .ab-sub-wrapper {
+                    left: auto;
+                    max-height: calc(100vh - 54px);
+                    max-width: calc(100vw - 16px);
+                    overflow-y: auto;
+                    right: 0;
+                    width: max-content;
+                }
+
+                #wpadminbar li.wp-app-admin-link-standalone .ab-submenu .ab-item {
                     box-sizing: border-box;
                     display: block;
                     height: auto !important;
@@ -1273,7 +1362,9 @@ class Masterbar {
     private function add_admin_context_items( $wp_admin_bar ) {
         // Only add link if user can access this app and the app link is enabled
         if ( $this->can_user_access_app() && $this->admin_bar_app_link && ! $this->should_show_app_link_in_overflow_only() && $this->should_show_global_app_link() && $this->should_show_app_link_content() ) {
-            $app_node_id = $this->get_admin_bar_app_link_id();
+            $app_node_id   = $this->get_admin_bar_app_link_id();
+            $standalone    = $this->is_standalone_app_link();
+            $settings_item = $standalone && function_exists( 'current_user_can' ) && current_user_can( 'manage_options' );
 
             // Add a simple link to the app from regular WordPress admin
             $wp_admin_bar->add_node(
@@ -1282,7 +1373,7 @@ class Masterbar {
 					'title' => $this->get_app_link_title(),
 					'href'  => $this->get_app_home_url(),
 					'meta'  => [
-						'class' => ( ! empty( $this->menu_items ) ? 'menupop ' : '' ) . 'wp-app-admin-link',
+						'class' => ( ! empty( $this->menu_items ) || $settings_item ? 'menupop ' : '' ) . 'wp-app-admin-link' . ( $standalone ? $this->get_standalone_app_link_classes() : '' ),
 					],
 				]
             );
@@ -1301,7 +1392,65 @@ class Masterbar {
 					]
                 );
             }
+
+            if ( $settings_item ) {
+                $wp_admin_bar->add_node( self::get_admin_bar_settings_node( $app_node_id ) );
+            }
         }
+    }
+
+    /**
+     * Check if this app link stands in for the overflow menu.
+     *
+     * A lone app is shown in the admin bar instead of being collapsed into an
+     * overflow menu that would hold a single entry, so its link takes over what
+     * the overflow menu would have provided: the settings item, and a place in
+     * the mobile admin bar.
+     *
+     * @return bool True when no overflow menu accompanies this app link.
+     */
+    private function is_standalone_app_link() {
+        if ( ! \WpApp\Settings::is_only_registered_app() ) {
+            return false;
+        }
+
+        return empty( self::get_admin_bar_overflow_links() );
+    }
+
+    /**
+     * Get the extra classes for an app link that stands in for the overflow menu.
+     *
+     * @return string Class names, with a leading space.
+     */
+    private function get_standalone_app_link_classes() {
+        $settings = \WpApp\Settings::get_app_settings( $this->app_url_path );
+        $classes  = ' wp-app-admin-link-standalone';
+
+        // The mobile admin bar only has room for the icon, so the app name is
+        // hidden there when the link has an icon to show in its place.
+        if ( ! empty( $settings['show_icon'] ) ) {
+            $classes .= ' wp-app-admin-link-has-icon';
+        }
+
+        return $classes;
+    }
+
+    /**
+     * Build the WP Apps settings admin bar node.
+     *
+     * @param string $parent Parent node ID.
+     * @return array Admin bar node.
+     */
+    private static function get_admin_bar_settings_node( $parent ) {
+        return [
+            'id'     => 'wp-app-admin-overflow-settings',
+            'parent' => $parent,
+            'title'  => __( 'WP Apps Settings' ),
+            'href'   => function_exists( 'admin_url' ) ? admin_url( 'options-general.php?page=wp-apps' ) : home_url( '/wp-admin/options-general.php?page=wp-apps' ),
+            'meta'   => [
+                'class' => 'wp-app-admin-overflow-settings',
+            ],
+        ];
     }
 
     /**

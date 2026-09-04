@@ -22,7 +22,7 @@ class MasterbarSharedHooksTest extends TestCase {
 
 		$this->reset_static( 'instances', [] );
 
-		foreach ( [ 'shared_hooks_initialized', 'admin_bar_overflow_styles_output', 'admin_bar_app_link_styles_output' ] as $name ) {
+		foreach ( [ 'shared_hooks_initialized', 'admin_bar_overflow_styles_output', 'admin_bar_standalone_link_styles_output', 'admin_bar_app_link_styles_output' ] as $name ) {
 			$this->reset_static( $name, false );
 		}
 	}

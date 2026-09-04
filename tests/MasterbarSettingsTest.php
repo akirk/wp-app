@@ -388,7 +388,9 @@ class MasterbarSettingsTest extends TestCase {
         $__wp_app_test_options[ Settings::OPTION ] = [
             'only_show_active_app'           => true,
             'show_inactive_apps_in_overflow' => true,
-            'apps'                           => [],
+            'apps'                           => [
+                'query-var-overflow-app' => [ 'always_show' => false ],
+            ],
         ];
 
         $admin_bar = new FakeAdminBar();
@@ -1000,5 +1002,138 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertSame( 'disabled', $status['state'] );
         $this->assertStringContainsString( 'no masterbar entry to customize', $status['message'] );
+    }
+
+    public function test_single_app_is_shown_instead_of_a_one_entry_overflow() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'lonely-app', [ 'app_name' => 'Lonely App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
+
+        $this->assertArrayHasKey( 'wp-app-link-lonely_app', $admin_bar->nodes );
+        $this->assertArrayNotHasKey( 'wp-app-admin-overflow', $admin_bar->nodes );
+    }
+
+    public function test_single_app_always_show_default_can_be_unchecked() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'collapsed-app', [ 'app_name' => 'Collapsed App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'collapsed-app' => [ 'always_show' => false ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
+
+        $this->assertArrayNotHasKey( 'wp-app-link-collapsed_app', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-collapsed-app', $admin_bar->nodes );
+    }
+
+    public function test_always_show_does_not_default_on_with_several_apps() {
+        global $__wp_app_test_options;
+
+        $first  = new WpApp( '', 'first-of-two-app', [ 'app_name' => 'First Of Two App' ] );
+        $second = new WpApp( '', 'second-of-two-app', [ 'app_name' => 'Second Of Two App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [],
+        ];
+
+        $this->assertFalse( Settings::get_app_settings( 'first-of-two-app' )['always_show'] );
+
+        $admin_bar = new FakeAdminBar();
+        $first->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        $second->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
+
+        $this->assertArrayNotHasKey( 'wp-app-link-first_of_two_app', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-first-of-two-app', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-second-of-two-app', $admin_bar->nodes );
+    }
+
+    public function test_single_app_link_carries_the_settings_item() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'settings-item-app', [ 'app_name' => 'Settings Item App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-settings', $admin_bar->nodes );
+        $this->assertSame( 'wp-app-link-settings_item_app', $admin_bar->nodes['wp-app-admin-overflow-settings']['parent'] );
+        $this->assertStringContainsString( 'menupop', $admin_bar->nodes['wp-app-link-settings_item_app']['meta']['class'] );
+        $this->assertStringContainsString( 'wp-app-admin-link-standalone', $admin_bar->nodes['wp-app-link-settings_item_app']['meta']['class'] );
+    }
+
+    public function test_settings_item_stays_in_the_overflow_for_several_apps() {
+        global $__wp_app_test_options;
+
+        $first  = new WpApp( '', 'first-settings-app', [ 'app_name' => 'First Settings App' ] );
+        $second = new WpApp( '', 'second-settings-app', [ 'app_name' => 'Second Settings App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'first-settings-app'  => [ 'always_show' => true ],
+                'second-settings-app' => [ 'always_show' => false ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $first->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        $second->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
+
+        $this->assertSame( 'wp-app-admin-overflow', $admin_bar->nodes['wp-app-admin-overflow-settings']['parent'] );
+        $this->assertStringNotContainsString( 'wp-app-admin-link-standalone', $admin_bar->nodes['wp-app-link-first_settings_app']['meta']['class'] );
+    }
+
+    public function test_settings_item_is_not_added_without_the_capability() {
+        global $__wp_app_test_current_user_can, $__wp_app_test_options;
+
+        $app = new WpApp( '', 'no-caps-app', [ 'app_name' => 'No Caps App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [],
+        ];
+
+        $__wp_app_test_current_user_can = [
+            'read'           => true,
+            'manage_options' => false,
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $this->assertArrayHasKey( 'wp-app-link-no_caps_app', $admin_bar->nodes );
+        $this->assertArrayNotHasKey( 'wp-app-admin-overflow-settings', $admin_bar->nodes );
+        $this->assertStringNotContainsString( 'menupop', $admin_bar->nodes['wp-app-link-no_caps_app']['meta']['class'] );
     }
 }
