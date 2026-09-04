@@ -16,7 +16,7 @@ $encrypted_contact_labels  = [
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-		<title><?php echo wp_app_title( 'Encrypted Contacts' ); ?></title>
+		<title><?php wp_app_the_title( 'Encrypted Contacts' ); ?></title>
 	<?php wp_app_head(); ?>
 </head>
 <body class="wp-app-body">

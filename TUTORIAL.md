@@ -228,9 +228,9 @@ $user_id = get_current_user_id();
 $visits  = $app->get_storage()->get_user_visits( $user_id );
 ?>
 <!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
+<html <?php wp_app_language_attributes(); ?>>
 <head>
-	<title><?php echo wp_app_title( 'Visit History' ); ?></title>
+	<title><?php wp_app_the_title( 'Visit History' ); ?></title>
 	<?php wp_app_head(); ?>
 </head>
 <body>
@@ -406,9 +406,9 @@ if ( ! is_user_logged_in() ) {
 $current_user = wp_get_current_user();
 ?>
 <!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
+<html <?php wp_app_language_attributes(); ?>>
 <head>
-	<title><?php echo wp_app_title( 'My Dashboard' ); ?></title>
+	<title><?php wp_app_the_title( 'My Dashboard' ); ?></title>
 	<?php wp_app_head(); ?>
 	<?php wp_app_enqueue_style( 'my-app-style', plugin_dir_url( __FILE__ ) . '../assets/style.css' ); ?>
 </head>

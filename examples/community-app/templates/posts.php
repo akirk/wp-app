@@ -18,7 +18,7 @@ $posts = $wpdb->get_results(
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title( 'Posts' ); ?></title>
+    <title><?php wp_app_the_title( 'Posts' ); ?></title>
     <?php wp_app_head(); ?>
 </head>
 <body class="wp-app-body">

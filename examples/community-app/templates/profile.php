@@ -26,7 +26,7 @@ if ( ! $user ) {
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>
 <head>
-    <title><?php echo wp_app_title( $user ? $user->display_name : 'User not found' ); ?></title>
+    <title><?php wp_app_the_title( $user ? $user->display_name : 'User not found' ); ?></title>
     <?php wp_app_head(); ?>
 </head>
 <body class="wp-app-body">

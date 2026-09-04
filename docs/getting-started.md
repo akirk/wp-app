@@ -49,9 +49,9 @@ Create `templates/index.php`:
 
 ```php
 <!DOCTYPE html>
-<html <?php echo wp_app_language_attributes(); ?>>
+<html <?php wp_app_language_attributes(); ?>>
 <head>
-	<title><?php echo wp_app_title( 'My App' ); ?></title>
+	<title><?php wp_app_the_title( 'My App' ); ?></title>
 	<?php wp_app_head(); ?>
 </head>
 <body>
@@ -73,8 +73,9 @@ Helper functions for use in templates:
 | `wp_app_head()` | HTML head with WordPress hooks |
 | `wp_app_body_open()` | Body open hook (renders admin bar) |
 | `wp_app_body_close()` | Body close hook |
-| `wp_app_title( 'Page' )` | Page title with site name |
-| `wp_app_language_attributes()` | Language attributes for `<html>` tag |
+| `wp_app_the_title( 'Page' )` | Print the page title with the site name, escaped |
+| `wp_app_get_title( 'Page' )` | The same title as plain text, for you to escape |
+| `wp_app_language_attributes()` | Print language attributes for the `<html>` tag |
 | `wp_app_enqueue_style( $handle, $src )` | Enqueue styles for app pages |
 | `wp_app_enqueue_script( $handle, $src )` | Enqueue scripts for app pages |
 

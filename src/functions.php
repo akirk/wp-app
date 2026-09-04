@@ -325,11 +325,18 @@ if ( ! function_exists( 'wp_app_do_scoped_action' ) ) {
 
 
 
-if ( ! function_exists( 'wp_app_title' ) ) {
+if ( ! function_exists( 'wp_app_get_title' ) ) {
     /**
-     * Generate page title for app pages
+     * The page title for an app page, as plain unescaped text.
+     *
+     * Escape it yourself for whatever context you put it in. For the common
+     * case of printing it into <title>, use wp_app_the_title() instead.
+     *
+     * @param string $title     Title to use. Defaults to one derived from the route.
+     * @param string $separator Separator between the title and the site name.
+     * @return string Unescaped title text.
      */
-    function wp_app_title( $title = '', $separator = '-' ) {
+    function wp_app_get_title( $title = '', $separator = '-' ) {
         $site_name = get_bloginfo( 'name' );
 
         if ( empty( $title ) ) {
@@ -343,25 +350,69 @@ if ( ! function_exists( 'wp_app_title' ) ) {
         }
 
         if ( $site_name ) {
-            return esc_html( $title . ' ' . $separator . ' ' . $site_name );
+            return $title . ' ' . $separator . ' ' . $site_name;
         }
 
-        return esc_html( $title );
+        return $title;
+    }
+}
+
+if ( ! function_exists( 'wp_app_the_title' ) ) {
+    /**
+     * Print the page title for an app page, escaped for HTML.
+     *
+     * Follows the core the_title()/get_the_title() split: this one prints and
+     * returns nothing, wp_app_get_title() returns the raw text. Printing here
+     * rather than returning escaped markup is what lets a caller write
+     * `<title><?php wp_app_the_title(); ?></title>` and have PHPCS see the
+     * escaping instead of needing an ignore comment at every call site.
+     *
+     * @param string $title     Title to use. Defaults to one derived from the route.
+     * @param string $separator Separator between the title and the site name.
+     * @return void
+     */
+    function wp_app_the_title( $title = '', $separator = '-' ) {
+        echo esc_html( wp_app_get_title( $title, $separator ) );
+    }
+}
+
+if ( ! function_exists( 'wp_app_title' ) ) {
+    /**
+     * Generate page title for app pages, escaped for HTML.
+     *
+     * @deprecated 1.8.0 Use wp_app_the_title() to print, or wp_app_get_title()
+     *                   to get the raw text. Returning escaped markup means
+     *                   callers cannot reuse the value in an attribute or in
+     *                   JSON without double-encoding it, and PHPCS cannot tell
+     *                   that `echo wp_app_title()` is safe.
+     *
+     * @param string $title     Title to use. Defaults to one derived from the route.
+     * @param string $separator Separator between the title and the site name.
+     * @return string Title escaped with esc_html().
+     */
+    function wp_app_title( $title = '', $separator = '-' ) {
+        return esc_html( wp_app_get_title( $title, $separator ) );
     }
 }
 
 if ( ! function_exists( 'wp_app_language_attributes' ) ) {
     /**
-     * Output or return language attributes for the HTML tag.
+     * Print or return language attributes for the HTML tag.
      *
-     * @param bool $echo Whether to echo the attributes. Defaults to true.
-     * @return string Language attributes.
+     * Follows core: language_attributes() prints and returns nothing,
+     * get_language_attributes() returns. Returning the string while also
+     * printing it made `echo wp_app_language_attributes()` emit the attributes
+     * twice, which is the form this used to be documented with.
+     *
+     * @param bool $echo Whether to print the attributes. Defaults to true.
+     * @return string Language attributes, or an empty string when printing.
      */
     function wp_app_language_attributes( $echo = true ) {
         if ( function_exists( 'get_language_attributes' ) ) {
             $attributes = get_language_attributes();
             if ( $echo ) {
                 echo $attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by WordPress.
+                return '';
             }
             return $attributes;
         }
@@ -387,6 +438,7 @@ if ( ! function_exists( 'wp_app_language_attributes' ) ) {
         $attributes = implode( ' ', $attributes );
         if ( $echo ) {
             echo $attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Attribute values are escaped above.
+            return '';
         }
 
         return $attributes;
