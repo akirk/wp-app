@@ -834,6 +834,8 @@ class Settings {
                 document.addEventListener("change", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppAutosaveCheckboxChange);
                 document.addEventListener("click", wpAppToggleSettingsRow);
+                document.addEventListener("DOMContentLoaded", wpAppSetupDashiconAutocomplete);
+                window.addEventListener("load", wpAppSetupDashiconAutocomplete);
                 wpAppShowSavedStatus();
                 wpAppSetupDashiconAutocomplete();
                 document.querySelectorAll("[data-wp-app-settings-list]").forEach(wpAppMakeSettingsListSortable);
@@ -921,6 +923,10 @@ class Settings {
                     window.jQuery("[data-wp-app-dashicon-autocomplete='1']").each(function() {
                         const input = this;
 
+                        if (input.dataset.wpAppDashiconAutocompleteReady === "1") {
+                            return;
+                        }
+
                         window.jQuery(input).autocomplete({
                             appendTo: "body",
                             classes: {
@@ -941,7 +947,7 @@ class Settings {
                                 return false;
                             }
                         }).on("focus", function() {
-                            window.jQuery(this).autocomplete("search", this.value);
+                            window.jQuery(this).autocomplete("search", "");
                         });
 
                         window.jQuery(input).autocomplete("instance")._renderItem = function(ul, item) {
@@ -953,6 +959,8 @@ class Settings {
                                 )
                                 .appendTo(ul);
                         };
+
+                        input.dataset.wpAppDashiconAutocompleteReady = "1";
                     });
                 }
 

@@ -1111,6 +1111,9 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( '"dashicons-admin-home"', $html );
         $this->assertStringContainsString( '_renderItem', $html );
         $this->assertStringContainsString( '.addClass("dashicons " + item.value)', $html );
+        $this->assertStringContainsString( 'autocomplete("search", "")', $html );
+        $this->assertStringContainsString( 'window.addEventListener("load", wpAppSetupDashiconAutocomplete)', $html );
+        $this->assertStringContainsString( 'wpAppDashiconAutocompleteReady', $html );
         $this->assertStringNotContainsString( '"dashicons-home"', $html );
         $this->assertStringNotContainsString( '<datalist id="wp-app-dashicon-options">', $html );
     }
