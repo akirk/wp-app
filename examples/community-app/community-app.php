@@ -258,7 +258,8 @@ class CommunityApp extends BaseApp {
 				'community-app-styles',
 				plugin_dir_url( __FILE__ ) . 'assets/app.css',
 				array(),
-				'1.0.0'
+				'1.0.0',
+				'community'
 			);
 		}
 	}

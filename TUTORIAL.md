@@ -410,7 +410,7 @@ $current_user = wp_get_current_user();
 <head>
 	<title><?php wp_app_the_title( 'My Dashboard' ); ?></title>
 	<?php wp_app_head(); ?>
-	<?php wp_app_enqueue_style( 'my-app-style', plugin_dir_url( __FILE__ ) . '../assets/style.css' ); ?>
+	<?php wp_app_enqueue_style( 'my-app-style', plugin_dir_url( __FILE__ ) . '../assets/style.css', [], false, 'my-app' ); ?>
 </head>
 <body class="wp-app-body">
 	<?php wp_app_body_open(); ?>

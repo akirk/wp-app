@@ -449,7 +449,7 @@ if ( ! function_exists( 'wp_app_enqueue_style' ) ) {
     /**
      * Enqueue a style for app pages
      */
-    function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false, $scope = null ) {
+    function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false, $scope ) {
         if ( null === $scope ) {
             wp_app_warn_missing_asset_scope( __FUNCTION__ );
         }
@@ -473,7 +473,7 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
     /**
      * Enqueue a script for app pages
      */
-    function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true, $scope = null ) {
+    function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true, $scope ) {
         if ( null === $scope ) {
             wp_app_warn_missing_asset_scope( __FUNCTION__ );
         }
@@ -572,9 +572,9 @@ if ( ! function_exists( 'wp_app_enqueue_crypto_runtime' ) ) {
     /**
      * Enqueue the WpApp client-side encryption runtime for app pages.
      *
-     * @param string|array|null $scope Optional app slug, or array with an app key.
+     * @param string|array $scope App slug, or array with an app key.
      */
-    function wp_app_enqueue_crypto_runtime( $scope = null ) {
+    function wp_app_enqueue_crypto_runtime( $scope ) {
         wp_app_enqueue_script(
             'wp-app-crypto',
             wp_app_get_asset_url( 'wp-app-crypto.js' ),
@@ -590,9 +590,9 @@ if ( ! function_exists( 'wp_app_enqueue_encrypted_fields_runtime' ) ) {
     /**
      * Enqueue the WpApp encrypted fields data client for app pages.
      *
-     * @param string|array|null $scope Optional app slug, or array with an app key.
+     * @param string|array $scope App slug, or array with an app key.
      */
-    function wp_app_enqueue_encrypted_fields_runtime( $scope = null ) {
+    function wp_app_enqueue_encrypted_fields_runtime( $scope ) {
         wp_app_enqueue_crypto_runtime( $scope );
         wp_app_enqueue_script(
             'wp-app-encrypted-fields',
