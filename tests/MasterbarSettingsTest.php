@@ -1116,6 +1116,15 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'close: function() {', $html );
         $this->assertStringContainsString( 'function wpAppUpdateMasterbarPreview(event, previewIcon)', $html );
         $this->assertStringContainsString( 'typeof previewIcon === "string" ? previewIcon.trim() : iconField.value.trim()', $html );
+        $this->assertStringContainsString( 'document.addEventListener("input", wpAppAutosaveSettingChange)', $html );
+        $this->assertStringContainsString( 'function wpAppAutosaveSettingChange(event)', $html );
+        $this->assertStringContainsString( 'event.type === "input" ? 500 : 250', $html );
+        $this->assertStringContainsString( 'document.addEventListener("keydown", wpAppPreventAutosaveFieldSubmit)', $html );
+        $this->assertStringContainsString( 'function wpAppPreventAutosaveFieldSubmit(event)', $html );
+        $this->assertStringContainsString( 'event.preventDefault()', $html );
+        $this->assertStringContainsString( 'document.addEventListener("submit", wpAppSubmitSettingsForm)', $html );
+        $this->assertStringContainsString( 'function wpAppSubmitSettingsForm(event)', $html );
+        $this->assertStringContainsString( 'form.querySelector("[name^=', $html );
         $this->assertStringContainsString( 'window.addEventListener("load", wpAppSetupDashiconAutocomplete)', $html );
         $this->assertStringContainsString( 'wpAppDashiconAutocompleteReady', $html );
         $this->assertStringNotContainsString( '"dashicons-home"', $html );
