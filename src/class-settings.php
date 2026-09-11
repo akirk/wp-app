@@ -84,10 +84,11 @@ class Settings {
      */
     public static function get_default_settings() {
         return [
-            'only_show_active_app'           => true,
-            'show_inactive_apps_in_overflow' => true,
-            'app_order'                      => [],
-            'apps'                           => [],
+            'only_show_active_app'              => true,
+            'show_inactive_apps_in_overflow'    => true,
+            'sort_overflow_menu_alphabetically' => false,
+            'app_order'                         => [],
+            'apps'                              => [],
         ];
     }
 
@@ -174,6 +175,16 @@ class Settings {
     }
 
     /**
+     * Whether the overflow menu should ignore saved order and sort app links alphabetically.
+     *
+     * @return bool True when overflow app links should be sorted alphabetically.
+     */
+    public static function should_sort_overflow_menu_alphabetically() {
+        $settings = self::get_settings();
+        return ! empty( $settings['sort_overflow_menu_alphabetically'] );
+    }
+
+    /**
      * Get WpApp apps registered with this library.
      *
      * @return array App metadata keyed by app path.
@@ -227,10 +238,11 @@ class Settings {
         }
 
         return [
-            'only_show_active_app'           => ! empty( $value['only_show_active_app'] ),
-            'show_inactive_apps_in_overflow' => ! empty( $value['show_inactive_apps_in_overflow'] ),
-            'app_order'                      => $order,
-            'apps'                           => $apps,
+            'only_show_active_app'              => ! empty( $value['only_show_active_app'] ),
+            'show_inactive_apps_in_overflow'    => ! empty( $value['show_inactive_apps_in_overflow'] ),
+            'sort_overflow_menu_alphabetically' => ! empty( $value['sort_overflow_menu_alphabetically'] ),
+            'app_order'                         => $order,
+            'apps'                              => $apps,
         ];
     }
 
@@ -581,6 +593,12 @@ class Settings {
                                 <input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="1" <?php checked( ! empty( $settings['show_inactive_apps_in_overflow'] ) ); ?>>
                                 <?php echo esc_html__( 'Show inactive apps in the overflow menu on app pages' ); ?>
                             </label>
+                            <br>
+                            <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="0">
+                            <label>
+                                <input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="1" <?php checked( ! empty( $settings['sort_overflow_menu_alphabetically'] ) ); ?>>
+                                <?php echo esc_html__( 'Sort overflow menu alphabetically (override order below)' ); ?>
+                            </label>
                             <?php if ( self::is_only_registered_app() ) : ?>
                                 <p class="description">
                                     <?php echo esc_html__( 'A single app is shown in the masterbar instead of being collapsed into a menu of its own. Uncheck Always show below to collapse it anyway.' ); ?>
@@ -708,6 +726,7 @@ class Settings {
             <script>
                 document.addEventListener("input", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppUpdateMasterbarPreview);
+                document.addEventListener("input", wpAppAutosaveTextInput);
                 document.addEventListener("change", wpAppAutosaveCheckboxChange);
                 document.addEventListener("click", wpAppToggleSettingsRow);
                 wpAppShowSavedStatus();
@@ -727,11 +746,29 @@ class Settings {
                         return;
                     }
 
+                    wpAppScheduleAutosave(form, 250);
+                }
+
+                function wpAppAutosaveTextInput(event) {
+                    if (!event.target.matches("input[type='text'][name^='<?php echo esc_js( self::OPTION ); ?>']")) {
+                        return;
+                    }
+
+                    const form = event.target.form;
+
+                    if (!form) {
+                        return;
+                    }
+
+                    wpAppScheduleAutosave(form, 700);
+                }
+
+                function wpAppScheduleAutosave(form, delay) {
                     wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
                     clearTimeout(wpAppAutosaveTimer);
                     wpAppAutosaveTimer = setTimeout(function() {
                         wpAppSubmitAutosave(form);
-                    }, 250);
+                    }, delay);
                 }
 
                 function wpAppSubmitAutosave(form) {
@@ -948,6 +985,7 @@ class Settings {
 
                         if (dragging && dropTarget && dropTarget !== dragging) {
                             list.insertBefore(dragging, dropBefore ? dropTarget : dropTarget.nextSibling);
+                            wpAppAutosaveSettingsList(list);
                         }
 
                         clearDropIndicators();
@@ -980,12 +1018,24 @@ class Settings {
 
                         if (event.key === "ArrowUp" && row.previousElementSibling) {
                             list.insertBefore(row, row.previousElementSibling);
+                            wpAppAutosaveSettingsList(list);
                         } else if (event.key === "ArrowDown" && row.nextElementSibling) {
                             list.insertBefore(row.nextElementSibling, row);
+                            wpAppAutosaveSettingsList(list);
                         }
 
                         event.target.focus();
                     });
+                }
+
+                function wpAppAutosaveSettingsList(list) {
+                    const form = list.closest("form");
+
+                    if (!form) {
+                        return;
+                    }
+
+                    wpAppScheduleAutosave(form, 250);
                 }
             </script>
         </div>

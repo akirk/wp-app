@@ -450,7 +450,21 @@ class Masterbar {
             $links[ $app_path ] = self::get_admin_bar_overflow_link( $app_path, $metadata );
         }
 
+        if ( \WpApp\Settings::should_sort_overflow_menu_alphabetically() ) {
+            uasort( $links, [ __CLASS__, 'sort_admin_bar_overflow_links_alphabetically' ] );
+        }
+
         return apply_filters( 'wp_app_admin_bar_overflow_links', $links );
+    }
+
+    /**
+     * Sort overflow links by their visible label.
+     */
+    private static function sort_admin_bar_overflow_links_alphabetically( $a, $b ) {
+        $a_title = isset( $a['label'] ) ? $a['label'] : '';
+        $b_title = isset( $b['label'] ) ? $b['label'] : '';
+
+        return strnatcasecmp( trim( $a_title ), trim( $b_title ) );
     }
 
     /**
@@ -465,6 +479,7 @@ class Masterbar {
 
         return [
             'id'    => 'wp-app-admin-overflow-' . $id_base,
+            'label' => self::get_app_display_name_for_app( $app_path, $metadata ),
             'title' => self::get_app_link_title_for_app( $app_path, $metadata, null, true ),
             'href'  => isset( $metadata['url'] ) && $metadata['url'] ? $metadata['url'] : home_url( '/' . $app_path ),
         ];
