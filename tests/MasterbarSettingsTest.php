@@ -1119,6 +1119,9 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'document.addEventListener("input", wpAppAutosaveSettingChange)', $html );
         $this->assertStringContainsString( 'function wpAppAutosaveSettingChange(event)', $html );
         $this->assertStringContainsString( 'event.type === "input" ? 500 : 250', $html );
+        $this->assertStringContainsString( 'document.addEventListener("keydown", wpAppPreventAutosaveFieldSubmit)', $html );
+        $this->assertStringContainsString( 'function wpAppPreventAutosaveFieldSubmit(event)', $html );
+        $this->assertStringContainsString( 'event.preventDefault()', $html );
         $this->assertStringContainsString( 'window.addEventListener("load", wpAppSetupDashiconAutocomplete)', $html );
         $this->assertStringContainsString( 'wpAppDashiconAutocompleteReady', $html );
         $this->assertStringNotContainsString( '"dashicons-home"', $html );

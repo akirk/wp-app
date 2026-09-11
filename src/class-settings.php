@@ -835,6 +835,7 @@ class Settings {
                 document.addEventListener("change", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppAutosaveSettingChange);
                 document.addEventListener("click", wpAppToggleSettingsRow);
+                document.addEventListener("keydown", wpAppPreventAutosaveFieldSubmit);
                 document.addEventListener("DOMContentLoaded", wpAppSetupDashiconAutocomplete);
                 window.addEventListener("load", wpAppSetupDashiconAutocomplete);
                 wpAppShowSavedStatus();
@@ -864,6 +865,24 @@ class Settings {
                     wpAppAutosaveTimer = setTimeout(function() {
                         wpAppSubmitAutosave(form);
                     }, event.type === "input" ? 500 : 250);
+                }
+
+                function wpAppPreventAutosaveFieldSubmit(event) {
+                    if (event.key !== "Enter" || !event.target.matches("input[type='text'][data-wp-app-setting][name^='<?php echo esc_js( self::OPTION ); ?>']")) {
+                        return;
+                    }
+
+                    const form = event.target.form;
+
+                    event.preventDefault();
+
+                    if (!form) {
+                        return;
+                    }
+
+                    wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
+                    clearTimeout(wpAppAutosaveTimer);
+                    wpAppSubmitAutosave(form);
                 }
 
                 function wpAppSubmitAutosave(form) {
