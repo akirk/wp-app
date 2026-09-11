@@ -25,6 +25,7 @@ class Settings {
         add_action( 'admin_menu', [ __CLASS__, 'add_settings_page' ] );
         add_action( 'admin_menu', [ __CLASS__, 'add_legacy_settings_page_alias' ] );
         add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
+        add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_settings_assets' ] );
 
         self::$hooks_initialized = true;
     }
@@ -77,6 +78,23 @@ class Settings {
                 'default'           => self::get_default_settings(),
             ]
         );
+    }
+
+    /**
+     * Enqueue assets used by the WP Apps settings screen.
+     *
+     * @param string $hook_suffix Current admin screen hook.
+     */
+    public static function enqueue_settings_assets( $hook_suffix = '' ) {
+        $is_settings_page = function_exists( 'get_current_screen' ) && get_current_screen() && 'settings_page_wp-apps' === get_current_screen()->id;
+
+        if ( ! $is_settings_page && 'settings_page_wp-apps' !== $hook_suffix ) {
+            return;
+        }
+
+        if ( function_exists( 'wp_enqueue_script' ) ) {
+            wp_enqueue_script( 'jquery-ui-autocomplete' );
+        }
     }
 
     /**
@@ -447,6 +465,49 @@ class Settings {
                     z-index: 2;
                 }
 
+                .wp-app-dashicon-autocomplete.ui-autocomplete {
+                    background: #fff;
+                    border: 1px solid #c3c4c7;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+                    box-sizing: border-box;
+                    margin: 0;
+                    max-height: 260px;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                    padding: 4px 0;
+                    z-index: 100000;
+                }
+
+                .wp-app-dashicon-autocomplete .ui-menu-item-wrapper {
+                    align-items: center;
+                    color: #1d2327;
+                    display: flex;
+                    gap: 8px;
+                    line-height: 1.4;
+                    padding: 6px 10px;
+                }
+
+                .wp-app-dashicon-autocomplete .ui-menu-item-wrapper.ui-state-active {
+                    background: #2271b1;
+                    border: 0;
+                    color: #fff;
+                    margin: 0;
+                }
+
+                .wp-app-dashicon-autocomplete .dashicons {
+                    font-size: 18px;
+                    height: 18px;
+                    line-height: 18px;
+                    width: 18px;
+                }
+
+                .wp-app-dashicon-autocomplete code {
+                    background: transparent;
+                    color: inherit;
+                    font-size: 12px;
+                    padding: 0;
+                }
+
                 .wp-app-settings-row .form-table {
                     margin-top: 0;
                 }
@@ -703,7 +764,7 @@ class Settings {
                                                         name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon' ) ); ?>"
                                                         data-wp-app-setting="icon"
                                                         value="<?php echo esc_attr( self::get_effective_app_icon_value( $app_settings, $metadata ) ); ?>"
-                                                        list="wp-app-dashicon-options"
+                                                        data-wp-app-dashicon-autocomplete="1"
                                                         placeholder="<?php echo esc_attr__( 'e.g. dashicons-admin-site or https://example.org/icon.svg' ); ?>"
                                                     >
                                                     <p class="description"><?php echo esc_html__( 'Use an image URL, emoji or' ); ?> <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank" rel="noopener noreferrer"><?php echo esc_html__( 'Dashicon' ); ?></a> <?php echo esc_html__( 'class.' ); ?></p>
@@ -758,7 +819,6 @@ class Settings {
                             </div>
                         </section>
                     <?php endforeach; ?>
-                    <?php self::render_dashicon_datalist(); ?>
                 </div>
 
                 <?php submit_button(); ?>
@@ -768,12 +828,14 @@ class Settings {
                     ajaxUrl: "<?php echo esc_js( function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '' ); ?>",
                     nonce: "<?php echo esc_js( function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'wp-app-admin-bar-refresh' ) : '' ); ?>"
                 };
+                const wpAppDashiconOptions = <?php echo wp_json_encode( self::get_dashicon_options() ); ?>;
 
                 document.addEventListener("input", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppAutosaveCheckboxChange);
                 document.addEventListener("click", wpAppToggleSettingsRow);
                 wpAppShowSavedStatus();
+                wpAppSetupDashiconAutocomplete();
                 document.querySelectorAll("[data-wp-app-settings-list]").forEach(wpAppMakeSettingsListSortable);
 
                 let wpAppAutosaveTimer = null;
@@ -849,6 +911,49 @@ class Settings {
                     status.hidden = false;
                     status.classList.toggle("is-saved", !!saved);
                     status.classList.toggle("is-failed", !!failed);
+                }
+
+                function wpAppSetupDashiconAutocomplete() {
+                    if (!window.jQuery || !window.jQuery.ui || !window.jQuery.ui.autocomplete) {
+                        return;
+                    }
+
+                    window.jQuery("[data-wp-app-dashicon-autocomplete='1']").each(function() {
+                        const input = this;
+
+                        window.jQuery(input).autocomplete({
+                            appendTo: "body",
+                            classes: {
+                                "ui-autocomplete": "wp-app-dashicon-autocomplete"
+                            },
+                            delay: 0,
+                            minLength: 0,
+                            source: wpAppDashiconOptions,
+                            focus: function(event, ui) {
+                                input.value = ui.item.value;
+                                input.dispatchEvent(new Event("input", { bubbles: true }));
+                                return false;
+                            },
+                            select: function(event, ui) {
+                                input.value = ui.item.value;
+                                input.dispatchEvent(new Event("input", { bubbles: true }));
+                                input.dispatchEvent(new Event("change", { bubbles: true }));
+                                return false;
+                            }
+                        }).on("focus", function() {
+                            window.jQuery(this).autocomplete("search", this.value);
+                        });
+
+                        window.jQuery(input).autocomplete("instance")._renderItem = function(ul, item) {
+                            return window.jQuery("<li>")
+                                .append(
+                                    window.jQuery("<div>")
+                                        .append(window.jQuery("<span>").addClass("dashicons " + item.value).attr("aria-hidden", "true"))
+                                        .append(window.jQuery("<code>").text(item.value))
+                                )
+                                .appendTo(ul);
+                        };
+                    });
                 }
 
                 function wpAppRefreshAdminBar() {
@@ -1320,10 +1425,10 @@ class Settings {
     }
 
     /**
-     * Render reusable Dashicon suggestions for icon fields.
+     * Get reusable Dashicon suggestions for icon fields.
      */
-    private static function render_dashicon_datalist() {
-        $dashicons = [
+    private static function get_dashicon_options() {
+        return [
             'dashicons-admin-appearance',
             'dashicons-admin-comments',
             'dashicons-admin-generic',
@@ -1428,13 +1533,6 @@ class Settings {
             'dashicons-welcome-write-blog',
             'dashicons-wordpress',
         ];
-        ?>
-        <datalist id="wp-app-dashicon-options">
-            <?php foreach ( $dashicons as $dashicon ) : ?>
-                <option value="<?php echo esc_attr( $dashicon ); ?>"></option>
-            <?php endforeach; ?>
-        </datalist>
-        <?php
     }
 
     /**

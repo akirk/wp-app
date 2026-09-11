@@ -1098,18 +1098,31 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'placeholder="e.g. dashicons-admin-site or https://example.org/icon.svg"', $html );
     }
 
-    public function test_settings_icon_control_includes_dashicon_datalist() {
-        $app = new WpApp( '', 'dashicon-datalist-app', [ 'app_name' => 'Dashicon Datalist App' ] );
+    public function test_settings_icon_control_includes_dashicon_autocomplete_source() {
+        $app = new WpApp( '', 'dashicon-autocomplete-app', [ 'app_name' => 'Dashicon Autocomplete App' ] );
         $app->init();
 
         ob_start();
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'list="wp-app-dashicon-options"', $html );
-        $this->assertStringContainsString( '<datalist id="wp-app-dashicon-options">', $html );
-        $this->assertStringContainsString( 'value="dashicons-admin-home"', $html );
-        $this->assertStringNotContainsString( 'value="dashicons-home"', $html );
+        $this->assertStringContainsString( 'data-wp-app-dashicon-autocomplete="1"', $html );
+        $this->assertStringContainsString( 'const wpAppDashiconOptions = ["dashicons-admin-appearance"', $html );
+        $this->assertStringContainsString( '"dashicons-admin-home"', $html );
+        $this->assertStringContainsString( '_renderItem', $html );
+        $this->assertStringContainsString( '.addClass("dashicons " + item.value)', $html );
+        $this->assertStringNotContainsString( '"dashicons-home"', $html );
+        $this->assertStringNotContainsString( '<datalist id="wp-app-dashicon-options">', $html );
+    }
+
+    public function test_settings_page_enqueues_jquery_ui_autocomplete() {
+        global $wp_scripts;
+
+        $wp_scripts = null;
+
+        Settings::enqueue_settings_assets( 'settings_page_wp-apps' );
+
+        $this->assertTrue( wp_script_is( 'jquery-ui-autocomplete' ) );
     }
 
     public function test_settings_icon_control_shows_editable_metadata_url_default() {
