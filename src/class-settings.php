@@ -836,6 +836,7 @@ class Settings {
                 document.addEventListener("change", wpAppAutosaveSettingChange);
                 document.addEventListener("click", wpAppToggleSettingsRow);
                 document.addEventListener("keydown", wpAppPreventAutosaveFieldSubmit);
+                document.addEventListener("submit", wpAppSubmitSettingsForm);
                 document.addEventListener("DOMContentLoaded", wpAppSetupDashiconAutocomplete);
                 window.addEventListener("load", wpAppSetupDashiconAutocomplete);
                 wpAppShowSavedStatus();
@@ -880,6 +881,19 @@ class Settings {
                         return;
                     }
 
+                    wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
+                    clearTimeout(wpAppAutosaveTimer);
+                    wpAppSubmitAutosave(form);
+                }
+
+                function wpAppSubmitSettingsForm(event) {
+                    const form = event.target;
+
+                    if (!form || !form.querySelector("[name^='<?php echo esc_js( self::OPTION ); ?>']")) {
+                        return;
+                    }
+
+                    event.preventDefault();
                     wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
                     clearTimeout(wpAppAutosaveTimer);
                     wpAppSubmitAutosave(form);
