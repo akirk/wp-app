@@ -108,9 +108,9 @@ class ClientEncryptedFields {
 	/**
 	 * Enqueue client-side encrypted fields assets and config for a WpApp scope.
 	 *
-	 * @param string|array|null $scope Optional app scope.
+	 * @param string|array $scope App scope.
 	 */
-	public function enqueue_assets( $scope = null ) {
+	public function enqueue_assets( $scope ) {
 		wp_app_enqueue_crypto_runtime( $scope );
 		wp_app_enqueue_script(
 			'wp-app-encrypted-fields',

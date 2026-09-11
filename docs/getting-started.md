@@ -76,8 +76,8 @@ Helper functions for use in templates:
 | `wp_app_the_title( 'Page' )` | Print the page title with the site name, escaped |
 | `wp_app_get_title( 'Page' )` | The same title as plain text, for you to escape |
 | `wp_app_language_attributes()` | Print language attributes for the `<html>` tag |
-| `wp_app_enqueue_style( $handle, $src )` | Enqueue styles for app pages |
-| `wp_app_enqueue_script( $handle, $src )` | Enqueue scripts for app pages |
+| `wp_app_enqueue_style( $handle, $src, $deps, $ver, $scope )` | Enqueue styles for app pages |
+| `wp_app_enqueue_script( $handle, $src, $deps, $ver, $in_footer, $scope )` | Enqueue scripts for app pages |
 
 ## Testing with WordPress Playground
 

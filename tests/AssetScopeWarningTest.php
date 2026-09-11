@@ -24,8 +24,8 @@ class AssetScopeWarningTest extends TestCase {
 		return $__wp_app_test_doing_it_wrong;
 	}
 
-	public function test_enqueueing_a_script_without_a_scope_warns() {
-		wp_app_enqueue_script( 'demo', 'https://example.org/demo.js' );
+	public function test_enqueueing_a_script_with_null_scope_warns() {
+		wp_app_enqueue_script( 'demo', 'https://example.org/demo.js', [], false, true, null );
 
 		$warnings = $this->warnings();
 
@@ -35,10 +35,22 @@ class AssetScopeWarningTest extends TestCase {
 		$this->assertStringContainsString( 'scope', $warnings[0]['message'] );
 	}
 
-	public function test_enqueueing_a_style_without_a_scope_warns() {
-		wp_app_enqueue_style( 'demo', 'https://example.org/demo.css' );
+	public function test_enqueueing_a_style_with_null_scope_warns() {
+		wp_app_enqueue_style( 'demo', 'https://example.org/demo.css', [], false, null );
 
 		$this->assertSame( 'wp_app_enqueue_style', $this->warnings()[0]['function'] );
+	}
+
+	public function test_enqueue_helpers_require_scope_parameter() {
+		$script           = new \ReflectionFunction( 'wp_app_enqueue_script' );
+		$style            = new \ReflectionFunction( 'wp_app_enqueue_style' );
+		$crypto           = new \ReflectionFunction( 'wp_app_enqueue_crypto_runtime' );
+		$encrypted_fields = new \ReflectionFunction( 'wp_app_enqueue_encrypted_fields_runtime' );
+
+		$this->assertSame( 6, $script->getNumberOfRequiredParameters() );
+		$this->assertSame( 5, $style->getNumberOfRequiredParameters() );
+		$this->assertSame( 1, $crypto->getNumberOfRequiredParameters() );
+		$this->assertSame( 1, $encrypted_fields->getNumberOfRequiredParameters() );
 	}
 
 	public function test_inline_helpers_without_a_scope_warn() {
@@ -70,7 +82,7 @@ class AssetScopeWarningTest extends TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub sets the route.
 		$wp_app_route = [ 'app_path' => 'rendering-app' ];
 
-		wp_app_enqueue_script( 'demo', 'https://example.org/demo.js' );
+		wp_app_enqueue_script( 'demo', 'https://example.org/demo.js', [], false, true, null );
 
 		$this->assertArrayHasKey( 'wp_app_body_close_rendering-app', $__wp_app_test_actions );
 		$this->assertNotEmpty( $this->warnings() );

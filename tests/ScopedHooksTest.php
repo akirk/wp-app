@@ -80,7 +80,9 @@ class ScopedHooksTest extends TestCase {
 			'wordcamp-companion',
 			'https://example.org/wordcamp.js',
 			[],
-			'1.0.0'
+			'1.0.0',
+			true,
+			'wordcamp-companion'
 		);
 
 		$wp_app_route = [

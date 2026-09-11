@@ -179,7 +179,7 @@ Your app is now available at `/minimal`!
 
 ### App-scoped assets
 
-When `wp_app_enqueue_style()`, `wp_app_enqueue_script()`, `wp_app_add_inline_style()`, or `wp_app_add_inline_script()` are called while an app is rendering, the asset is automatically attached to that app's scoped hook. This prevents assets from one WpApp from printing in another WpApp.
+When `wp_app_enqueue_style()`, `wp_app_enqueue_script()`, `wp_app_add_inline_style()`, or `wp_app_add_inline_script()` receive an app scope, the asset is attached to that app's scoped hook. This prevents assets from one WpApp from printing in another WpApp.
 
 You can also pass an explicit app scope when registering assets before render time:
 
