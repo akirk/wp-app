@@ -148,6 +148,91 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order below)', $html );
     }
 
+    public function test_global_admin_bar_links_follow_saved_app_order() {
+        global $__wp_app_test_options;
+
+        new WpApp( '', 'zeta-global-order-app', [ 'app_name' => 'Zeta Global Order App' ] );
+        new WpApp( '', 'alpha-global-order-app', [ 'app_name' => 'Alpha Global Order App' ] );
+        new WpApp( '', 'middle-global-order-app', [ 'app_name' => 'Middle Global Order App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'app_order'                      => [
+                'middle-global-order-app',
+                'alpha-global-order-app',
+                'zeta-global-order-app',
+            ],
+            'apps'                           => [
+                'zeta-global-order-app'   => [ 'always_show' => true ],
+                'alpha-global-order-app'  => [ 'always_show' => true ],
+                'middle-global-order-app' => [ 'always_show' => true ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        Masterbar::add_wp_admin_bar_admin_context_items_for_all( $admin_bar );
+
+        $keys = array_keys( $admin_bar->nodes );
+
+        $this->assertLessThan(
+            array_search( 'wp-app-link-alpha_global_order_app', $keys, true ),
+            array_search( 'wp-app-link-middle_global_order_app', $keys, true )
+        );
+        $this->assertLessThan(
+            array_search( 'wp-app-link-zeta_global_order_app', $keys, true ),
+            array_search( 'wp-app-link-alpha_global_order_app', $keys, true )
+        );
+    }
+
+    public function test_admin_bar_refresh_data_uses_saved_app_title() {
+        global $__wp_app_test_options;
+
+        new WpApp( '', 'refresh-title-app', [ 'app_name' => 'Refresh Title App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => false,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'refresh-title-app' => [
+                    'title'       => 'Updated App',
+                    'show_icon'   => true,
+                    'show_text'   => true,
+                    'always_show' => true,
+                ],
+            ],
+        ];
+
+        $data = Masterbar::get_admin_bar_refresh_data();
+        $html = implode( '', array_column( $data['nodes'], 'html' ) );
+
+        $this->assertStringContainsString( 'wp-admin-bar-wp-app-link-refresh_title_app', $html );
+        $this->assertStringContainsString( '<span class="wp-app-link-text">Updated App</span>', $html );
+    }
+
+    public function test_admin_bar_refresh_data_renders_overflow_children() {
+        global $__wp_app_test_options;
+
+        new WpApp( '', 'refresh-overflow-first-app', [ 'app_name' => 'Refresh Overflow First App' ] );
+        new WpApp( '', 'refresh-overflow-second-app', [ 'app_name' => 'Refresh Overflow Second App' ] );
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                           => [
+                'refresh-overflow-first-app'  => [ 'always_show' => false ],
+                'refresh-overflow-second-app' => [ 'always_show' => false ],
+            ],
+        ];
+
+        $data = Masterbar::get_admin_bar_refresh_data();
+        $html = implode( '', array_column( $data['nodes'], 'html' ) );
+
+        $this->assertStringContainsString( 'wp-admin-bar-wp-app-admin-overflow', $html );
+        $this->assertStringContainsString( 'wp-admin-bar-wp-app-admin-overflow-refresh-overflow-first-app', $html );
+        $this->assertStringContainsString( 'wp-admin-bar-wp-app-admin-overflow-refresh-overflow-second-app', $html );
+    }
+
     public function test_only_show_active_app_preserves_saved_false() {
         global $__wp_app_test_options;
 

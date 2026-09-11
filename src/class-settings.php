@@ -724,6 +724,11 @@ class Settings {
                 <?php submit_button(); ?>
             </form>
             <script>
+                const wpAppAdminBarRefresh = {
+                    ajaxUrl: "<?php echo esc_js( function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '' ); ?>",
+                    nonce: "<?php echo esc_js( function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'wp-app-admin-bar-refresh' ) : '' ); ?>"
+                };
+
                 document.addEventListener("input", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppUpdateMasterbarPreview);
                 document.addEventListener("change", wpAppAutosaveCheckboxChange);
@@ -775,6 +780,7 @@ class Settings {
                         }
 
                         wpAppSetSaveStatus("<?php echo esc_js( __( 'Saved' ) ); ?>", true);
+                        wpAppRefreshAdminBar();
                     }).catch(function(error) {
                         if (error && error.name === "AbortError") {
                             return;
@@ -803,6 +809,164 @@ class Settings {
                     status.hidden = false;
                     status.classList.toggle("is-saved", !!saved);
                     status.classList.toggle("is-failed", !!failed);
+                }
+
+                function wpAppRefreshAdminBar() {
+                    const adminBars = Array.from(document.querySelectorAll("#wpadminbar"));
+                    const adminBar = adminBars.find(function(node) {
+                        return !node.closest(".wp-app-masterbar-preview-wrap");
+                    });
+                    const rootMenu = adminBar ? adminBar.querySelector("#wp-admin-bar-root-default") : null;
+
+                    console.log("WP Apps admin bar refresh: start", {
+                        adminBars: adminBars.length,
+                        hasAdminBar: !!adminBar,
+                        hasRootMenu: !!rootMenu,
+                        ajaxUrl: wpAppAdminBarRefresh.ajaxUrl
+                    });
+
+                    if (!window.fetch || !adminBar || !rootMenu || !wpAppAdminBarRefresh.ajaxUrl) {
+                        console.log("WP Apps admin bar refresh: skipped");
+                        return;
+                    }
+
+                    const body = new FormData();
+                    body.append("action", "wp_app_admin_bar_nodes");
+                    body.append("nonce", wpAppAdminBarRefresh.nonce);
+
+                    fetch(wpAppAdminBarRefresh.ajaxUrl, {
+                        body,
+                        credentials: "same-origin",
+                        method: "POST"
+                    }).then(function(response) {
+                        console.log("WP Apps admin bar refresh: response", {
+                            ok: response.ok,
+                            status: response.status
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("Admin bar refresh failed");
+                        }
+
+                        return response.json();
+                    }).then(function(payload) {
+                        console.log("WP Apps admin bar refresh: payload", payload);
+
+                        if (!payload || !payload.success || !payload.data || !Array.isArray(payload.data.nodes)) {
+                            console.log("WP Apps admin bar refresh: invalid payload");
+                            return;
+                        }
+
+                        wpAppPatchAdminBar(rootMenu, payload.data.nodes);
+                    }).catch(function(error) {
+                        console.log("WP Apps admin bar refresh: failed", error);
+                    });
+                }
+
+                function wpAppPatchAdminBar(rootMenu, nodes) {
+                    const incomingTopNodes = nodes.filter(function(node) {
+                        return !node.parent;
+                    });
+                    const incomingOverflowNode = incomingTopNodes.find(function(node) {
+                        return node.id === "wp-app-admin-overflow";
+                    });
+                    const incomingAppLinkNodes = incomingTopNodes.filter(function(node) {
+                        return node.id !== "wp-app-admin-overflow";
+                    });
+                    const existingAppLinkNodes = Array.from(rootMenu.children).filter(function(node) {
+                        return node.id.indexOf("wp-admin-bar-wp-app-link-") === 0;
+                    });
+                    const existingOverflowNode = wpAppFindAdminBarChild(rootMenu, "wp-admin-bar-wp-app-admin-overflow");
+
+                    console.log("WP Apps admin bar refresh: patch", {
+                        existingAppLinkNodes: existingAppLinkNodes.length,
+                        hasExistingOverflowNode: !!existingOverflowNode,
+                        incomingNodes: nodes.length,
+                        incomingTopNodes: incomingTopNodes.length,
+                        incomingAppLinkNodes: incomingAppLinkNodes.length,
+                        hasIncomingOverflowNode: !!incomingOverflowNode
+                    });
+
+                    existingAppLinkNodes.forEach(function(node) {
+                        node.remove();
+                    });
+
+                    if (incomingOverflowNode) {
+                        wpAppUpsertAdminBarNode(rootMenu, incomingOverflowNode, null, true);
+                    } else if (existingOverflowNode) {
+                        existingOverflowNode.remove();
+                    }
+
+                    const overflowAnchor = wpAppFindAdminBarChild(rootMenu, "wp-admin-bar-wp-app-admin-overflow");
+
+                    incomingAppLinkNodes.forEach(function(node) {
+                        wpAppUpsertAdminBarNode(rootMenu, node, overflowAnchor, false);
+                    });
+
+                    console.log("WP Apps admin bar refresh: patched");
+                }
+
+                function wpAppUpsertAdminBarNode(rootMenu, node, anchor, refreshExistingContent) {
+                    const template = document.createElement("template");
+                    template.innerHTML = node.html.trim();
+
+                    const refreshedNode = template.content.firstElementChild;
+                    const currentNode = refreshedNode ? wpAppFindAdminBarChild(rootMenu, refreshedNode.id) : null;
+
+                    if (!refreshedNode) {
+                        return;
+                    }
+
+                    if (!currentNode) {
+                        rootMenu.insertBefore(refreshedNode, anchor || null);
+                        return;
+                    }
+
+                    if (refreshExistingContent) {
+                        wpAppRefreshAdminBarNodeContent(currentNode, refreshedNode);
+                    } else {
+                        rootMenu.insertBefore(refreshedNode, anchor || currentNode);
+                        currentNode.remove();
+                    }
+                }
+
+                function wpAppFindAdminBarChild(rootMenu, id) {
+                    return Array.from(rootMenu.children).find(function(node) {
+                        return node.id === id;
+                    }) || null;
+                }
+
+                function wpAppRefreshAdminBarNodeContent(currentNode, refreshedNode) {
+                    const currentItem = Array.from(currentNode.children).find(function(child) {
+                        return child.classList.contains("ab-item");
+                    });
+                    const refreshedItem = Array.from(refreshedNode.children).find(function(child) {
+                        return child.classList.contains("ab-item");
+                    });
+                    const currentSubmenu = Array.from(currentNode.children).find(function(child) {
+                        return child.classList.contains("ab-sub-wrapper");
+                    });
+                    const refreshedSubmenu = Array.from(refreshedNode.children).find(function(child) {
+                        return child.classList.contains("ab-sub-wrapper");
+                    });
+
+                    currentNode.className = refreshedNode.className;
+
+                    if (currentItem && refreshedItem) {
+                        currentItem.replaceWith(refreshedItem);
+                    } else if (refreshedItem) {
+                        currentNode.insertBefore(refreshedItem, currentNode.firstChild);
+                    } else if (currentItem) {
+                        currentItem.remove();
+                    }
+
+                    if (currentSubmenu && refreshedSubmenu) {
+                        currentSubmenu.innerHTML = refreshedSubmenu.innerHTML;
+                    } else if (refreshedSubmenu) {
+                        currentNode.appendChild(refreshedSubmenu);
+                    } else if (currentSubmenu) {
+                        currentSubmenu.remove();
+                    }
                 }
 
                 function wpAppToggleSettingsRow(event) {
