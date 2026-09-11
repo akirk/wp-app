@@ -935,9 +935,7 @@ class Settings {
                             delay: 0,
                             minLength: 0,
                             source: wpAppDashiconOptions,
-                            focus: function(event, ui) {
-                                input.value = ui.item.value;
-                                input.dispatchEvent(new Event("input", { bubbles: true }));
+                            focus: function() {
                                 return false;
                             },
                             select: function(event, ui) {
