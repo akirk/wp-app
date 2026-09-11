@@ -478,11 +478,22 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
             wp_app_warn_missing_asset_scope( __FUNCTION__ );
         }
 
-        $hook = wp_app_get_scoped_hook_name( $in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts', $scope );
+        if ( function_exists( 'wp_register_script' ) ) {
+            wp_register_script( $handle, $src, $deps, $ver, $in_footer );
+        }
+
+        $print_in_footer = is_array( $in_footer ) ? ! empty( $in_footer['in_footer'] ) : (bool) $in_footer;
+        $hook            = wp_app_get_scoped_hook_name( $print_in_footer ? 'wp_app_body_close' : 'wp_app_head_scripts', $scope );
 
         add_action(
             $hook,
             function () use ( $handle, $src, $deps, $ver ) {
+				if ( function_exists( 'wp_enqueue_script' ) && function_exists( 'wp_scripts' ) ) {
+					wp_enqueue_script( $handle );
+					wp_scripts()->do_items( [ $handle ] );
+					return;
+				}
+
 				if ( $src ) {
 					$url = $src;
 					if ( $ver ) {

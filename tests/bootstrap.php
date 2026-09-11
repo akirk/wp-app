@@ -1,5 +1,7 @@
 <?php
 
+// phpcs:disable Universal.Files.SeparateFunctionsFromOO.Mixed, Generic.Files.OneObjectStructurePerFile.MultipleFound -- Test bootstrap defines WordPress stand-ins.
+
 if ( ! defined( 'WP_CONTENT_DIR' ) ) {
 	define( 'WP_CONTENT_DIR', sys_get_temp_dir() . '/wp-app-test-content' );
 }
@@ -78,6 +80,180 @@ if ( ! function_exists( 'remove_action' ) ) {
 		}
 
 		return false;
+	}
+}
+
+if ( ! class_exists( 'WP_Scripts' ) ) {
+	class WP_Scripts {
+		public $registered = [];
+		public $queue      = [];
+		public $done       = [];
+
+		public function add( $handle, $src, $deps = [], $ver = false, $args = null ) {
+			if ( isset( $this->registered[ $handle ] ) ) {
+				return false;
+			}
+
+			$this->registered[ $handle ] = (object) [
+				'handle' => $handle,
+				'src'    => $src,
+				'deps'   => $deps,
+				'ver'    => $ver,
+				'args'   => $args,
+				'extra'  => [],
+			];
+
+			return true;
+		}
+
+		public function enqueue( $handle ) {
+			if ( ! in_array( $handle, $this->queue, true ) ) {
+				$this->queue[] = $handle;
+			}
+		}
+
+		public function do_items( $handles = false ) {
+			$handles = false === $handles ? $this->queue : (array) $handles;
+
+			foreach ( $handles as $handle ) {
+				$this->do_item( $handle );
+			}
+		}
+
+		public function do_item( $handle ) {
+			if ( in_array( $handle, $this->done, true ) || ! isset( $this->registered[ $handle ] ) ) {
+				return false;
+			}
+
+			$script = $this->registered[ $handle ];
+
+			foreach ( (array) $script->deps as $dependency ) {
+				$this->do_item( $dependency );
+			}
+
+			$this->print_extra_script( $handle, 'data' );
+			$this->print_extra_script( $handle, 'before' );
+
+			if ( '' !== $script->src ) {
+				$src = $script->src;
+				if ( false !== $script->ver && null !== $script->ver ) {
+					$src .= ( false === strpos( $src, '?' ) ? '?' : '&' ) . 'ver=' . rawurlencode( (string) $script->ver );
+				}
+
+				echo '<script id="' . esc_attr( $handle ) . '-js" src="' . esc_url( $src ) . '"></script>' . "\n";
+			}
+
+			$this->print_extra_script( $handle, 'after' );
+
+			$this->done[] = $handle;
+
+			return true;
+		}
+
+		public function localize( $handle, $object_name, $l10n ) {
+			if ( ! isset( $this->registered[ $handle ] ) ) {
+				return false;
+			}
+
+			$data = 'var ' . $object_name . ' = ' . wp_json_encode( $l10n ) . ';';
+
+			if ( ! isset( $this->registered[ $handle ]->extra['data'] ) ) {
+				$this->registered[ $handle ]->extra['data'] = [];
+			}
+
+			$this->registered[ $handle ]->extra['data'][] = $data;
+
+			return true;
+		}
+
+		public function add_inline_script( $handle, $data, $position = 'after' ) {
+			if ( ! isset( $this->registered[ $handle ] ) ) {
+				return false;
+			}
+
+			$position = 'before' === $position ? 'before' : 'after';
+
+			if ( ! isset( $this->registered[ $handle ]->extra[ $position ] ) ) {
+				$this->registered[ $handle ]->extra[ $position ] = [];
+			}
+
+			$this->registered[ $handle ]->extra[ $position ][] = $data;
+
+			return true;
+		}
+
+		public function query( $handle, $status = 'registered' ) {
+			if ( 'registered' === $status ) {
+				return isset( $this->registered[ $handle ] );
+			}
+
+			if ( 'enqueued' === $status || 'queue' === $status ) {
+				return in_array( $handle, $this->queue, true );
+			}
+
+			if ( 'done' === $status ) {
+				return in_array( $handle, $this->done, true );
+			}
+
+			return false;
+		}
+
+		private function print_extra_script( $handle, $key ) {
+			if ( empty( $this->registered[ $handle ]->extra[ $key ] ) ) {
+				return;
+			}
+
+			echo '<script id="' . esc_attr( $handle ) . '-js-' . esc_attr( $key ) . '">' . "\n";
+			echo implode( "\n", $this->registered[ $handle ]->extra[ $key ] ) . "\n";
+			echo '</script>' . "\n";
+		}
+	}
+}
+
+if ( ! function_exists( 'wp_scripts' ) ) {
+	function wp_scripts() {
+		global $wp_scripts;
+
+		if ( ! $wp_scripts instanceof WP_Scripts ) {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub initializes the WordPress script registry global.
+			$wp_scripts = new WP_Scripts();
+		}
+
+		return $wp_scripts;
+	}
+}
+
+if ( ! function_exists( 'wp_register_script' ) ) {
+	function wp_register_script( $handle, $src, $deps = [], $ver = false, $args = null ) {
+		return wp_scripts()->add( $handle, $src, $deps, $ver, $args );
+	}
+}
+
+if ( ! function_exists( 'wp_enqueue_script' ) ) {
+	function wp_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $args = null ) {
+		if ( '' !== $src && ! wp_scripts()->query( $handle, 'registered' ) ) {
+			wp_register_script( $handle, $src, $deps, $ver, $args );
+		}
+
+		wp_scripts()->enqueue( $handle );
+	}
+}
+
+if ( ! function_exists( 'wp_script_is' ) ) {
+	function wp_script_is( $handle, $status = 'enqueued' ) {
+		return wp_scripts()->query( $handle, $status );
+	}
+}
+
+if ( ! function_exists( 'wp_localize_script' ) ) {
+	function wp_localize_script( $handle, $object_name, $l10n ) {
+		return wp_scripts()->localize( $handle, $object_name, $l10n );
+	}
+}
+
+if ( ! function_exists( 'wp_add_inline_script' ) ) {
+	function wp_add_inline_script( $handle, $data, $position = 'after' ) {
+		return wp_scripts()->add_inline_script( $handle, $data, $position );
 	}
 }
 
@@ -249,7 +425,7 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	function current_user_can( $capability, ...$args ) {
 		global $__wp_app_test_current_user_can, $__wp_app_test_cap_calls;
 
-		$__wp_app_test_cap_calls[] = array( $capability, $args );
+		$__wp_app_test_cap_calls[] = [ $capability, $args ];
 
 		if ( is_array( $__wp_app_test_current_user_can ?? null ) ) {
 			return ! empty( $__wp_app_test_current_user_can[ $capability ] );
@@ -586,7 +762,7 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 	class WP_REST_Request {
 		private $params;
 
-		public function __construct( $params = array() ) {
+		public function __construct( $params = [] ) {
 			$this->params = $params;
 		}
 
@@ -634,4 +810,3 @@ if ( ! class_exists( 'WP_REST_Terms_Controller' ) ) {
 
 
 require_once __DIR__ . '/../vendor/autoload.php';
-
