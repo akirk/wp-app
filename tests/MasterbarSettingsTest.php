@@ -25,11 +25,10 @@ class MasterbarSettingsTest extends TestCase {
     public function test_sanitize_settings_preserves_app_paths() {
         $settings = Settings::sanitize_settings(
             [
-                'only_show_active_app'              => '1',
-                'show_inactive_apps_in_overflow'    => '1',
-                'sort_overflow_menu_alphabetically' => '1',
-                'app_order'                         => [ 'team/tools', 'bad path!', 'team/tools', '/Reports_App/' ],
-                'apps'                              => [
+                'only_show_active_app'           => '1',
+                'show_inactive_apps_in_overflow' => '1',
+                'app_order'                      => [ 'team/tools', 'bad path!', 'team/tools', '/Reports_App/' ],
+                'apps'                           => [
                     'team/tools' => [
                         'title'                => '<b>Team Tools</b>',
                         'icon'                 => 'dashicons-admin-site',
@@ -44,7 +43,6 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertTrue( $settings['only_show_active_app'] );
         $this->assertTrue( $settings['show_inactive_apps_in_overflow'] );
-        $this->assertTrue( $settings['sort_overflow_menu_alphabetically'] );
         $this->assertSame( [ 'team/tools', 'badpath', 'reports_app' ], $settings['app_order'] );
         $this->assertArrayHasKey( 'team/tools', $settings['apps'] );
         $this->assertSame( 'Team Tools', $settings['apps']['team/tools']['title'] );
@@ -63,12 +61,6 @@ class MasterbarSettingsTest extends TestCase {
         $settings = Settings::get_settings();
 
         $this->assertTrue( $settings['show_inactive_apps_in_overflow'] );
-    }
-
-    public function test_sort_overflow_menu_alphabetically_defaults_off() {
-        $settings = Settings::get_settings();
-
-        $this->assertFalse( $settings['sort_overflow_menu_alphabetically'] );
     }
 
     public function test_registered_apps_follow_saved_order_before_new_apps() {
@@ -95,67 +87,6 @@ class MasterbarSettingsTest extends TestCase {
             array_search( 'middle-settings-order-app', $keys, true ),
             array_search( 'alpha-settings-order-app', $keys, true )
         );
-    }
-
-    public function test_overflow_menu_can_sort_alphabetically_instead_of_saved_order() {
-        global $__wp_app_test_options, $wp_query;
-
-        $active_app = new WpApp( '', 'active-alpha-overflow-app', [ 'app_name' => 'Active Alpha Overflow App' ] );
-        $zeta_app   = new WpApp( '', 'zeta-alpha-overflow-app', [ 'app_name' => 'Zeta Alpha Overflow App' ] );
-        $alpha_app  = new WpApp( '', 'alpha-alpha-overflow-app', [ 'app_name' => 'Alpha Alpha Overflow App' ] );
-        $zeta_app->init();
-        $alpha_app->init();
-        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub simulates the current app request.
-        $wp_query = (object) [
-            'query_vars' => [
-                'wp_app_request' => true,
-                'wp_app_path'    => 'active-alpha-overflow-app',
-            ],
-        ];
-
-        $__wp_app_test_options[ Settings::OPTION ] = [
-            'only_show_active_app'              => true,
-            'show_inactive_apps_in_overflow'    => true,
-            'sort_overflow_menu_alphabetically' => true,
-            'app_order'                         => [
-                'zeta-alpha-overflow-app',
-                'alpha-alpha-overflow-app',
-            ],
-            'apps'                              => [
-                'zeta-alpha-overflow-app'  => [ 'always_show' => false ],
-                'alpha-alpha-overflow-app' => [ 'always_show' => false ],
-            ],
-        ];
-
-        $admin_bar = new FakeAdminBar();
-        $active_app->masterbar()->add_wp_admin_bar_app_context_items( $admin_bar );
-        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
-
-        $keys = array_keys( $admin_bar->nodes );
-
-        $this->assertLessThan(
-            array_search( 'wp-app-admin-overflow-zeta-alpha-overflow-app', $keys, true ),
-            array_search( 'wp-app-admin-overflow-alpha-alpha-overflow-app', $keys, true )
-        );
-    }
-
-    public function test_settings_page_renders_alphabetical_overflow_checkbox() {
-        ob_start();
-        Settings::render_settings_page();
-        $html = ob_get_clean();
-
-        $this->assertStringContainsString( Settings::OPTION . '[sort_overflow_menu_alphabetically]', $html );
-        $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order below)', $html );
-    }
-
-    public function test_settings_page_autosaves_text_inputs() {
-        ob_start();
-        Settings::render_settings_page();
-        $html = ob_get_clean();
-
-        $this->assertStringContainsString( 'document.addEventListener("input", wpAppAutosaveTextInput);', $html );
-        $this->assertStringContainsString( 'input[type=\'text\'][name^=\'' . Settings::OPTION, $html );
-        $this->assertStringContainsString( 'wpAppScheduleAutosave(form, 700);', $html );
     }
 
     public function test_only_show_active_app_preserves_saved_false() {
