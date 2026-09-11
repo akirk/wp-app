@@ -1112,8 +1112,10 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( '_renderItem', $html );
         $this->assertStringContainsString( '.addClass("dashicons " + item.value)', $html );
         $this->assertStringContainsString( 'autocomplete("search", "")', $html );
-        $this->assertStringContainsString( 'focus: function() {', $html );
-        $this->assertStringNotContainsString( 'focus: function(event, ui)', $html );
+        $this->assertStringContainsString( 'wpAppUpdateMasterbarPreview({ target: input }, ui.item.value)', $html );
+        $this->assertStringContainsString( 'close: function() {', $html );
+        $this->assertStringContainsString( 'function wpAppUpdateMasterbarPreview(event, previewIcon)', $html );
+        $this->assertStringContainsString( 'typeof previewIcon === "string" ? previewIcon.trim() : iconField.value.trim()', $html );
         $this->assertStringContainsString( 'window.addEventListener("load", wpAppSetupDashiconAutocomplete)', $html );
         $this->assertStringContainsString( 'wpAppDashiconAutocompleteReady', $html );
         $this->assertStringNotContainsString( '"dashicons-home"', $html );

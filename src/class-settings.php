@@ -935,7 +935,8 @@ class Settings {
                             delay: 0,
                             minLength: 0,
                             source: wpAppDashiconOptions,
-                            focus: function() {
+                            focus: function(event, ui) {
+                                wpAppUpdateMasterbarPreview({ target: input }, ui.item.value);
                                 return false;
                             },
                             select: function(event, ui) {
@@ -943,6 +944,9 @@ class Settings {
                                 input.dispatchEvent(new Event("input", { bubbles: true }));
                                 input.dispatchEvent(new Event("change", { bubbles: true }));
                                 return false;
+                            },
+                            close: function() {
+                                input.dispatchEvent(new Event("input", { bubbles: true }));
                             }
                         }).on("focus", function() {
                             window.jQuery(this).autocomplete("search", "");
@@ -1141,7 +1145,7 @@ class Settings {
                     details.hidden = expanded;
                 }
 
-                function wpAppUpdateMasterbarPreview(event) {
+                function wpAppUpdateMasterbarPreview(event, previewIcon) {
                     const card = event.target.closest(".wp-app-settings-card");
 
                     if (!card) {
@@ -1155,7 +1159,7 @@ class Settings {
                     const iconUrl = card.dataset.iconUrl || "";
                     const forceShowText = card.dataset.forceShowText === "1";
                     const title = titleField.value.trim() || defaultTitle;
-                    const icon = iconField.value.trim();
+                    const icon = typeof previewIcon === "string" ? previewIcon.trim() : iconField.value.trim();
                     const iconBackgroundField = card.querySelector("[data-wp-app-setting='icon_background']");
                     const iconColorField = card.querySelector("[data-wp-app-setting='icon_color']");
                     const iconBackground = sanitizeIconCssValue(iconBackgroundField ? iconBackgroundField.value : "") || sanitizeIconCssValue(card.dataset.defaultIconBackground || "");
