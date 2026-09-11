@@ -831,8 +831,9 @@ class Settings {
                 const wpAppDashiconOptions = <?php echo wp_json_encode( self::get_dashicon_options() ); ?>;
 
                 document.addEventListener("input", wpAppUpdateMasterbarPreview);
+                document.addEventListener("input", wpAppAutosaveSettingChange);
                 document.addEventListener("change", wpAppUpdateMasterbarPreview);
-                document.addEventListener("change", wpAppAutosaveCheckboxChange);
+                document.addEventListener("change", wpAppAutosaveSettingChange);
                 document.addEventListener("click", wpAppToggleSettingsRow);
                 document.addEventListener("DOMContentLoaded", wpAppSetupDashiconAutocomplete);
                 window.addEventListener("load", wpAppSetupDashiconAutocomplete);
@@ -843,8 +844,12 @@ class Settings {
                 let wpAppAutosaveTimer = null;
                 let wpAppAutosaveController = null;
 
-                function wpAppAutosaveCheckboxChange(event) {
-                    if (!event.target.matches("input[type='checkbox'][name^='<?php echo esc_js( self::OPTION ); ?>']")) {
+                function wpAppAutosaveSettingChange(event) {
+                    if (!event.target.matches("[data-wp-app-setting][name^='<?php echo esc_js( self::OPTION ); ?>']")) {
+                        return;
+                    }
+
+                    if (event.type === "input" && event.target.matches("input[type='checkbox']")) {
                         return;
                     }
 
@@ -858,7 +863,7 @@ class Settings {
                     clearTimeout(wpAppAutosaveTimer);
                     wpAppAutosaveTimer = setTimeout(function() {
                         wpAppSubmitAutosave(form);
-                    }, 250);
+                    }, event.type === "input" ? 500 : 250);
                 }
 
                 function wpAppSubmitAutosave(form) {
