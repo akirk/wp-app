@@ -40,7 +40,6 @@ class Masterbar {
 
         // Add active app items before cross-app links so active submenus stay accessible on mobile.
         add_action( 'admin_bar_menu', [ $this, 'add_wp_admin_bar_app_context_items' ], 998 );
-        add_action( 'admin_bar_menu', [ $this, 'add_wp_admin_bar_admin_context_items' ], 999 );
 
         // Only show on app requests to avoid interfering with regular WordPress
         add_action( 'wp_app_before_render', [ $this, 'setup_for_app_request' ] );
@@ -291,8 +290,236 @@ class Masterbar {
         add_action( 'wp_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
         add_action( 'admin_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
         add_action( 'wp_app_head', [ __CLASS__, 'output_admin_bar_app_link_styles' ], 99 );
+        add_action( 'admin_bar_menu', [ __CLASS__, 'add_wp_admin_bar_admin_context_items_for_all' ], 999 );
+        add_action( 'wp_ajax_wp_app_admin_bar_nodes', [ __CLASS__, 'ajax_admin_bar_nodes' ] );
 
         self::$shared_hooks_initialized = true;
+    }
+
+    /**
+     * Return refreshed WpApp admin bar nodes for the settings screen.
+     */
+    public static function ajax_admin_bar_nodes() {
+        if ( function_exists( 'check_ajax_referer' ) ) {
+            check_ajax_referer( 'wp-app-admin-bar-refresh', 'nonce' );
+        }
+
+        if ( function_exists( 'current_user_can' ) && ! current_user_can( 'manage_options' ) ) {
+            self::send_json_error( [ 'message' => __( 'Sorry, you are not allowed to refresh the WP Apps admin bar.' ) ], 403 );
+            return;
+        }
+
+        self::send_json_success( self::get_admin_bar_refresh_data() );
+    }
+
+    /**
+     * Get the current WpApp admin bar nodes as DOM-ready records.
+     *
+     * @return array Refresh data.
+     */
+    public static function get_admin_bar_refresh_data() {
+        $nodes = self::get_admin_bar_refresh_nodes();
+
+        return [
+            'nodes' => self::serialize_admin_bar_nodes( $nodes ),
+        ];
+    }
+
+    /**
+     * Rebuild the WpApp-owned admin bar nodes using the same PHP paths as the real admin bar.
+     *
+     * @return array Admin bar nodes keyed by node ID.
+     */
+    public static function get_admin_bar_refresh_nodes() {
+        $admin_bar = new class() {
+            /**
+             * Collected nodes keyed by node ID.
+             *
+             * @var array
+             */
+            public $nodes = [];
+
+            /**
+             * Store a node.
+             *
+             * @param array $node Admin bar node.
+             */
+            public function add_node( $node ) {
+                if ( isset( $node['id'] ) ) {
+                    $this->nodes[ $node['id'] ] = $node;
+                }
+            }
+
+            /**
+             * Remove a node.
+             *
+             * @param string $id Node ID.
+             */
+            public function remove_node( $id ) {
+                unset( $this->nodes[ $id ] );
+            }
+        };
+
+        self::add_wp_admin_bar_admin_context_items_for_all( $admin_bar );
+
+        self::add_admin_bar_overflow_menu( $admin_bar );
+
+        return $admin_bar->nodes;
+    }
+
+    /**
+     * Convert collected admin bar nodes to a compact, client-renderable shape.
+     *
+     * @param array $nodes Admin bar nodes keyed by node ID.
+     * @return array Serialized nodes.
+     */
+    private static function serialize_admin_bar_nodes( $nodes ) {
+        $serialized = [];
+
+        foreach ( $nodes as $id => $node ) {
+            $parent = isset( $node['parent'] ) ? $node['parent'] : null;
+
+            if ( null !== $parent ) {
+                continue;
+            }
+
+            $serialized[] = [
+                'id'     => $id,
+                'parent' => $parent,
+                'html'   => self::render_admin_bar_node_html( $node, $nodes ),
+            ];
+        }
+
+        return $serialized;
+    }
+
+    /**
+     * Get direct children for an admin bar node.
+     *
+     * @param array  $nodes Admin bar nodes keyed by node ID.
+     * @param string $parent Parent node ID.
+     * @return array Child nodes.
+     */
+    private static function get_admin_bar_node_children( $nodes, $parent ) {
+        $children = [];
+
+        foreach ( $nodes as $id => $node ) {
+            if ( isset( $node['parent'] ) && $parent === $node['parent'] ) {
+                $children[ $id ] = $node;
+            }
+        }
+
+        return $children;
+    }
+
+    /**
+     * Render one admin bar node and its descendants as WordPress-compatible list markup.
+     *
+     * @param array $node Admin bar node.
+     * @param array $nodes All admin bar nodes keyed by node ID.
+     * @return string Node HTML.
+     */
+    private static function render_admin_bar_node_html( $node, $nodes ) {
+        $id       = isset( $node['id'] ) ? $node['id'] : '';
+        $meta     = isset( $node['meta'] ) && is_array( $node['meta'] ) ? $node['meta'] : [];
+        $classes  = isset( $meta['class'] ) ? trim( $meta['class'] ) : '';
+        $children = self::get_admin_bar_node_children( $nodes, $id );
+
+        if ( ! empty( $children ) && false === strpos( $classes, 'menupop' ) ) {
+            $classes = trim( 'menupop ' . $classes );
+        }
+
+        $html  = '<li role="group" id="wp-admin-bar-' . esc_attr( $id ) . '"' . ( '' !== $classes ? ' class="' . esc_attr( $classes ) . '"' : '' ) . '>';
+        $html .= self::render_admin_bar_node_item_html( $node, ! empty( $children ) );
+
+        if ( ! empty( $children ) ) {
+            $html .= '<div class="ab-sub-wrapper"><ul role="menu" id="wp-admin-bar-' . esc_attr( $id ) . '-default" class="ab-submenu">';
+
+            foreach ( $children as $child ) {
+                $html .= self::render_admin_bar_node_html( $child, $nodes );
+            }
+
+            $html .= '</ul></div>';
+        }
+
+        $html .= '</li>';
+
+        return $html;
+    }
+
+    /**
+     * Render the clickable or static content for one admin bar node.
+     *
+     * @param array $node Admin bar node.
+     * @param bool  $has_children Whether this node has a submenu.
+     * @return string Node item HTML.
+     */
+    private static function render_admin_bar_node_item_html( $node, $has_children ) {
+        $title  = isset( $node['title'] ) ? $node['title'] : '';
+        $href   = isset( $node['href'] ) ? $node['href'] : '';
+        $meta   = isset( $node['meta'] ) && is_array( $node['meta'] ) ? $node['meta'] : [];
+        $target = isset( $meta['target'] ) && '' !== $meta['target'] ? ' target="' . esc_attr( $meta['target'] ) . '"' : '';
+
+        if ( '' === $href ) {
+            return '<div class="ab-item ab-empty-item"' . ( $has_children ? ' aria-expanded="false"' : '' ) . '>' . $title . '</div>';
+        }
+
+        return '<a class="ab-item" role="menuitem" href="' . esc_url( $href ) . '"' . $target . ( $has_children ? ' aria-expanded="false"' : '' ) . '>' . $title . '</a>';
+    }
+
+    /**
+     * Send a JSON success response with a test-friendly fallback.
+     *
+     * @param array $data Response data.
+     */
+    private static function send_json_success( $data ) {
+        if ( function_exists( 'wp_send_json_success' ) ) {
+            wp_send_json_success( $data );
+            return;
+        }
+
+        echo wp_json_encode(
+            [
+                'success' => true,
+                'data'    => $data,
+            ]
+        );
+    }
+
+    /**
+     * Send a JSON error response with a test-friendly fallback.
+     *
+     * @param array $data Response data.
+     * @param int   $status HTTP status code.
+     */
+    private static function send_json_error( $data, $status = 400 ) {
+        if ( function_exists( 'wp_send_json_error' ) ) {
+            wp_send_json_error( $data, $status );
+            return;
+        }
+
+        echo wp_json_encode(
+            [
+                'success' => false,
+                'data'    => $data,
+                'status'  => $status,
+            ]
+        );
+    }
+
+    /**
+     * Add global app links in the saved settings order.
+     *
+     * @param object $wp_admin_bar Admin bar object.
+     */
+    public static function add_wp_admin_bar_admin_context_items_for_all( $wp_admin_bar ) {
+        foreach ( array_keys( \WpApp\Settings::get_registered_apps() ) as $app_path ) {
+            $masterbar = self::get_instance_for_app( $app_path );
+
+            if ( $masterbar instanceof self ) {
+                $masterbar->add_wp_admin_bar_admin_context_items( $wp_admin_bar );
+            }
+        }
     }
 
     /**
