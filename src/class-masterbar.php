@@ -1786,22 +1786,7 @@ class Masterbar {
         $title    = '<span class="wp-app-link-title">';
 
         if ( ! empty( $settings['show_icon'] ) ) {
-            $icon_url = isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '';
-            $dashicon = isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '';
-            $icon     = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
-
-            $style = self::get_app_icon_style_attr( $metadata );
-
-            if ( '' !== $icon ) {
-                $title .= self::get_app_icon_html( $icon, $style );
-            } elseif ( $dashicon ) {
-                $title .= self::get_app_icon_html( $dashicon, $style );
-            } elseif ( $icon_url ) {
-                $title .= self::get_app_image_icon_html( $icon_url );
-            } else {
-                $letter = strtoupper( substr( $app_name, 0, 1 ) );
-                $title .= '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true"' . $style . '>' . esc_html( $letter ) . '</span>';
-            }
+            $title .= self::get_app_link_icon_html_for_app( $app_path, $metadata, $app_name );
         }
 
         if ( $force_show_text || ! empty( $settings['show_text'] ) ) {
@@ -1813,6 +1798,66 @@ class Masterbar {
         $title .= '</span>';
 
         return $title;
+    }
+
+    /**
+     * Get icon HTML for a registered app link.
+     *
+     * @param string      $app_path App URL path.
+     * @param array       $metadata App metadata.
+     * @param string|null $fallback_name Optional fallback display name.
+     * @param bool        $hidden Whether the icon should be hidden in previews.
+     * @return string Icon HTML.
+     */
+    public static function get_app_link_icon_html_for_app( $app_path, $metadata, $fallback_name = null, $hidden = false ) {
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
+        $metadata = self::get_app_icon_metadata_for_app( $app_path, $metadata );
+        $app_name = self::get_app_display_name_for_app( $app_path, $metadata, $fallback_name );
+        $icon_url = isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '';
+        $dashicon = isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '';
+        $icon     = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
+        $style    = self::get_app_icon_style_attr( $metadata );
+
+        if ( '' !== $icon ) {
+            if ( self::is_app_icon_url( $icon ) ) {
+                return self::get_app_image_icon_html( $icon, $hidden );
+            }
+
+            return self::get_app_icon_html( $icon, $style, $hidden );
+        }
+
+        if ( $dashicon ) {
+            return self::get_app_icon_html( $dashicon, $style, $hidden );
+        }
+
+        if ( $icon_url ) {
+            return self::get_app_image_icon_html( $icon_url, $hidden );
+        }
+
+        $letter = strtoupper( substr( $app_name, 0, 1 ) );
+        return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true"' . ( $hidden ? ' hidden' : '' ) . $style . '>' . esc_html( $letter ) . '</span>';
+    }
+
+    /**
+     * Get effective metadata for an app icon, including settings overrides.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $metadata App metadata.
+     * @return array App metadata with icon style overrides applied.
+     */
+    private static function get_app_icon_metadata_for_app( $app_path, $metadata ) {
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
+        $metadata = is_array( $metadata ) ? $metadata : [];
+
+        foreach ( [ 'icon_background', 'icon_color' ] as $key ) {
+            $value = isset( $settings[ $key ] ) ? WpApp::sanitize_icon_css_value( $settings[ $key ] ) : '';
+
+            if ( '' !== $value ) {
+                $metadata[ $key ] = $value;
+            }
+        }
+
+        return $metadata;
     }
 
     /**
@@ -1852,13 +1897,20 @@ class Masterbar {
     /**
      * Get icon HTML for a text or Dashicon class override.
      */
-    private static function get_app_icon_html( $icon, $style = '' ) {
+    private static function get_app_icon_html( $icon, $style = '', $hidden = false ) {
         if ( preg_match( '/^dashicons-[a-z0-9-]+$/', $icon ) ) {
             $class = 'wp-app-link-icon wp-app-link-icon-dashicon' . ( '' !== $style ? ' wp-app-link-icon-styled' : '' );
-            return '<span class="' . $class . '" aria-hidden="true"' . $style . '><span class="dashicons ' . esc_attr( $icon ) . '"></span></span>';
+            return '<span class="' . $class . '" aria-hidden="true"' . ( $hidden ? ' hidden' : '' ) . $style . '><span class="dashicons ' . esc_attr( $icon ) . '"></span></span>';
         }
 
-        return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true"' . $style . '>' . esc_html( $icon ) . '</span>';
+        return '<span class="wp-app-link-icon wp-app-link-icon-generated" aria-hidden="true"' . ( $hidden ? ' hidden' : '' ) . $style . '>' . esc_html( $icon ) . '</span>';
+    }
+
+    /**
+     * Whether an icon setting is an image URL.
+     */
+    private static function is_app_icon_url( $icon ) {
+        return is_string( $icon ) && preg_match( '#^https?://#i', trim( $icon ) );
     }
 
     /**
@@ -1868,6 +1920,22 @@ class Masterbar {
      * @return string Empty string or a leading-space ` style="..."` attribute.
      */
     private static function get_app_icon_style_attr( $metadata ) {
+        $style = self::get_app_icon_style_css( $metadata );
+
+        if ( '' === $style ) {
+            return '';
+        }
+
+        return ' style="' . esc_attr( $style ) . '"';
+    }
+
+    /**
+     * Build the inline style declarations for an app's icon tile colours.
+     *
+     * @param array $metadata App metadata with optional icon_background / icon_color.
+     * @return string Empty string or CSS declarations.
+     */
+    public static function get_app_icon_style_css( $metadata ) {
         $rules = [];
 
         $background = isset( $metadata['icon_background'] ) ? WpApp::sanitize_icon_css_value( $metadata['icon_background'] ) : '';
@@ -1880,11 +1948,18 @@ class Masterbar {
             $rules[] = 'color: ' . $color;
         }
 
-        if ( empty( $rules ) ) {
-            return '';
-        }
+        return implode( '; ', $rules );
+    }
 
-        return ' style="' . esc_attr( implode( '; ', $rules ) ) . '"';
+    /**
+     * Build the effective inline style declarations for an app's icon tile.
+     *
+     * @param string $app_path App URL path.
+     * @param array  $metadata App metadata with optional icon_background / icon_color.
+     * @return string Empty string or CSS declarations.
+     */
+    public static function get_app_icon_style_css_for_app( $app_path, $metadata ) {
+        return self::get_app_icon_style_css( self::get_app_icon_metadata_for_app( $app_path, $metadata ) );
     }
 
     /**
@@ -1893,8 +1968,8 @@ class Masterbar {
      * @param string $icon_url Icon URL.
      * @return string Icon HTML.
      */
-    private static function get_app_image_icon_html( $icon_url ) {
-        return '<span class="wp-app-link-icon wp-app-link-icon-image"><img src="' . esc_url( $icon_url ) . '" alt="" decoding="async"></span>';
+    private static function get_app_image_icon_html( $icon_url, $hidden = false ) {
+        return '<span class="wp-app-link-icon wp-app-link-icon-image"' . ( $hidden ? ' hidden' : '' ) . '><img src="' . esc_url( $icon_url ) . '" alt="" decoding="async"></span>';
     }
 
     /**

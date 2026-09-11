@@ -33,6 +33,8 @@ class MasterbarSettingsTest extends TestCase {
                     'team/tools' => [
                         'title'                => '<b>Team Tools</b>',
                         'icon'                 => 'dashicons-admin-site',
+                        'icon_background'      => 'linear-gradient(135deg, #f7971e, #ffd200)',
+                        'icon_color'           => '#fff',
                         'show_icon'            => '1',
                         'generate_letter_icon' => '0',
                         'show_text'            => '1',
@@ -49,8 +51,26 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertArrayHasKey( 'team/tools', $settings['apps'] );
         $this->assertSame( 'Team Tools', $settings['apps']['team/tools']['title'] );
         $this->assertSame( 'dashicons-admin-site', $settings['apps']['team/tools']['icon'] );
+        $this->assertSame( 'linear-gradient(135deg, #f7971e, #ffd200)', $settings['apps']['team/tools']['icon_background'] );
+        $this->assertSame( '#fff', $settings['apps']['team/tools']['icon_color'] );
         $this->assertTrue( $settings['apps']['team/tools']['show_icon'] );
         $this->assertFalse( $settings['apps']['team/tools']['generate_letter_icon'] );
+    }
+
+    public function test_sanitize_settings_rejects_unsafe_icon_color_values() {
+        $settings = Settings::sanitize_settings(
+            [
+                'apps' => [
+                    'unsafe-icon-style-app' => [
+                        'icon_background' => 'url(https://example.org/icon.png)',
+                        'icon_color'      => 'red" onclick="alert(1)',
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertSame( '', $settings['apps']['unsafe-icon-style-app']['icon_background'] );
+        $this->assertSame( '', $settings['apps']['unsafe-icon-style-app']['icon_color'] );
     }
 
     public function test_only_show_active_app_defaults_on() {
@@ -881,6 +901,40 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringNotContainsString( 'mask:', Masterbar::get_app_link_styles( '#wpadminbar' ) );
     }
 
+    public function test_settings_preview_uses_metadata_image_icon_markup() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp(
+            '',
+            'cookbook-preview-icon-app',
+            [
+                'app_name'     => 'Cookbook',
+                'my_apps_icon' => 'https://example.org/wp-content/plugins/cookbook/assets/icon.svg',
+            ]
+        );
+        $app->init();
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'apps' => [
+                'cookbook-preview-icon-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => true,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( '<span class="wp-app-link-icon wp-app-link-icon-image"><img src="https://example.org/wp-content/plugins/cookbook/assets/icon.svg" alt="" decoding="async"></span>', $html );
+        $this->assertStringNotContainsString( '<span class="wp-app-link-icon">C</span>', $html );
+    }
+
     public function test_my_apps_icon_dashicon_is_available_to_masterbar_metadata() {
         global $__wp_app_test_options;
 
@@ -917,6 +971,78 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'dashicons-admin-site', $title );
     }
 
+    public function test_app_icon_color_settings_override_metadata_in_masterbar() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp(
+            '',
+            'styled-settings-icon-app',
+            [
+                'app_name'            => 'Styled Settings Icon App',
+                'my_apps_icon'        => 'dashicons-admin-site',
+                'app_icon_background' => '#111111',
+                'app_icon_color'      => '#eeeeee',
+            ]
+        );
+        $app->init();
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app' => false,
+            'apps'                 => [
+                'styled-settings-icon-app' => [
+                    'title'                => '',
+                    'icon'                 => '',
+                    'icon_background'      => '#123456',
+                    'icon_color'           => '#ffffff',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => true,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $title = $admin_bar->nodes['wp-app-link-styled_settings_icon_app']['title'];
+
+        $this->assertStringContainsString( 'wp-app-link-icon-styled', $title );
+        $this->assertStringContainsString( 'style="background: #123456; color: #ffffff"', $title );
+        $this->assertStringNotContainsString( '#111111', $title );
+        $this->assertStringNotContainsString( '#eeeeee', $title );
+    }
+
+    public function test_icon_url_setting_renders_as_image_in_masterbar() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'custom-url-icon-app', [ 'app_name' => 'Custom URL Icon App' ] );
+        $app->init();
+
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app' => false,
+            'apps'                 => [
+                'custom-url-icon-app' => [
+                    'title'                => '',
+                    'icon'                 => 'https://example.org/wp-content/plugins/custom-url-icon-app/icon.svg',
+                    'show_icon'            => true,
+                    'generate_letter_icon' => false,
+                    'show_text'            => true,
+                    'always_show'          => false,
+                ],
+            ],
+        ];
+
+        $admin_bar = new FakeAdminBar();
+        $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+
+        $title = $admin_bar->nodes['wp-app-link-custom_url_icon_app']['title'];
+
+        $this->assertStringContainsString( 'wp-app-link-icon-image', $title );
+        $this->assertStringContainsString( '<img src="https://example.org/wp-content/plugins/custom-url-icon-app/icon.svg" alt="" decoding="async">', $title );
+        $this->assertStringNotContainsString( 'wp-app-link-icon-generated', $title );
+    }
+
     public function test_settings_preview_uses_metadata_dashicon() {
         global $__wp_app_test_options;
 
@@ -947,9 +1073,87 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( '<span class="wp-app-link-icon"><span class="dashicons dashicons-welcome-learn-more"></span></span>', $html );
+        $this->assertStringContainsString( '<span class="wp-app-link-icon wp-app-link-icon-dashicon" aria-hidden="true"><span class="dashicons dashicons-welcome-learn-more"></span></span>', $html );
         $this->assertStringContainsString( 'dashicons dashicons-welcome-learn-more', $html );
-        $this->assertStringNotContainsString( '<span class="wp-app-link-icon" hidden', $html );
+        $this->assertStringNotContainsString( '<span class="wp-app-link-icon wp-app-link-icon-dashicon" aria-hidden="true" hidden', $html );
+    }
+
+    public function test_settings_icon_control_shows_editable_metadata_dashicon_default() {
+        $app = new WpApp(
+            '',
+            'editable-default-dashicon-app',
+            [
+                'app_name'     => 'Editable Default Dashicon App',
+                'my_apps_icon' => 'dashicons-admin-site',
+            ]
+        );
+        $app->init();
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'data-wp-app-setting="icon"', $html );
+        $this->assertStringContainsString( 'value="dashicons-admin-site"', $html );
+        $this->assertStringContainsString( 'placeholder="e.g. dashicons-admin-site or https://example.org/icon.svg"', $html );
+    }
+
+    public function test_settings_icon_control_includes_dashicon_datalist() {
+        $app = new WpApp( '', 'dashicon-datalist-app', [ 'app_name' => 'Dashicon Datalist App' ] );
+        $app->init();
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'list="wp-app-dashicon-options"', $html );
+        $this->assertStringContainsString( '<datalist id="wp-app-dashicon-options">', $html );
+        $this->assertStringContainsString( 'value="dashicons-admin-home"', $html );
+        $this->assertStringNotContainsString( 'value="dashicons-home"', $html );
+    }
+
+    public function test_settings_icon_control_shows_editable_metadata_url_default() {
+        $app = new WpApp(
+            '',
+            'editable-default-url-icon-app',
+            [
+                'app_name'     => 'Editable Default URL Icon App',
+                'my_apps_icon' => 'https://example.org/wp-content/plugins/editable-default-url-icon-app/icon.svg',
+            ]
+        );
+        $app->init();
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'data-wp-app-setting="icon"', $html );
+        $this->assertStringContainsString( 'value="https://example.org/wp-content/plugins/editable-default-url-icon-app/icon.svg"', $html );
+    }
+
+    public function test_settings_color_controls_show_editable_metadata_defaults() {
+        $app = new WpApp(
+            '',
+            'editable-default-colors-app',
+            [
+                'app_name'            => 'Editable Default Colors App',
+                'my_apps_icon'        => 'dashicons-admin-site',
+                'app_icon_background' => 'linear-gradient(135deg, #f7971e, #ffd200)',
+                'app_icon_color'      => '#fff',
+            ]
+        );
+        $app->init();
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'data-wp-app-setting="icon_background"', $html );
+        $this->assertStringContainsString( 'value="linear-gradient(135deg, #f7971e, #ffd200)"', $html );
+        $this->assertStringContainsString( 'data-wp-app-setting="icon_color"', $html );
+        $this->assertStringContainsString( 'value="#fff"', $html );
+        $this->assertStringContainsString( 'placeholder="e.g. #2271b1 or linear-gradient(135deg, #f7971e, #ffd200)"', $html );
+        $this->assertStringContainsString( 'placeholder="e.g. #fff"', $html );
     }
 
     public function test_registered_app_metadata_includes_wp_app_package_versions() {

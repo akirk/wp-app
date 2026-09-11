@@ -99,6 +99,8 @@ class Settings {
         return [
             'title'                => '',
             'icon'                 => '',
+            'icon_background'      => '',
+            'icon_color'           => '',
             'show_icon'            => true,
             'generate_letter_icon' => true,
             'show_text'            => true,
@@ -229,6 +231,8 @@ class Settings {
                 $apps[ $app_path ] = [
                     'title'                => isset( $app_settings['title'] ) ? sanitize_text_field( $app_settings['title'] ) : '',
                     'icon'                 => isset( $app_settings['icon'] ) ? sanitize_text_field( $app_settings['icon'] ) : '',
+                    'icon_background'      => isset( $app_settings['icon_background'] ) ? WpApp::sanitize_icon_css_value( $app_settings['icon_background'] ) : '',
+                    'icon_color'           => isset( $app_settings['icon_color'] ) ? WpApp::sanitize_icon_css_value( $app_settings['icon_color'] ) : '',
                     'show_icon'            => ! empty( $app_settings['show_icon'] ),
                     'generate_letter_icon' => ! empty( $app_settings['generate_letter_icon'] ),
                     'show_text'            => ! empty( $app_settings['show_text'] ),
@@ -630,6 +634,8 @@ class Settings {
                             data-default-letter="<?php echo esc_attr( strtoupper( substr( $app_name, 0, 1 ) ) ); ?>"
                             data-default-dashicon="<?php echo esc_attr( isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '' ); ?>"
                             data-icon-url="<?php echo esc_url( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' ); ?>"
+                            data-default-icon-background="<?php echo esc_attr( isset( $metadata['icon_background'] ) ? $metadata['icon_background'] : '' ); ?>"
+                            data-default-icon-color="<?php echo esc_attr( isset( $metadata['icon_color'] ) ? $metadata['icon_color'] : '' ); ?>"
                             data-force-show-text="0"
                             data-app-path="<?php echo esc_attr( $app_path ); ?>"
                         >
@@ -696,10 +702,43 @@ class Settings {
                                                         type="text"
                                                         name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon' ) ); ?>"
                                                         data-wp-app-setting="icon"
-                                                        value="<?php echo esc_attr( $app_settings['icon'] ); ?>"
-                                                        placeholder="<?php echo esc_attr__( 'e.g. dashicons-admin-site' ); ?>"
+                                                        value="<?php echo esc_attr( self::get_effective_app_icon_value( $app_settings, $metadata ) ); ?>"
+                                                        list="wp-app-dashicon-options"
+                                                        placeholder="<?php echo esc_attr__( 'e.g. dashicons-admin-site or https://example.org/icon.svg' ); ?>"
                                                     >
-                                                    <p class="description"><?php echo esc_html__( 'Use an emoji or' ); ?> <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank" rel="noopener noreferrer"><?php echo esc_html__( 'Dashicon' ); ?></a> <?php echo esc_html__( 'class.' ); ?></p>
+                                                    <p class="description"><?php echo esc_html__( 'Use an image URL, emoji or' ); ?> <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank" rel="noopener noreferrer"><?php echo esc_html__( 'Dashicon' ); ?></a> <?php echo esc_html__( 'class.' ); ?></p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">
+                                                    <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_background' ) ); ?>"><?php echo esc_html__( 'Icon background' ); ?></label>
+                                                </th>
+                                                <td>
+                                                    <input
+                                                        id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_background' ) ); ?>"
+                                                        class="regular-text"
+                                                        type="text"
+                                                        name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon_background' ) ); ?>"
+                                                        data-wp-app-setting="icon_background"
+                                                        value="<?php echo esc_attr( self::get_effective_app_setting_value( $app_settings, $metadata, 'icon_background' ) ); ?>"
+                                                        placeholder="<?php echo esc_attr__( 'e.g. #2271b1 or linear-gradient(135deg, #f7971e, #ffd200)' ); ?>"
+                                                    >
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">
+                                                    <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_color' ) ); ?>"><?php echo esc_html__( 'Icon foreground' ); ?></label>
+                                                </th>
+                                                <td>
+                                                    <input
+                                                        id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_color' ) ); ?>"
+                                                        class="regular-text"
+                                                        type="text"
+                                                        name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon_color' ) ); ?>"
+                                                        data-wp-app-setting="icon_color"
+                                                        value="<?php echo esc_attr( self::get_effective_app_setting_value( $app_settings, $metadata, 'icon_color' ) ); ?>"
+                                                        placeholder="<?php echo esc_attr__( 'e.g. #fff' ); ?>"
+                                                    >
                                                 </td>
                                             </tr>
                                         </table>
@@ -719,6 +758,7 @@ class Settings {
                             </div>
                         </section>
                     <?php endforeach; ?>
+                    <?php self::render_dashicon_datalist(); ?>
                 </div>
 
                 <?php submit_button(); ?>
@@ -1005,11 +1045,66 @@ class Settings {
                     const forceShowText = card.dataset.forceShowText === "1";
                     const title = titleField.value.trim() || defaultTitle;
                     const icon = iconField.value.trim();
+                    const iconBackgroundField = card.querySelector("[data-wp-app-setting='icon_background']");
+                    const iconColorField = card.querySelector("[data-wp-app-setting='icon_color']");
+                    const iconBackground = sanitizeIconCssValue(iconBackgroundField ? iconBackgroundField.value : "") || sanitizeIconCssValue(card.dataset.defaultIconBackground || "");
+                    const iconColor = sanitizeIconCssValue(iconColorField ? iconColorField.value : "") || sanitizeIconCssValue(card.dataset.defaultIconColor || "");
                     const showTextField = card.querySelector("[data-wp-app-setting='show_text']");
                     const showIconField = card.querySelector("[data-wp-app-setting='show_icon']");
                     const preview = card.querySelector(".wp-app-masterbar-preview-wrap");
                     const iconWrap = preview.querySelector(".wp-app-link-icon");
                     const textWrap = preview.querySelector(".wp-app-link-text");
+
+                    function sanitizeIconCssValue(value) {
+                        value = (value || "").replace(/\s+/g, " ").trim();
+
+                        if (!value || value.length > 300 || /[^a-z0-9#.,%()\/\s+-]/i.test(value)) {
+                            return "";
+                        }
+
+                        if ((value.match(/\(/g) || []).length !== (value.match(/\)/g) || []).length) {
+                            return "";
+                        }
+
+                        if (/(^|[^a-z-])(url|var|attr|expression|image-set|element|env)\s*\(/i.test(value)) {
+                            return "";
+                        }
+
+                        return value;
+                    }
+
+                    function getIconStyle() {
+                        const rules = [];
+
+                        if (iconBackground) {
+                            rules.push("background: " + iconBackground);
+                        }
+
+                        if (iconColor) {
+                            rules.push("color: " + iconColor);
+                        }
+
+                        return rules.join("; ");
+                    }
+
+                    function resetIcon(kind, useStyle) {
+                        const iconStyle = useStyle ? getIconStyle() : "";
+                        iconWrap.className = "wp-app-link-icon wp-app-link-icon-" + kind + (kind === "dashicon" && iconStyle ? " wp-app-link-icon-styled" : "");
+                        iconWrap.removeAttribute("style");
+
+                        if (iconStyle) {
+                            iconWrap.style.cssText = iconStyle;
+                        }
+                    }
+
+                    function renderImageIcon(url) {
+                        const img = document.createElement("img");
+                        resetIcon("image", false);
+                        img.alt = "";
+                        img.decoding = "async";
+                        img.src = url;
+                        iconWrap.appendChild(img);
+                    }
 
                     textWrap.textContent = title;
                     textWrap.hidden = !forceShowText && !showTextField.checked;
@@ -1025,21 +1120,24 @@ class Settings {
                     if (icon) {
                         if (/^dashicons-[a-z0-9-]+$/.test(icon)) {
                             const span = document.createElement("span");
+                            resetIcon("dashicon", true);
                             span.className = "dashicons " + icon;
                             iconWrap.appendChild(span);
+                        } else if (/^https?:\/\//i.test(icon)) {
+                            renderImageIcon(icon);
                         } else {
+                            resetIcon("generated", true);
                             iconWrap.textContent = icon;
                         }
                     } else if (defaultDashicon) {
                         const span = document.createElement("span");
+                        resetIcon("dashicon", true);
                         span.className = "dashicons " + defaultDashicon;
                         iconWrap.appendChild(span);
                     } else if (iconUrl) {
-                        const img = document.createElement("img");
-                        img.alt = "";
-                        img.src = iconUrl;
-                        iconWrap.appendChild(img);
+                        renderImageIcon(iconUrl);
                     } else {
+                        resetIcon("generated", true);
                         iconWrap.textContent = (title.charAt(0) || card.dataset.defaultLetter || "").toUpperCase();
                     }
                 }
@@ -1222,6 +1320,158 @@ class Settings {
     }
 
     /**
+     * Render reusable Dashicon suggestions for icon fields.
+     */
+    private static function render_dashicon_datalist() {
+        $dashicons = [
+            'dashicons-admin-appearance',
+            'dashicons-admin-comments',
+            'dashicons-admin-generic',
+            'dashicons-admin-home',
+            'dashicons-admin-links',
+            'dashicons-admin-media',
+            'dashicons-admin-network',
+            'dashicons-admin-page',
+            'dashicons-admin-plugins',
+            'dashicons-admin-post',
+            'dashicons-admin-settings',
+            'dashicons-admin-site',
+            'dashicons-admin-tools',
+            'dashicons-admin-users',
+            'dashicons-airplane',
+            'dashicons-analytics',
+            'dashicons-archive',
+            'dashicons-art',
+            'dashicons-awards',
+            'dashicons-bank',
+            'dashicons-book',
+            'dashicons-businessman',
+            'dashicons-businessperson',
+            'dashicons-calendar',
+            'dashicons-camera',
+            'dashicons-car',
+            'dashicons-cart',
+            'dashicons-category',
+            'dashicons-chart-area',
+            'dashicons-chart-bar',
+            'dashicons-chart-line',
+            'dashicons-chart-pie',
+            'dashicons-clipboard',
+            'dashicons-clock',
+            'dashicons-cloud',
+            'dashicons-coffee',
+            'dashicons-controls-play',
+            'dashicons-dashboard',
+            'dashicons-database',
+            'dashicons-desktop',
+            'dashicons-editor-code',
+            'dashicons-editor-help',
+            'dashicons-editor-ol',
+            'dashicons-editor-spellcheck',
+            'dashicons-editor-table',
+            'dashicons-editor-ul',
+            'dashicons-email',
+            'dashicons-excerpt-view',
+            'dashicons-feedback',
+            'dashicons-filter',
+            'dashicons-food',
+            'dashicons-format-aside',
+            'dashicons-format-audio',
+            'dashicons-format-chat',
+            'dashicons-format-gallery',
+            'dashicons-format-image',
+            'dashicons-format-quote',
+            'dashicons-format-status',
+            'dashicons-format-video',
+            'dashicons-forms',
+            'dashicons-games',
+            'dashicons-groups',
+            'dashicons-hammer',
+            'dashicons-heart',
+            'dashicons-id',
+            'dashicons-images-alt2',
+            'dashicons-index-card',
+            'dashicons-info',
+            'dashicons-laptop',
+            'dashicons-lightbulb',
+            'dashicons-location',
+            'dashicons-location-alt',
+            'dashicons-lock',
+            'dashicons-megaphone',
+            'dashicons-money-alt',
+            'dashicons-networking',
+            'dashicons-palmtree',
+            'dashicons-paperclip',
+            'dashicons-performance',
+            'dashicons-pets',
+            'dashicons-portfolio',
+            'dashicons-products',
+            'dashicons-randomize',
+            'dashicons-rest-api',
+            'dashicons-rss',
+            'dashicons-schedule',
+            'dashicons-search',
+            'dashicons-share',
+            'dashicons-shield',
+            'dashicons-smartphone',
+            'dashicons-sos',
+            'dashicons-star-filled',
+            'dashicons-store',
+            'dashicons-superhero',
+            'dashicons-tag',
+            'dashicons-tickets',
+            'dashicons-universal-access',
+            'dashicons-update',
+            'dashicons-vault',
+            'dashicons-video-alt3',
+            'dashicons-welcome-learn-more',
+            'dashicons-welcome-write-blog',
+            'dashicons-wordpress',
+        ];
+        ?>
+        <datalist id="wp-app-dashicon-options">
+            <?php foreach ( $dashicons as $dashicon ) : ?>
+                <option value="<?php echo esc_attr( $dashicon ); ?>"></option>
+            <?php endforeach; ?>
+        </datalist>
+        <?php
+    }
+
+    /**
+     * Get an editable setting value, falling back to app metadata defaults.
+     */
+    private static function get_effective_app_setting_value( $app_settings, $metadata, $field ) {
+        if ( isset( $app_settings[ $field ] ) && '' !== trim( (string) $app_settings[ $field ] ) ) {
+            return $app_settings[ $field ];
+        }
+
+        if ( isset( $metadata[ $field ] ) && '' !== trim( (string) $metadata[ $field ] ) ) {
+            return $metadata[ $field ];
+        }
+
+        return '';
+    }
+
+    /**
+     * Get the editable icon value, falling back to app metadata defaults.
+     */
+    private static function get_effective_app_icon_value( $app_settings, $metadata ) {
+        if ( isset( $app_settings['icon'] ) && '' !== trim( (string) $app_settings['icon'] ) ) {
+            return $app_settings['icon'];
+        }
+
+        if ( isset( $metadata['dashicon'] ) && '' !== trim( (string) $metadata['dashicon'] ) ) {
+            return $metadata['dashicon'];
+        }
+
+        if ( isset( $metadata['icon_url'] ) && '' !== trim( (string) $metadata['icon_url'] ) ) {
+            return $metadata['icon_url'];
+        }
+
+        return '';
+    }
+
+    /**
      * Render the saved-state preview for one app.
      */
     private static function render_preview( $app_settings, $metadata, $app_name, $app_path, $force_show_text = false ) {
@@ -1237,7 +1487,7 @@ class Settings {
                         <li role="group" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) ); ?>" class="<?php echo ! empty( $menu_items ) ? 'menupop ' : ''; ?>wp-app-admin-link">
                             <a class="ab-item" role="menuitem" href="<?php echo esc_url( isset( $metadata['url'] ) ? $metadata['url'] : '#' ); ?>"<?php echo ! empty( $menu_items ) ? ' aria-expanded="false"' : ''; ?>>
                                 <span class="wp-app-link-title">
-                                    <?php self::render_preview_icon( $app_settings, $metadata, $title ); ?>
+                                    <?php self::render_preview_icon( $app_path, $app_settings, $metadata, $title ); ?>
                                     <span class="wp-app-link-text" <?php echo $show_text ? '' : 'hidden'; ?>><?php echo esc_html( $title ); ?></span>
                                 </span>
                             </a>
@@ -1766,26 +2016,16 @@ class Settings {
     /**
      * Render the saved-state preview icon for one app.
      */
-    private static function render_preview_icon( $app_settings, $metadata, $title ) {
-        $icon   = isset( $app_settings['icon'] ) ? trim( $app_settings['icon'] ) : '';
+    private static function render_preview_icon( $app_path, $app_settings, $metadata, $title ) {
         $hidden = empty( $app_settings['show_icon'] );
 
-        echo '<span class="wp-app-link-icon"' . ( $hidden ? ' hidden' : '' ) . '>';
-
-        if ( '' !== $icon ) {
-            if ( self::is_dashicon_value( $icon ) ) {
-                echo '<span class="dashicons ' . esc_attr( $icon ) . '"></span>';
-            } else {
-                echo esc_html( $icon );
-            }
-        } elseif ( ! empty( $metadata['dashicon'] ) ) {
-            echo '<span class="dashicons ' . esc_attr( $metadata['dashicon'] ) . '"></span>';
-        } elseif ( ! empty( $metadata['icon_url'] ) ) {
-            echo '<img src="' . esc_url( $metadata['icon_url'] ) . '" alt="">';
-        } else {
-            echo esc_html( strtoupper( substr( $title, 0, 1 ) ) );
+        if ( class_exists( __NAMESPACE__ . '\Masterbar' ) && method_exists( __NAMESPACE__ . '\Masterbar', 'get_app_link_icon_html_for_app' ) ) {
+            echo Masterbar::get_app_link_icon_html_for_app( $app_path, $metadata, $title, $hidden );
+            return;
         }
 
+        echo '<span class="wp-app-link-icon wp-app-link-icon-generated"' . ( $hidden ? ' hidden' : '' ) . '>';
+        echo esc_html( strtoupper( substr( $title, 0, 1 ) ) );
         echo '</span>';
     }
 
@@ -1893,13 +2133,6 @@ class Settings {
             'label'   => '',
             'message' => '',
         ];
-    }
-
-    /**
-     * Check if an icon override should be rendered as a dashicon.
-     */
-    private static function is_dashicon_value( $icon ) {
-        return is_string( $icon ) && preg_match( '/^dashicons-[a-z0-9-]+$/', $icon );
     }
 
     /**
