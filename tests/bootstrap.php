@@ -27,6 +27,12 @@ if ( ! function_exists( 'did_action' ) ) {
 	}
 }
 
+if ( ! function_exists( 'status_header' ) ) {
+	function status_header( $code ) {
+		return $code;
+	}
+}
+
 if ( ! function_exists( '_doing_it_wrong' ) ) {
 	function _doing_it_wrong( $function_name, $message, $version ) {
 		global $__wp_app_test_doing_it_wrong;

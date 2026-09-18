@@ -42,6 +42,19 @@ class RouterTest extends TestCase {
         $this->assertEquals( [ 'id' ], $routes[0]['vars'] );
     }
 
+    public function test_fallback_404_loads_stylesheet_without_inline_styles() {
+        $this->router = new Router( '/test/templates', 'cookbook' );
+
+        ob_start();
+        $this->router->handle_app_request_directly( 'missing' );
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString( 'id="wp-app-404-css"', $output );
+        $this->assertStringContainsString( 'wp-app-404.css?ver=' . WP_APP_VERSION, $output );
+        $this->assertStringNotContainsString( '<style', $output );
+        $this->assertStringNotContainsString( ' style=', $output );
+    }
+
     public function test_pattern_to_regex() {
         $this->router->add_route( 'test/{id}/edit/{action}', 'test.php', [ 'id', 'action' ] );
 

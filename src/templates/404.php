@@ -15,109 +15,11 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 <html <?php wp_app_language_attributes(); ?>>
 <head>
 	<title><?php wp_app_the_title( 'Page Not Found' ); ?></title>
-	<?php wp_app_head(); ?>
+	<?php
+	wp_app_enqueue_style( 'wp-app-404', wp_app_get_asset_url( 'wp-app-404.css' ), [], WP_APP_VERSION, $app_path ? $app_path : 'global' );
+	wp_app_head();
+	?>
 
-	<style>
-		/* Default 404 styles - included inline to avoid external dependencies */
-		.wp-app-404-container {
-			max-width: 600px;
-			margin: 100px auto;
-			padding: 40px;
-			background: var(--wp-app-color-surface);
-			border-radius: 10px;
-			border: 1px solid var(--wp-app-color-border);
-			box-shadow: 0 2px 10px var(--wp-app-color-border);
-			text-align: center;
-			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-		}
-
-		.wp-app-404-code {
-			font-size: 72px;
-			font-weight: bold;
-			color: var(--wp-app-color-error);
-			margin-bottom: 20px;
-		}
-
-		.wp-app-404-title {
-			font-size: 32px;
-			color: var(--wp-app-color-text);
-			margin-bottom: 20px;
-		}
-
-		.wp-app-404-message {
-			font-size: 18px;
-			color: var(--wp-app-color-muted);
-			margin-bottom: 30px;
-		}
-
-		.wp-app-404-path {
-			background: var(--wp-app-color-surface-alt);
-			padding: 10px;
-			border-radius: 5px;
-			font-family: monospace;
-			color: var(--wp-app-color-text);
-			margin-bottom: 30px;
-			word-break: break-all;
-		}
-
-		.wp-app-404-buttons {
-			display: flex;
-			gap: 15px;
-			justify-content: center;
-			flex-wrap: wrap;
-		}
-
-		.wp-app-404-button {
-			display: inline-block;
-			padding: 12px 24px;
-			text-decoration: none;
-			border-radius: 5px;
-			font-weight: 500;
-			transition: all 0.3s ease;
-		}
-
-		body.wp-app-body .wp-app-404-button-primary {
-			background: var(--wp-app-color-primary);
-			color: var(--wp-app-color-on-primary);
-		}
-
-		body.wp-app-body .wp-app-404-button-primary:hover,
-		body.wp-app-body .wp-app-404-button-primary:focus {
-			background: var(--wp-app-color-primary-hover);
-			color: var(--wp-app-color-on-primary);
-		}
-
-		body.wp-app-body .wp-app-404-button-secondary {
-			background: var(--wp-app-color-secondary);
-			color: var(--wp-app-color-secondary-text);
-		}
-
-		body.wp-app-body .wp-app-404-button-secondary:hover,
-		body.wp-app-body .wp-app-404-button-secondary:focus {
-			background: var(--wp-app-color-secondary-hover);
-			color: var(--wp-app-color-secondary-text);
-		}
-
-		@media (max-width: 600px) {
-			.wp-app-404-container {
-				margin: 50px 20px;
-				padding: 30px 20px;
-			}
-
-			.wp-app-404-code {
-				font-size: 48px;
-			}
-
-			.wp-app-404-title {
-				font-size: 24px;
-			}
-
-			.wp-app-404-buttons {
-				flex-direction: column;
-				align-items: center;
-			}
-		}
-	</style>
 </head>
 <body class="wp-app-body">
 
@@ -137,13 +39,13 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 		<?php endif; ?>
 
 		<?php if ( $template_path ) : ?>
-			<div class="wp-app-404-path" style="margin-top: 10px;">
+			<div class="wp-app-404-path wp-app-404-path-detail">
 				Missing template: <strong><?php echo esc_html( $template_path ); ?></strong>
 			</div>
 		<?php endif; ?>
 
 		<?php if ( defined( 'WP_DEBUG' ) && WP_DEBUG && $matched_route ) : ?>
-			<div class="wp-app-404-path" style="margin-top: 10px; text-align: left; font-size: 14px;">
+			<div class="wp-app-404-path wp-app-404-path-detail wp-app-404-route-info">
 				<strong>Route info:</strong><br>
 				Pattern: <?php echo esc_html( $matched_route['pattern'] ); ?><br>
 				Template: <?php echo esc_html( $matched_route['template'] ); ?>
@@ -162,7 +64,7 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 	<?php endif; ?>
 
 	<?php if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) : ?>
-		<div class="wp-app-404-path" style="margin-top: 20px; text-align: left; font-size: 12px; background: var(--wp-app-color-surface-alt); padding: 15px;">
+		<div class="wp-app-404-path wp-app-404-debug-info">
 			<strong>Debug Information:</strong><br>
 			Error Type: <code><?php echo esc_html( var_export( $error_type, true ) ); ?></code><br>
 			Request Path: <code><?php echo esc_html( var_export( $request_path, true ) ); ?></code><br>
