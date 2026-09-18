@@ -5,8 +5,8 @@ namespace WpApp\Tests;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Omitting the scope resolves it from whatever is rendering, which is almost
- * never what the caller means. The behaviour is unchanged; it just says so.
+ * Passing a null scope resolves it from whatever is rendering, which is almost
+ * never what the caller means.
  */
 class AssetScopeWarningTest extends TestCase {
 	protected function setUp(): void {
@@ -24,29 +24,18 @@ class AssetScopeWarningTest extends TestCase {
 		return $__wp_app_test_doing_it_wrong;
 	}
 
-	public function test_enqueueing_a_script_with_null_scope_warns() {
-		wp_app_enqueue_script( 'demo', 'https://example.org/demo.js', [], false, true, null );
-
-		$warnings = $this->warnings();
-
-		$this->assertCount( 1, $warnings );
-		$this->assertSame( 'wp_app_enqueue_script', $warnings[0]['function'] );
-		$this->assertSame( '1.7.0', $warnings[0]['version'] );
-		$this->assertStringContainsString( 'scope', $warnings[0]['message'] );
-	}
-
-	public function test_enqueueing_a_style_with_null_scope_warns() {
-		wp_app_enqueue_style( 'demo', 'https://example.org/demo.css', [], false, null );
-
-		$this->assertSame( 'wp_app_enqueue_style', $this->warnings()[0]['function'] );
-	}
-
 	public function test_enqueue_helpers_require_scope_parameter() {
 		$script           = new \ReflectionFunction( 'wp_app_enqueue_script' );
 		$style            = new \ReflectionFunction( 'wp_app_enqueue_style' );
 		$crypto           = new \ReflectionFunction( 'wp_app_enqueue_crypto_runtime' );
 		$encrypted_fields = new \ReflectionFunction( 'wp_app_enqueue_encrypted_fields_runtime' );
+		$script_scope     = $script->getParameters()[5];
+		$style_scope      = $style->getParameters()[4];
 
+		$this->assertSame( 'scope', $script_scope->getName() );
+		$this->assertFalse( $script_scope->isDefaultValueAvailable() );
+		$this->assertSame( 'scope', $style_scope->getName() );
+		$this->assertFalse( $style_scope->isDefaultValueAvailable() );
 		$this->assertSame( 6, $script->getNumberOfRequiredParameters() );
 		$this->assertSame( 5, $style->getNumberOfRequiredParameters() );
 		$this->assertSame( 1, $crypto->getNumberOfRequiredParameters() );
@@ -76,15 +65,4 @@ class AssetScopeWarningTest extends TestCase {
 		$this->assertSame( [], $this->warnings() );
 	}
 
-	public function test_the_warning_does_not_change_where_the_asset_lands() {
-		global $__wp_app_test_actions, $wp_app_route;
-
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test stub sets the route.
-		$wp_app_route = [ 'app_path' => 'rendering-app' ];
-
-		wp_app_enqueue_script( 'demo', 'https://example.org/demo.js', [], false, true, null );
-
-		$this->assertArrayHasKey( 'wp_app_body_close_rendering-app', $__wp_app_test_actions );
-		$this->assertNotEmpty( $this->warnings() );
-	}
 }

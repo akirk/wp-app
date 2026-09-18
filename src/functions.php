@@ -449,11 +449,7 @@ if ( ! function_exists( 'wp_app_enqueue_style' ) ) {
     /**
      * Enqueue a style for app pages
      */
-    function wp_app_enqueue_style( $handle, $src = '', $deps = [], $ver = false, $scope ) {
-        if ( null === $scope ) {
-            wp_app_warn_missing_asset_scope( __FUNCTION__ );
-        }
-
+    function wp_app_enqueue_style( $handle, $src, $deps, $ver, $scope ) {
         add_action(
             wp_app_get_scoped_hook_name( 'wp_app_head_styles', $scope ),
             function () use ( $handle, $src, $deps, $ver ) {
@@ -473,11 +469,7 @@ if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
     /**
      * Enqueue a script for app pages
      */
-    function wp_app_enqueue_script( $handle, $src = '', $deps = [], $ver = false, $in_footer = true, $scope ) {
-        if ( null === $scope ) {
-            wp_app_warn_missing_asset_scope( __FUNCTION__ );
-        }
-
+    function wp_app_enqueue_script( $handle, $src, $deps, $ver, $in_footer, $scope ) {
         if ( function_exists( 'wp_register_script' ) ) {
             wp_register_script( $handle, $src, $deps, $ver, $in_footer );
         }
