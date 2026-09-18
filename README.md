@@ -189,6 +189,8 @@ wp_app_enqueue_script( 'minimal-app', $script_url, [], '1.0.0', true, [ 'app' =>
 
 Use `[ 'app' => 'global' ]` for framework-level assets that should print for every WpApp.
 
+Keep CSS and JavaScript in asset files and load them with the scoped enqueue helpers. Avoid writing inline `<style>` or `<script>` blocks, `style` attributes, and event-handler attributes in templates. For dynamic values, use HTML data attributes that an external script can read.
+
 ## Requirements
 
 - PHP 7.4 or higher
