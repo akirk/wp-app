@@ -177,6 +177,8 @@ class Storage extends BaseStorage {
 
 ## Template Structure
 
+Keep CSS and JavaScript in asset files loaded through the scoped enqueue helpers. Do not write inline `<style>` or `<script>` blocks, `style` attributes, or event-handler attributes in app templates. Pass dynamic values through HTML data attributes for an external script to read.
+
 ```php
 <!DOCTYPE html>
 <html <?php wp_app_language_attributes(); ?>>

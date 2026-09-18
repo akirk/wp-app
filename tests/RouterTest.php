@@ -55,6 +55,21 @@ class RouterTest extends TestCase {
         $this->assertStringNotContainsString( ' style=', $output );
     }
 
+    public function test_fallback_403_loads_stylesheet_without_inline_styles() {
+        global $wp_app_route, $__wp_app_test_is_user_logged_in;
+
+        $wp_app_route                    = [ 'app_path' => 'cookbook' ];
+        $__wp_app_test_is_user_logged_in = true;
+
+        ob_start();
+        include __DIR__ . '/../src/templates/403.php';
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString( 'id="wp-app-403-css"', $output );
+        $this->assertStringContainsString( 'wp-app-403.css?ver=' . WP_APP_VERSION, $output );
+        $this->assertStringNotContainsString( '<style', $output );
+    }
+
     public function test_pattern_to_regex() {
         $this->router->add_route( 'test/{id}/edit/{action}', 'test.php', [ 'id', 'action' ] );
 
