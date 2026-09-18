@@ -4,7 +4,7 @@
     <title><?php wp_app_the_title( '403 Forbidden' ); ?></title>
     <?php
     $app_path = wp_app_get_current_app_path();
-    wp_app_enqueue_style( 'wp-app-403', wp_app_get_asset_url( 'wp-app-403.css' ), [], WP_APP_VERSION, $app_path ? $app_path : 'global' );
+    wp_app_enqueue_style( 'wp-app-error-pages', wp_app_get_asset_url( 'wp-app-error-pages.css' ), [], WP_APP_VERSION, $app_path ? $app_path : 'global' );
     wp_app_head();
     ?>
 

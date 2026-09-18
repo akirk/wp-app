@@ -16,7 +16,7 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 <head>
 	<title><?php wp_app_the_title( 'Page Not Found' ); ?></title>
 	<?php
-	wp_app_enqueue_style( 'wp-app-404', wp_app_get_asset_url( 'wp-app-404.css' ), [], WP_APP_VERSION, $app_path ? $app_path : 'global' );
+	wp_app_enqueue_style( 'wp-app-error-pages', wp_app_get_asset_url( 'wp-app-error-pages.css' ), [], WP_APP_VERSION, $app_path ? $app_path : 'global' );
 	wp_app_head();
 	?>
 

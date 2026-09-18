@@ -44,13 +44,14 @@ class RouterTest extends TestCase {
 
     public function test_fallback_404_loads_stylesheet_without_inline_styles() {
         $this->router = new Router( '/test/templates', 'cookbook' );
+        $this->assertFileExists( __DIR__ . '/../assets/wp-app-error-pages.css' );
 
         ob_start();
         $this->router->handle_app_request_directly( 'missing' );
         $output = ob_get_clean();
 
-        $this->assertStringContainsString( 'id="wp-app-404-css"', $output );
-        $this->assertStringContainsString( 'wp-app-404.css?ver=' . WP_APP_VERSION, $output );
+        $this->assertStringContainsString( 'id="wp-app-error-pages-css"', $output );
+        $this->assertStringContainsString( 'wp-app-error-pages.css?ver=' . WP_APP_VERSION, $output );
         $this->assertStringNotContainsString( '<style', $output );
         $this->assertStringNotContainsString( ' style=', $output );
     }
@@ -65,8 +66,8 @@ class RouterTest extends TestCase {
         include __DIR__ . '/../src/templates/403.php';
         $output = ob_get_clean();
 
-        $this->assertStringContainsString( 'id="wp-app-403-css"', $output );
-        $this->assertStringContainsString( 'wp-app-403.css?ver=' . WP_APP_VERSION, $output );
+        $this->assertStringContainsString( 'id="wp-app-error-pages-css"', $output );
+        $this->assertStringContainsString( 'wp-app-error-pages.css?ver=' . WP_APP_VERSION, $output );
         $this->assertStringNotContainsString( '<style', $output );
     }
 
