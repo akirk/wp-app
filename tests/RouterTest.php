@@ -52,6 +52,8 @@ class RouterTest extends TestCase {
 
         $this->assertStringContainsString( 'id="wp-app-error-pages-css"', $output );
         $this->assertStringContainsString( 'wp-app-error-pages.css?ver=' . WP_APP_VERSION, $output );
+        $this->assertStringContainsString( 'class="wp-app-error"', $output );
+        $this->assertStringContainsString( 'class="wp-app-error__title"', $output );
         $this->assertStringNotContainsString( '<style', $output );
         $this->assertStringNotContainsString( ' style=', $output );
     }
@@ -68,6 +70,8 @@ class RouterTest extends TestCase {
 
         $this->assertStringContainsString( 'id="wp-app-error-pages-css"', $output );
         $this->assertStringContainsString( 'wp-app-error-pages.css?ver=' . WP_APP_VERSION, $output );
+        $this->assertStringContainsString( 'class="wp-app-error"', $output );
+        $this->assertStringContainsString( 'class="wp-app-error__title"', $output );
         $this->assertStringNotContainsString( '<style', $output );
     }
 

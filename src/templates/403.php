@@ -12,15 +12,20 @@
 <body class="wp-app-body">
 <?php wp_app_body_open(); ?>
 
-<div class="wp-app-403">
-    <h1>403 - Access Denied</h1>
+<div class="wp-app-error">
+    <div class="wp-app-error__code">403</div>
+    <h1 class="wp-app-error__title">Access Denied</h1>
 
     <?php if ( is_user_logged_in() ) : ?>
-        <p>You don't have permission to access this page. You may need additional privileges to view this content.</p>
-        <p><a href="<?php echo esc_url( home_url() ); ?>">← Return to Home</a></p>
+        <p class="wp-app-error__message">You don't have permission to access this page. You may need additional privileges to view this content.</p>
+        <div class="wp-app-error__actions">
+            <a href="<?php echo esc_url( home_url() ); ?>" class="wp-app-error__button wp-app-error__button--secondary">Return to Home</a>
+        </div>
     <?php else : ?>
-        <p>You need to be logged in to access this page.</p>
-        <a href="<?php echo esc_url( wp_login_url( $_SERVER['REQUEST_URI'] ?? '' ) ); ?>" class="login-link">Login</a>
+        <p class="wp-app-error__message">You need to be logged in to access this page.</p>
+        <div class="wp-app-error__actions">
+            <a href="<?php echo esc_url( wp_login_url( $_SERVER['REQUEST_URI'] ?? '' ) ); ?>" class="wp-app-error__button wp-app-error__button--primary">Login</a>
+        </div>
     <?php endif; ?>
 
     <?php if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) : ?>
@@ -28,7 +33,7 @@
         global $wp_app_route;
         $params = $wp_app_route['params'] ?? [];
         ?>
-        <div class="debug-info">
+        <div class="wp-app-error__details wp-app-error__details--debug">
             <h3>Debug Information</h3>
             <strong>Request Path:</strong> <?php echo esc_html( $params['request_path'] ?? 'unknown' ); ?><br>
             <strong>Required Capability:</strong> <?php echo esc_html( $params['required_capability'] ?? 'none' ); ?><br>
