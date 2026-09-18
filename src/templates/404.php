@@ -76,32 +76,26 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 			transition: all 0.3s ease;
 		}
 
-		.wp-app-404-button-primary {
+		body.wp-app-body .wp-app-404-button-primary {
 			background: var(--wp-app-color-primary);
 			color: var(--wp-app-color-on-primary);
 		}
 
-		.wp-app-404-button-primary:hover {
+		body.wp-app-body .wp-app-404-button-primary:hover,
+		body.wp-app-body .wp-app-404-button-primary:focus {
 			background: var(--wp-app-color-primary-hover);
 			color: var(--wp-app-color-on-primary);
 		}
 
-		.wp-app-404-button-secondary {
+		body.wp-app-body .wp-app-404-button-secondary {
 			background: var(--wp-app-color-secondary);
 			color: var(--wp-app-color-secondary-text);
 		}
 
-		.wp-app-404-button-secondary:hover {
+		body.wp-app-body .wp-app-404-button-secondary:hover,
+		body.wp-app-body .wp-app-404-button-secondary:focus {
 			background: var(--wp-app-color-secondary-hover);
 			color: var(--wp-app-color-secondary-text);
-		}
-
-		.wp-app-404-footer {
-			margin-top: 40px;
-			padding-top: 20px;
-			border-top: 1px solid var(--wp-app-color-border);
-			font-size: 14px;
-			color: var(--wp-app-color-muted);
 		}
 
 		@media (max-width: 600px) {
@@ -203,16 +197,6 @@ $app_path      = isset( $wp_app_route['params']['app_path'] ) ? $wp_app_route['p
 		<a href="<?php echo esc_url( home_url() ); ?>" class="wp-app-404-button wp-app-404-button-secondary">
 			Back to Website
 		</a>
-
-		<?php if ( is_user_logged_in() ) : ?>
-			<a href="<?php echo esc_url( admin_url() ); ?>" class="wp-app-404-button wp-app-404-button-secondary">
-				WordPress Dashboard
-			</a>
-		<?php endif; ?>
-	</div>
-
-	<div class="wp-app-404-footer">
-		<p>Powered by <strong>WpApp Framework</strong></p>
 	</div>
 </div>
 
