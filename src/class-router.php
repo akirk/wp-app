@@ -390,8 +390,13 @@ class Router {
         );
     }
 
-    /** Locate a relative template, allowing ordered theme fallbacks. */
-    private function locate_template( $template ) {
+    /**
+     * Locate a relative template, allowing ordered theme fallbacks.
+     *
+     * @param string $template Relative template path.
+     * @return string Resolved template path, or the final fallback path when missing.
+     */
+    public function locate_template( $template ) {
         $directories = [ $this->template_directory ];
         if ( is_callable( $this->template_directories_provider ) ) {
             $provided = call_user_func( $this->template_directories_provider );

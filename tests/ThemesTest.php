@@ -47,10 +47,8 @@ class ThemesTest extends TestCase {
 		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
 		$_GET['wp_app_theme'] = 'compact';
 
-		$locate_template = new \ReflectionMethod( $app->router(), 'locate_template' );
-		$locate_template->setAccessible( true );
-		$index           = $locate_template->invoke( $app->router(), 'index.php' );
-		$details         = $locate_template->invoke( $app->router(), 'details.php' );
+		$index   = $app->router()->locate_template( 'index.php' );
+		$details = $app->router()->locate_template( 'details.php' );
 
 		$this->assertSame( $this->theme_directory . '/index.php', $index );
 		$this->assertSame( $this->base_directory . '/details.php', $details );
