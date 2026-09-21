@@ -24,7 +24,7 @@ class RouterTest extends TestCase {
         $_SERVER['REQUEST_URI']          = '';
         Registry::reset();
 
-        $this->router = new Router( '/test/templates' );
+        $this->router = new Router( __DIR__ . '/fixtures/templates' );
     }
 
     private function get_routes() {
@@ -43,7 +43,7 @@ class RouterTest extends TestCase {
     }
 
     public function test_fallback_404_loads_stylesheet_without_inline_styles() {
-        $this->router = new Router( '/test/templates', 'cookbook' );
+        $this->router = new Router( __DIR__ . '/fixtures/templates', 'cookbook' );
         $this->assertFileExists( __DIR__ . '/../assets/wp-app-error-pages.css' );
 
         ob_start();
@@ -96,7 +96,7 @@ class RouterTest extends TestCase {
             123 => 'de_DE',
         ];
 
-        new Router( '/test/templates', 'cookbook' );
+        new Router( __DIR__ . '/fixtures/templates', 'cookbook' );
 
         $this->assertSame( 'de_DE', $__wp_app_test_current_locale );
     }

@@ -21,7 +21,7 @@ class WpAppTest extends TestCase {
 
 	public function test_app_name_is_returned_as_configured_without_textdomain() {
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'app_name' => 'My App',
@@ -39,7 +39,7 @@ class WpAppTest extends TestCase {
 		];
 
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'app_name'            => 'My App',
@@ -59,7 +59,7 @@ class WpAppTest extends TestCase {
 		];
 
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'app_name'            => 'My App',
@@ -79,7 +79,7 @@ class WpAppTest extends TestCase {
 		];
 
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'app_name'            => 'My App',
@@ -91,7 +91,7 @@ class WpAppTest extends TestCase {
 	}
 
 	public function test_app_init_filter_can_set_translated_app_name_before_metadata_refresh() {
-		$app = new WpApp( '/test/templates', 'my-app' );
+		$app = new WpApp( __DIR__ . '/fixtures/templates', 'my-app' );
 
 		add_filter(
 			$app->get_init_filter_name(),
@@ -114,7 +114,7 @@ class WpAppTest extends TestCase {
 	}
 
 	public function test_init_filter_name_uses_normalized_app_path() {
-		$app = new WpApp( '/test/templates', 'my/app-path' );
+		$app = new WpApp( __DIR__ . '/fixtures/templates', 'my/app-path' );
 
 		$this->assertSame( 'wp_app_init_my_app-path', $app->get_init_filter_name() );
 	}
@@ -124,7 +124,7 @@ class WpAppTest extends TestCase {
 			public $menu_setup_count = 0;
 
 			public function __construct() {
-				$this->app = new WpApp( '/test/templates', 'base-test-app' );
+				$this->app = new WpApp( __DIR__ . '/fixtures/templates', 'base-test-app' );
 			}
 
 			protected function setup_database() {
@@ -152,14 +152,14 @@ class WpAppTest extends TestCase {
 	}
 
 	public function test_require_login_defaults_to_true() {
-		$app = new WpApp( '/test/templates', 'my-app' );
+		$app = new WpApp( __DIR__ . '/fixtures/templates', 'my-app' );
 
 		$this->assertSame( 'read', $app->get_required_capability() );
 	}
 
 	public function test_require_login_can_be_disabled_explicitly() {
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'require_login' => false,
@@ -171,7 +171,7 @@ class WpAppTest extends TestCase {
 
 	public function test_require_login_default_does_not_override_explicit_capability() {
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'require_capability' => 'manage_options',
@@ -183,7 +183,7 @@ class WpAppTest extends TestCase {
 
 	public function test_require_login_true_does_not_downgrade_require_capability() {
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'require_capability' => 'manage_options',
@@ -196,7 +196,7 @@ class WpAppTest extends TestCase {
 
 	public function test_require_capability_implies_login_even_if_require_login_false() {
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'my-app',
 			[
 				'require_capability' => 'manage_options',

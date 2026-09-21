@@ -191,6 +191,20 @@ Use `[ 'app' => 'global' ]` for framework-level assets that should print for eve
 
 Keep CSS and JavaScript in asset files and load them with the scoped enqueue helpers. Avoid writing inline `<style>` or `<script>` blocks, `style` attributes, and event-handler attributes in templates. For dynamic values, use HTML data attributes that an external script can read.
 
+### App themes
+
+Apps and add-on plugins can register themes with their own template directories:
+
+```php
+$app->register_theme(
+	'compact',
+	__( 'Compact', 'my-plugin' ),
+	plugin_dir_path( __FILE__ ) . 'templates/compact'
+);
+```
+
+WpApp adds a Theme submenu to the app's masterbar and remembers the current user's selection. The selected theme's templates take priority, while missing templates fall back to the app's regular template directory. See [App Themes](docs/configuration.md#app-themes) for add-on registration and theme-specific asset hooks.
+
 ## Requirements
 
 - PHP 7.4 or higher

@@ -1,0 +1,3 @@
+<?php
+
+echo 'default-details';

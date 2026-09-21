@@ -23,7 +23,7 @@ class PwaTest extends TestCase {
 		global $wp_app_route;
 
 		$app = new WpApp(
-			'/test/templates',
+			__DIR__ . '/fixtures/templates',
 			'field-notes',
 			[
 				'app_name' => 'Field Notes',
@@ -296,7 +296,7 @@ class PwaTest extends TestCase {
 	}
 
 	public function test_wpapp_exposes_manifest_url_with_query_args() {
-		$app = new WpApp( '/test/templates', 'travel-app-link' );
+		$app = new WpApp( __DIR__ . '/fixtures/templates', 'travel-app-link' );
 		$app->enable_pwa(
 			[
 				'manifest_path' => 'manifest.webmanifest',
