@@ -37,9 +37,12 @@ class ThemesTest extends TestCase {
 		$this->assertSame( 'compact', $__wp_app_test_user_options['wp_app_theme_reader'] );
 
 		$items = $app->masterbar()->get_preview_menu_items();
-		$this->assertSame( 'Theme', $items['wp-app-theme-reader']['title'] );
-		$this->assertSame( 'wp-app-theme-reader', $items['wp-app-theme-reader-compact']['parent'] );
-		$this->assertSame( '✓ Compact', $items['wp-app-theme-reader-compact']['title'] );
+		$this->assertSame( 'Themes', $items['wp-app-theme-reader']['title'] );
+		$this->assertSame( 'wp-app-theme-reader', $items['wp-app-theme-reader-choice-default']['parent'] );
+		$this->assertSame( 'Default', $items['wp-app-theme-reader-choice-default']['title'] );
+		$this->assertSame( 'wp-app-theme-reader', $items['wp-app-theme-reader-choice-compact']['parent'] );
+		$this->assertSame( '✓ Compact', $items['wp-app-theme-reader-choice-compact']['title'] );
+		$this->assertArrayNotHasKey( 'wp-app-theme-reader-default', $items );
 	}
 
 	public function test_theme_template_overrides_and_falls_back_to_app_templates() {

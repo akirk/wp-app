@@ -203,7 +203,7 @@ $app->register_theme(
 );
 ```
 
-WpApp adds a Theme submenu to the app's masterbar and remembers the current user's selection. The selected theme's templates take priority, while missing templates fall back to the app's regular template directory. See [App Themes](docs/configuration.md#app-themes) for add-on registration and theme-specific asset hooks.
+WpApp adds a Themes submenu to the app's masterbar and remembers the current user's selection. The selected theme's templates take priority, while missing templates fall back to the app's regular template directory. See [App Themes](docs/configuration.md#app-themes) for add-on registration and theme-specific asset hooks.
 
 ## Requirements
 

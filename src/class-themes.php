@@ -122,14 +122,14 @@ class Themes {
 		}
 
 		$parent_id = 'wp-app-theme-' . $this->get_hook_suffix();
-		$this->masterbar->add_menu_item( $parent_id, __( 'Theme' ) );
+		$this->masterbar->add_menu_item( $parent_id, __( 'Themes' ) );
 		$current_url = home_url( '/' . $this->app_path . '/' );
 
 		foreach ( $this->themes as $slug => $theme ) {
 			$selected = $this->selection_loaded ? $this->selected_theme : get_user_option( $this->get_user_option_name(), get_current_user_id() );
 			$title    = ( $slug === $selected || ( ! $selected && 'default' === $slug ) ? '✓ ' : '' ) . $theme['name'];
 			$this->masterbar->add_menu_item(
-				$parent_id . '-' . $slug,
+				$parent_id . '-choice-' . $slug,
 				$title,
 				add_query_arg( 'wp_app_theme', $slug, $current_url ),
 				[ 'parent' => $parent_id ]
