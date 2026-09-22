@@ -170,4 +170,4 @@ Labels, padding, and UI type can change freely. Treat field IDs, `field`, and `m
 
 ## Example
 
-See `examples/encrypted-contacts-app` for a hybrid app that registers a CPT and taxonomies in PHP, then uses a manifest to encrypt `post_title`, contact details, notes, and private tags client-side.
+See the [`encrypted-contacts-app`](https://github.com/akirk/wp-app-examples/tree/main/encrypted-contacts-app) example for a hybrid app that registers a CPT and taxonomies in PHP, then uses a manifest to encrypt `post_title`, contact details, notes, and private tags client-side.

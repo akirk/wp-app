@@ -23,9 +23,9 @@ Start with the [README](../README.md) for the two-command quick start, then work
 
 ## Examples
 
-- [`examples/community-app/`](../examples/community-app/) — BaseApp, BaseStorage, custom tables, REST endpoints, abilities
-- [`examples/encrypted-contacts-app/`](../examples/encrypted-contacts-app/) — client-side encryption in practice
-- [`examples/minimal-app/`](../examples/minimal-app/) — the smallest working plugin
+- [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) — BaseApp, BaseStorage, custom tables, REST endpoints, abilities
+- [`encrypted-contacts-app`](https://github.com/akirk/wp-app-examples/tree/main/encrypted-contacts-app) — client-side encryption in practice
+- [`minimal-app`](https://github.com/akirk/wp-app-examples/tree/main/minimal-app) — the smallest working plugin
 
 ## For agents
 

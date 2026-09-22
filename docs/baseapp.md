@@ -231,7 +231,7 @@ foreach ( $items as $item ) {
 
 ## Complete Example
 
-See the [Community App example](../examples/community-app/) for a full implementation with:
+See the [Community App example](https://github.com/akirk/wp-app-examples/tree/main/community-app) for a full implementation with:
 
 - BaseApp structure
 - BaseStorage with schema

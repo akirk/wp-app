@@ -16,7 +16,7 @@ The WpApp framework lets you build modern applications while getting all these b
 
 ## Getting Started: The Minimal Example
 
-The simplest possible WpApp requires just 3 lines of PHP. Check out `examples/minimal-app/`:
+The simplest possible WpApp requires just 3 lines of PHP. Check out the [`minimal-app`](https://github.com/akirk/wp-app-examples/tree/main/minimal-app) example:
 
 ```php
 <?php
@@ -426,7 +426,7 @@ $current_user = wp_get_current_user();
 
 ## Complete Example: Community App
 
-For a full-featured example showcasing all these concepts, see `examples/community-app/`. This example demonstrates:
+For a full-featured example showcasing all these concepts, see the [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) example. It demonstrates:
 
 - **BaseApp Pattern** - Structured architecture with storage separation
 - **BaseStorage** - Schema management with `get_schema()` and `dbDelta`
@@ -441,7 +441,7 @@ For a full-featured example showcasing all these concepts, see `examples/communi
 Run it with WordPress Playground:
 
 ```bash
-cd examples/community-app
+cd ../wp-app-examples/community-app
 npx @wp-playground/cli run .
 ```
 
@@ -457,7 +457,7 @@ npx @wp-playground/cli run .
 
 ## Next Steps
 
-- Explore the `examples/community-app/` for advanced patterns
+- Explore the [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) example for advanced patterns
 - Add custom CSS and JavaScript to your templates
 - Integrate with WordPress plugins
 - Create REST API endpoints for dynamic functionality
