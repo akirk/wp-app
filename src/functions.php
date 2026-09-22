@@ -4,6 +4,19 @@
  * Global functions for WpApp framework
  */
 
+if ( ! defined( 'WP_APP_PROVIDER_PATH' ) ) {
+    foreach ( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) as $wp_app_trace ) {
+        $wp_app_trace_file = isset( $wp_app_trace['file'] ) ? str_replace( '\\', '/', (string) $wp_app_trace['file'] ) : '';
+
+        if ( preg_match( '#/vendor/composer/autoload_real\.php$#', $wp_app_trace_file ) ) {
+            define( 'WP_APP_PROVIDER_PATH', $wp_app_trace_file );
+            break;
+        }
+    }
+
+    unset( $wp_app_trace, $wp_app_trace_file );
+}
+
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
     require_once __DIR__ . '/class-cli.php';
 

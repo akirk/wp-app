@@ -246,9 +246,10 @@ class Settings {
 
             if ( ! empty( $package['loaded'] ) && is_array( $package['loaded'] ) ) {
                 $loaded_path    = isset( $package['loaded']['path'] ) ? (string) $package['loaded']['path'] : '';
+                $provider_path  = isset( $package['loaded']['provider_path'] ) ? (string) $package['loaded']['provider_path'] : $loaded_path;
                 $loaded_version = isset( $package['loaded']['version'] ) ? trim( (string) $package['loaded']['version'] ) : '';
 
-                self::add_wp_app_provider( $providers, $loaded_path, $loaded_version, true );
+                self::add_wp_app_provider( $providers, $provider_path, $loaded_version, true );
             }
         }
 
@@ -274,10 +275,15 @@ class Settings {
                 continue;
             }
 
-            $loaded  = $metadata['wp_app_package']['loaded'];
-            $path    = isset( $loaded['path'] ) ? (string) $loaded['path'] : '';
-            $version = isset( $loaded['version'] ) ? (string) $loaded['version'] : '';
-            $slug    = self::get_wp_content_plugin_slug( $path );
+            $loaded        = $metadata['wp_app_package']['loaded'];
+            $path          = isset( $loaded['path'] ) ? (string) $loaded['path'] : '';
+            $version       = isset( $loaded['version'] ) ? (string) $loaded['version'] : '';
+            $provider_path = isset( $loaded['provider_path'] ) ? (string) $loaded['provider_path'] : '';
+            $slug          = self::get_wp_content_plugin_slug( $provider_path );
+
+            if ( '' === $slug ) {
+                $slug = self::get_wp_content_plugin_slug( $path );
+            }
 
             return [
                 'slug'    => '' !== $slug ? $slug : self::get_external_wp_app_label( $path ),

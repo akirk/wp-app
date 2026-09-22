@@ -1224,6 +1224,8 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertNotEmpty( $apps['package-test-app']['wp_app_package']['loaded']['path'] );
         $this->assertSame( WP_APP_VERSION, $apps['package-test-app']['wp_app_package']['loaded']['version'] );
         $this->assertSame( dirname( __DIR__ ), $apps['package-test-app']['wp_app_package']['loaded']['path'] );
+        $this->assertArrayHasKey( 'provider_path', $apps['package-test-app']['wp_app_package']['loaded'] );
+        $this->assertStringEndsWith( '/vendor/composer/autoload_real.php', $apps['package-test-app']['wp_app_package']['loaded']['provider_path'] );
     }
 
     public function test_settings_page_does_not_render_per_app_package_diagnostics() {
@@ -1407,6 +1409,27 @@ class MasterbarSettingsTest extends TestCase {
         );
 
         $this->assertSame( 'wp-app (external checkout)', $result['slug'] );
+        $this->assertSame( '2.0.0', $result['version'] );
+    }
+
+    public function test_loaded_wp_app_uses_composer_loader_to_identify_symlink_provider() {
+        $method = new \ReflectionMethod( Settings::class, 'get_loaded_wp_app_provider' );
+        $result = $method->invoke(
+            null,
+            [
+                [
+                    'wp_app_package' => [
+                        'loaded' => [
+                            'version'       => '2.0.0',
+                            'path'          => '/Users/example/Sites/wp-app',
+                            'provider_path' => WP_CONTENT_DIR . '/plugins/community-app/vendor/composer/autoload_real.php',
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertSame( 'community-app', $result['slug'] );
         $this->assertSame( '2.0.0', $result['version'] );
     }
 
