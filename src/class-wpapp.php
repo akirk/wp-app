@@ -424,7 +424,7 @@ class WpApp {
      * loaded one. The path of this very file and WP_APP_VERSION (defined by
      * the first functions.php to load) are the only truthful sources.
      *
-     * @return array{name:string,version:string|null,path:string,provider_path?:string}
+     * @return array{name:string,version:string|null,path:string}
      */
     private static function get_loaded_wp_app_package() {
         $path    = self::normalize_path( dirname( __DIR__ ) );
@@ -439,17 +439,11 @@ class WpApp {
             }
         }
 
-        $package = [
+        return [
             'name'    => 'akirk/wp-app',
             'version' => $version,
             'path'    => $path ? $path : dirname( __DIR__ ),
         ];
-
-        if ( defined( 'WP_APP_PROVIDER_PATH' ) && '' !== WP_APP_PROVIDER_PATH ) {
-            $package['provider_path'] = self::normalize_path( WP_APP_PROVIDER_PATH );
-        }
-
-        return $package;
     }
 
     /**

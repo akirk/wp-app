@@ -1224,8 +1224,6 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertNotEmpty( $apps['package-test-app']['wp_app_package']['loaded']['path'] );
         $this->assertSame( WP_APP_VERSION, $apps['package-test-app']['wp_app_package']['loaded']['version'] );
         $this->assertSame( dirname( __DIR__ ), $apps['package-test-app']['wp_app_package']['loaded']['path'] );
-        $this->assertArrayHasKey( 'provider_path', $apps['package-test-app']['wp_app_package']['loaded'] );
-        $this->assertStringEndsWith( '/vendor/composer/autoload_real.php', $apps['package-test-app']['wp_app_package']['loaded']['provider_path'] );
     }
 
     public function test_settings_page_does_not_render_per_app_package_diagnostics() {
@@ -1392,7 +1390,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
     }
 
-    public function test_settings_page_uses_composer_loader_to_identify_symlink_provider() {
+    public function test_settings_page_labels_loaded_wp_app_outside_plugins_as_external_checkout() {
         global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
 
         $community_dir  = WP_CONTENT_DIR . '/plugins/community-app';
@@ -1409,19 +1407,21 @@ class MasterbarSettingsTest extends TestCase {
 
         touch( $community_file );
         touch( $alternative_file );
-        file_put_contents(
-            $alternative_dir . '/composer.lock',
-            wp_json_encode(
-                [
-                    'packages' => [
-                        [
-                            'name'    => 'akirk/wp-app',
-                            'version' => 'dev-main',
+        foreach ( [ $community_dir, $alternative_dir ] as $plugin_dir ) {
+            file_put_contents(
+                $plugin_dir . '/composer.lock',
+                wp_json_encode(
+                    [
+                        'packages' => [
+                            [
+                                'name'    => 'akirk/wp-app',
+                                'version' => 'dev-main',
+                            ],
                         ],
-                    ],
-                ]
-            )
-        );
+                    ]
+                )
+            );
+        }
 
         $__wp_app_test_plugins = [
             'community-app'   => [ 'community-app.php' => [] ],
@@ -1441,10 +1441,20 @@ class MasterbarSettingsTest extends TestCase {
                     'expected'        => 'dev-main',
                     'expected_source' => $alternative_dir . '/composer.json',
                     'loaded'          => [
-                        'version'       => '2.0.0',
-                        'path'          => '/Users/example/Sites/wp-app',
-                        'provider_path' => $community_dir . '/vendor/composer/autoload_real.php',
+                        'version' => '2.0.0',
+                        'path'    => '/Users/example/Sites/wp-app',
                     ],
+                ],
+            ]
+        );
+        Registry::register_app_metadata(
+            'alternative-app',
+            [
+                'name'           => 'Alternative App',
+                'url'            => 'https://example.org/alternative-app/',
+                'wp_app_package' => [
+                    'expected'        => 'dev-main',
+                    'expected_source' => $community_dir . '/composer.json',
                 ],
             ]
         );
@@ -1454,7 +1464,7 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( 'Load WP Apps library from', $html );
-        $this->assertStringContainsString( 'First plugin (community-app, wp-app 2.0.0)', $html );
+        $this->assertStringContainsString( 'First plugin (wp-app (external checkout), wp-app 2.0.0)', $html );
     }
 
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
