@@ -225,7 +225,7 @@ class Settings {
      * Get plugins known to bundle wp-app.
      *
      * @param array|null $apps Registered app metadata, or null to fetch it.
-     * @return array<string, array{label:string}> Providers keyed by plugin slug.
+     * @return array<string, array{label:string}> Providers keyed by plugin basename.
      */
     public static function get_wp_app_providers( $apps = null ) {
         $apps      = is_array( $apps ) ? $apps : self::get_registered_apps();
@@ -292,13 +292,23 @@ class Settings {
     }
 
     /**
-     * Sanitize a plugin folder slug used as the preferred provider.
+     * Sanitize a plugin basename relative to WP_PLUGIN_DIR.
      *
-     * @param mixed $slug Raw provider slug.
-     * @return string Sanitized provider slug.
+     * @param mixed $plugin_file Raw provider plugin basename.
+     * @return string Sanitized plugin basename.
      */
-    public static function sanitize_provider_slug( $slug ) {
-        return is_string( $slug ) ? strtolower( preg_replace( '/[^a-z0-9_-]/i', '', $slug ) ) : '';
+    public static function sanitize_provider_plugin_file( $plugin_file ) {
+        if ( ! is_string( $plugin_file ) ) {
+            return '';
+        }
+
+        $plugin_file = str_replace( '\\', '/', trim( $plugin_file ) );
+
+        if ( false !== strpos( $plugin_file, '..' ) || ! preg_match( '#^(?:[a-z0-9._-]+/)*[a-z0-9._-]+\.php$#i', $plugin_file ) ) {
+            return '';
+        }
+
+        return $plugin_file;
     }
 
     /**
@@ -314,10 +324,10 @@ class Settings {
             return;
         }
 
-        $plugin = self::get_plugin_metadata_from_path( $path );
-        $slug   = isset( $plugin['slug'] ) ? self::sanitize_provider_slug( $plugin['slug'] ) : '';
+        $plugin      = self::get_plugin_metadata_from_path( $path );
+        $plugin_file = isset( $plugin['file'] ) ? self::sanitize_provider_plugin_file( $plugin['file'] ) : '';
 
-        if ( '' === $slug ) {
+        if ( '' === $plugin_file ) {
             return;
         }
 
@@ -333,8 +343,8 @@ class Settings {
             }
         }
 
-        if ( ! isset( $providers[ $slug ] ) || $is_loaded ) {
-            $providers[ $slug ] = [ 'label' => $label ];
+        if ( ! isset( $providers[ $plugin_file ] ) || $is_loaded ) {
+            $providers[ $plugin_file ] = [ 'label' => $label ];
         }
     }
 
@@ -435,7 +445,7 @@ class Settings {
             'only_show_active_app'              => ! empty( $value['only_show_active_app'] ),
             'show_inactive_apps_in_overflow'    => ! empty( $value['show_inactive_apps_in_overflow'] ),
             'sort_overflow_menu_alphabetically' => ! empty( $value['sort_overflow_menu_alphabetically'] ),
-            'provider'                          => isset( $value['provider'] ) ? self::sanitize_provider_slug( $value['provider'] ) : '',
+            'provider'                          => isset( $value['provider'] ) ? self::sanitize_provider_plugin_file( $value['provider'] ) : '',
             'app_order'                         => $order,
             'apps'                              => $apps,
         ];
@@ -2096,6 +2106,7 @@ class Settings {
                 'name'    => __( 'This app' ),
                 'version' => '',
                 'slug'    => '',
+                'file'    => '',
             ];
         }
 
@@ -2103,12 +2114,20 @@ class Settings {
             'name'    => self::get_wp_content_plugin_name( $path ),
             'version' => '',
             'slug'    => $slug,
+            'file'    => '',
         ];
 
         $plugin_file = self::find_plugin_file( $slug );
 
         if ( '' === $plugin_file ) {
             return $metadata;
+        }
+
+        $plugin_root = rtrim( self::get_plugin_root_path(), '/' ) . '/';
+        $plugin_file = self::normalize_filesystem_path( $plugin_file );
+
+        if ( 0 === strpos( $plugin_file, $plugin_root ) ) {
+            $metadata['file'] = substr( $plugin_file, strlen( $plugin_root ) );
         }
 
         $headers = self::read_plugin_headers( $plugin_file );

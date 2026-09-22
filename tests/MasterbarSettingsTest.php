@@ -92,10 +92,14 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertFalse( $settings['sort_overflow_menu_alphabetically'] );
     }
 
-    public function test_sanitize_settings_preserves_safe_provider_slug() {
-        $settings = Settings::sanitize_settings( [ 'provider' => '../Wordopedia!' ] );
+    public function test_sanitize_settings_preserves_safe_provider_plugin_file() {
+        $settings = Settings::sanitize_settings( [ 'provider' => 'Wordopedia/Wordopedia.php' ] );
 
-        $this->assertSame( 'wordopedia', $settings['provider'] );
+        $this->assertSame( 'Wordopedia/Wordopedia.php', $settings['provider'] );
+
+        $settings = Settings::sanitize_settings( [ 'provider' => '../wordopedia.php' ] );
+
+        $this->assertSame( '', $settings['provider'] );
     }
 
     public function test_registered_apps_follow_saved_order_before_new_apps() {
@@ -1327,8 +1331,8 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertGreaterThan( strpos( $html, 'data-app-path="memex"' ), strpos( $html, 'App menu visibility' ) );
         $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, 'Load WP Apps library from' ) );
         $this->assertStringContainsString( 'First plugin (wordopedia, wp-app 2.0.0)', $html );
-        $this->assertStringContainsString( '<option value="memex"', $html );
-        $this->assertStringContainsString( '<option value="wordopedia"', $html );
+        $this->assertStringContainsString( '<option value="memex/memex.php"', $html );
+        $this->assertStringContainsString( '<option value="wordopedia/wordopedia.php"', $html );
         $this->assertStringContainsString( 'Memex 1.4.0 — wp-app 2.1.0', $html );
         $this->assertStringContainsString( 'Wordopedia 2.1.0 — wp-app 2.0.0 (active)', $html );
     }

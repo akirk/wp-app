@@ -25,15 +25,21 @@ $wp_app_package_files = [
     'rest/class-access.php',
 ];
 
-$wp_app_selected_provider = '';
-$wp_app_current_provider  = '';
-$wp_app_provider_ready    = false;
+$wp_app_selected_provider  = '';
+$wp_app_selected_directory = '';
+$wp_app_current_provider   = '';
+$wp_app_provider_ready     = false;
 
 if ( function_exists( 'get_option' ) ) {
     $wp_app_settings = get_option( 'wp_app_masterbar_settings', [] );
 
     if ( is_array( $wp_app_settings ) && isset( $wp_app_settings['provider'] ) && is_string( $wp_app_settings['provider'] ) ) {
-        $wp_app_selected_provider = strtolower( preg_replace( '/[^a-z0-9_-]/i', '', $wp_app_settings['provider'] ) );
+        $wp_app_candidate = str_replace( '\\', '/', trim( $wp_app_settings['provider'] ) );
+
+        if ( false === strpos( $wp_app_candidate, '..' ) && preg_match( '#^(?:[a-z0-9._-]+/)*[a-z0-9._-]+\.php$#i', $wp_app_candidate ) ) {
+            $wp_app_selected_provider  = $wp_app_candidate;
+            $wp_app_selected_directory = dirname( $wp_app_candidate );
+        }
     }
 }
 
@@ -44,26 +50,22 @@ if ( '' !== $wp_app_selected_provider && defined( 'WP_PLUGIN_DIR' ) ) {
     if ( 0 === strpos( $wp_app_package_dir, $wp_app_plugin_root ) ) {
         $wp_app_relative_path    = substr( $wp_app_package_dir, strlen( $wp_app_plugin_root ) );
         $wp_app_path_parts       = explode( '/', $wp_app_relative_path );
-        $wp_app_current_provider = strtolower( (string) reset( $wp_app_path_parts ) );
+        $wp_app_current_provider = (string) reset( $wp_app_path_parts );
         $wp_app_package_suffix   = implode( '/', array_slice( $wp_app_path_parts, 1 ) );
-        $wp_app_provider_ready   = is_readable( $wp_app_plugin_root . $wp_app_selected_provider . '/' . $wp_app_package_suffix . '/src/bootstrap.php' );
+        $wp_app_provider_ready   = is_readable( $wp_app_plugin_root . $wp_app_selected_directory . '/' . $wp_app_package_suffix . '/src/bootstrap.php' );
     }
 
-    $wp_app_active_providers = [];
-    $wp_app_active_plugins   = (array) get_option( 'active_plugins', [] );
-    $wp_app_network_plugins  = function_exists( 'get_site_option' ) ? (array) get_site_option( 'active_sitewide_plugins', [] ) : [];
-
-    foreach ( array_merge( $wp_app_active_plugins, array_keys( $wp_app_network_plugins ) ) as $wp_app_plugin_file ) {
-        $wp_app_plugin_parts = explode( '/', str_replace( '\\', '/', (string) $wp_app_plugin_file ) );
-        $wp_app_plugin_slug  = strtolower( count( $wp_app_plugin_parts ) > 1 ? $wp_app_plugin_parts[0] : pathinfo( $wp_app_plugin_parts[0], PATHINFO_FILENAME ) );
-
-        if ( '' !== $wp_app_plugin_slug ) {
-            $wp_app_active_providers[] = $wp_app_plugin_slug;
-        }
-    }
+    $wp_app_active_plugins  = (array) get_option( 'active_plugins', [] );
+    $wp_app_network_plugins = function_exists( 'get_site_option' ) ? (array) get_site_option( 'active_sitewide_plugins', [] ) : [];
+    $wp_app_active_plugins  = array_map(
+        static function ( $plugin ) {
+            return str_replace( '\\', '/', (string) $plugin );
+        },
+        array_merge( $wp_app_active_plugins, array_keys( $wp_app_network_plugins ) )
+    );
 
     // Ignore a stale selection when its plugin is no longer active.
-    if ( $wp_app_provider_ready && in_array( $wp_app_selected_provider, $wp_app_active_providers, true ) && '' !== $wp_app_current_provider && $wp_app_selected_provider !== $wp_app_current_provider ) {
+    if ( $wp_app_provider_ready && in_array( $wp_app_selected_provider, $wp_app_active_plugins, true ) && '' !== $wp_app_current_provider && $wp_app_selected_directory !== $wp_app_current_provider ) {
         foreach ( $wp_app_package_files as $wp_app_file ) {
             $GLOBALS['__composer_autoload_files'][ md5( 'akirk/wp-app:src/' . $wp_app_file ) ] = true;
         }
@@ -72,7 +74,7 @@ if ( '' !== $wp_app_selected_provider && defined( 'WP_PLUGIN_DIR' ) ) {
 
 unset(
     $wp_app_active_plugins,
-    $wp_app_active_providers,
+    $wp_app_candidate,
     $wp_app_current_provider,
     $wp_app_file,
     $wp_app_network_plugins,
@@ -80,12 +82,10 @@ unset(
     $wp_app_package_files,
     $wp_app_package_suffix,
     $wp_app_path_parts,
-    $wp_app_plugin_file,
-    $wp_app_plugin_parts,
     $wp_app_plugin_root,
-    $wp_app_plugin_slug,
     $wp_app_provider_ready,
     $wp_app_relative_path,
+    $wp_app_selected_directory,
     $wp_app_selected_provider,
     $wp_app_settings
 );
