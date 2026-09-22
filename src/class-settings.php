@@ -279,6 +279,10 @@ class Settings {
             $version = isset( $loaded['version'] ) ? (string) $loaded['version'] : '';
             $slug    = self::get_wp_content_plugin_slug( $path );
 
+            if ( '' === $slug ) {
+                $slug = self::get_inferred_wp_app_provider_slug( $apps );
+            }
+
             return [
                 'slug'    => '' !== $slug ? $slug : self::get_symlinked_wp_app_label( $path ),
                 'version' => '' !== $version ? $version : ( defined( 'WP_APP_VERSION' ) ? WP_APP_VERSION : __( 'unknown' ) ),
@@ -289,6 +293,34 @@ class Settings {
             'slug'    => __( 'unknown source' ),
             'version' => defined( 'WP_APP_VERSION' ) ? WP_APP_VERSION : __( 'unknown' ),
         ];
+    }
+
+    /**
+     * Infer the loaded provider from the selected provider or plugin load order.
+     *
+     * @param array $apps Registered app metadata.
+     * @return string Plugin folder slug, or an empty string.
+     */
+    private static function get_inferred_wp_app_provider_slug( $apps ) {
+        $providers = self::get_wp_app_providers( $apps );
+        $settings  = self::get_settings();
+        $selected  = isset( $settings['provider'] ) ? self::sanitize_provider_plugin_file( $settings['provider'] ) : '';
+
+        if ( '' !== $selected && isset( $providers[ $selected ] ) ) {
+            return self::get_wp_content_plugin_slug( self::get_plugin_root_path() . '/' . $selected );
+        }
+
+        $active_plugins = function_exists( 'get_option' ) ? (array) get_option( 'active_plugins', [] ) : [];
+
+        foreach ( $active_plugins as $plugin_file ) {
+            $plugin_file = self::sanitize_provider_plugin_file( $plugin_file );
+
+            if ( '' !== $plugin_file && isset( $providers[ $plugin_file ] ) ) {
+                return self::get_wp_content_plugin_slug( self::get_plugin_root_path() . '/' . $plugin_file );
+            }
+        }
+
+        return '';
     }
 
     /**

@@ -1390,8 +1390,8 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
     }
 
-    public function test_settings_page_labels_loaded_wp_app_outside_plugins_as_symlinked() {
-        global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
+    public function test_settings_page_infers_symlinked_provider_from_plugin_load_order() {
+        global $__wp_app_test_options, $__wp_app_test_plugin_data, $__wp_app_test_plugins;
 
         $community_dir  = WP_CONTENT_DIR . '/plugins/community-app';
         $alternative_dir = WP_CONTENT_DIR . '/plugins/alternative-app';
@@ -1431,6 +1431,10 @@ class MasterbarSettingsTest extends TestCase {
             $community_file   => [ 'Name' => 'Community App', 'Version' => '1.0.0' ],
             $alternative_file => [ 'Name' => 'Alternative App', 'Version' => '1.0.0' ],
         ];
+        $__wp_app_test_options['active_plugins'] = [
+            'alternative-app/alternative-app.php',
+            'community-app/community-app.php',
+        ];
 
         Registry::register_app_metadata(
             'community-app',
@@ -1464,7 +1468,7 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( 'Load WP Apps library from', $html );
-        $this->assertStringContainsString( 'First plugin (wp-app (symlinked), wp-app 2.0.0)', $html );
+        $this->assertStringContainsString( 'First plugin (alternative-app, wp-app 2.0.0)', $html );
     }
 
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
