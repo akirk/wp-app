@@ -1370,6 +1370,140 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'Wordopedia 2.1.0 — wp-app 2.0.0 (active)', $html );
     }
 
+    public function test_development_wp_app_versions_are_available_as_providers() {
+        global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
+
+        $development_dir  = WP_CONTENT_DIR . '/plugins/development-provider';
+        $development_file = $development_dir . '/development-provider.php';
+
+        if ( ! is_dir( $development_dir ) ) {
+            mkdir( $development_dir, 0777, true );
+        }
+
+        touch( $development_file );
+        file_put_contents(
+            $development_dir . '/composer.lock',
+            wp_json_encode(
+                [
+                    'packages' => [
+                        [
+                            'name'    => 'akirk/wp-app',
+                            'version' => 'dev-main',
+                        ],
+                    ],
+                ]
+            )
+        );
+
+        $__wp_app_test_plugins = [
+            'development-provider' => [
+                'development-provider.php' => [],
+            ],
+        ];
+
+        $__wp_app_test_plugin_data = [
+            $development_file => [
+                'Name'    => 'Development Provider',
+                'Version' => '1.0.0',
+            ],
+        ];
+
+        $providers = Settings::get_wp_app_providers(
+            [
+                [
+                    'wp_app_package' => [
+                        'expected'        => 'dev-main',
+                        'expected_source' => $development_dir . '/composer.json',
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertArrayHasKey( 'development-provider/development-provider.php', $providers );
+        $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
+    }
+
+    public function test_settings_page_infers_symlinked_provider_from_plugin_load_order() {
+        global $__wp_app_test_options, $__wp_app_test_plugin_data, $__wp_app_test_plugins;
+
+        $community_dir  = WP_CONTENT_DIR . '/plugins/community-app';
+        $alternative_dir = WP_CONTENT_DIR . '/plugins/alternative-app';
+
+        foreach ( [ $community_dir, $alternative_dir ] as $plugin_dir ) {
+            if ( ! is_dir( $plugin_dir ) ) {
+                mkdir( $plugin_dir, 0777, true );
+            }
+        }
+
+        $community_file   = $community_dir . '/community-app.php';
+        $alternative_file = $alternative_dir . '/alternative-app.php';
+
+        touch( $community_file );
+        touch( $alternative_file );
+        foreach ( [ $community_dir, $alternative_dir ] as $plugin_dir ) {
+            file_put_contents(
+                $plugin_dir . '/composer.lock',
+                wp_json_encode(
+                    [
+                        'packages' => [
+                            [
+                                'name'    => 'akirk/wp-app',
+                                'version' => 'dev-main',
+                            ],
+                        ],
+                    ]
+                )
+            );
+        }
+
+        $__wp_app_test_plugins = [
+            'community-app'   => [ 'community-app.php' => [] ],
+            'alternative-app' => [ 'alternative-app.php' => [] ],
+        ];
+        $__wp_app_test_plugin_data = [
+            $community_file   => [ 'Name' => 'Community App', 'Version' => '1.0.0' ],
+            $alternative_file => [ 'Name' => 'Alternative App', 'Version' => '1.0.0' ],
+        ];
+        $__wp_app_test_options['active_plugins'] = [
+            'alternative-app/alternative-app.php',
+            'community-app/community-app.php',
+        ];
+
+        Registry::register_app_metadata(
+            'community-app',
+            [
+                'name'           => 'Community App',
+                'url'            => 'https://example.org/community-app/',
+                'wp_app_package' => [
+                    'expected'        => 'dev-main',
+                    'expected_source' => $alternative_dir . '/composer.json',
+                    'loaded'          => [
+                        'version' => '2.0.0',
+                        'path'    => '/Users/example/Sites/wp-app',
+                    ],
+                ],
+            ]
+        );
+        Registry::register_app_metadata(
+            'alternative-app',
+            [
+                'name'           => 'Alternative App',
+                'url'            => 'https://example.org/alternative-app/',
+                'wp_app_package' => [
+                    'expected'        => 'dev-main',
+                    'expected_source' => $community_dir . '/composer.json',
+                ],
+            ]
+        );
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( 'First plugin (alternative-app, wp-app 2.0.0)', $html );
+    }
+
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
         Registry::register_app_metadata(
             'unknown-requirement-app',

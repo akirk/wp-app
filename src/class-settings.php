@@ -280,16 +280,66 @@ class Settings {
             $version = isset( $loaded['version'] ) ? (string) $loaded['version'] : '';
             $slug    = self::get_wp_content_plugin_slug( $path );
 
+            if ( '' === $slug ) {
+                $slug = self::get_inferred_wp_app_provider_slug( $apps );
+            }
+
             return [
-                'slug'    => '' !== $slug ? $slug : __( 'unknown plugin' ),
+                'slug'    => '' !== $slug ? $slug : self::get_symlinked_wp_app_label( $path ),
                 'version' => '' !== $version ? $version : ( defined( 'WP_APP_VERSION' ) ? WP_APP_VERSION : __( 'unknown' ) ),
             ];
         }
 
         return [
-            'slug'    => __( 'unknown plugin' ),
+            'slug'    => __( 'unknown source' ),
             'version' => defined( 'WP_APP_VERSION' ) ? WP_APP_VERSION : __( 'unknown' ),
         ];
+    }
+
+    /**
+     * Infer the loaded provider from the selected provider or plugin load order.
+     *
+     * @param array $apps Registered app metadata.
+     * @return string Plugin folder slug, or an empty string.
+     */
+    private static function get_inferred_wp_app_provider_slug( $apps ) {
+        $providers = self::get_wp_app_providers( $apps );
+        $settings  = self::get_settings();
+        $selected  = isset( $settings['provider'] ) ? self::sanitize_provider_plugin_file( $settings['provider'] ) : '';
+
+        if ( '' !== $selected && isset( $providers[ $selected ] ) ) {
+            return self::get_wp_content_plugin_slug( self::get_plugin_root_path() . '/' . $selected );
+        }
+
+        $active_plugins = function_exists( 'get_option' ) ? (array) get_option( 'active_plugins', [] ) : [];
+
+        foreach ( $active_plugins as $plugin_file ) {
+            $plugin_file = self::sanitize_provider_plugin_file( $plugin_file );
+
+            if ( '' !== $plugin_file && isset( $providers[ $plugin_file ] ) ) {
+                return self::get_wp_content_plugin_slug( self::get_plugin_root_path() . '/' . $plugin_file );
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Describe a loaded wp-app package reached through a Composer symlink.
+     *
+     * @param string $path Loaded wp-app package path.
+     * @return string Human-readable source label.
+     */
+    private static function get_symlinked_wp_app_label( $path ) {
+        $path = rtrim( self::normalize_filesystem_path( $path ), '/' );
+        $name = basename( $path );
+
+        if ( '' === $name || '.' === $name ) {
+            return __( 'unknown source' );
+        }
+
+        /* translators: %s: Directory name of a symlinked wp-app package. */
+        return sprintf( __( '%s (symlinked)' ), $name );
     }
 
     /**
@@ -321,7 +371,7 @@ class Settings {
      * @param bool   $is_loaded Whether this is the currently loaded copy.
      */
     private static function add_wp_app_provider( &$providers, $path, $version, $is_loaded ) {
-        if ( '' === $version || version_compare( $version, self::MINIMUM_SWITCHABLE_VERSION, '<' ) ) {
+        if ( '' === $version || ( ! self::is_development_version( $version ) && version_compare( $version, self::MINIMUM_SWITCHABLE_VERSION, '<' ) ) ) {
             return;
         }
 
@@ -347,6 +397,16 @@ class Settings {
         if ( ! isset( $providers[ $plugin_file ] ) || $is_loaded ) {
             $providers[ $plugin_file ] = [ 'label' => $label ];
         }
+    }
+
+    /**
+     * Whether a Composer package version identifies a development branch.
+     *
+     * @param string $version Composer package version.
+     * @return bool True for versions such as dev-main and 2.0.x-dev.
+     */
+    private static function is_development_version( $version ) {
+        return 1 === preg_match( '/^(?:dev-.+|.+-dev)$/i', $version );
     }
 
     /**
