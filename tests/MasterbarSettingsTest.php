@@ -1392,51 +1392,69 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
     }
 
-    public function test_loaded_wp_app_outside_plugins_uses_external_checkout_label() {
-        $method = new \ReflectionMethod( Settings::class, 'get_loaded_wp_app_provider' );
-        if ( PHP_VERSION_ID < 80100 ) {
-            $method->setAccessible( true );
+    public function test_settings_page_uses_composer_loader_to_identify_symlink_provider() {
+        global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
+
+        $community_dir  = WP_CONTENT_DIR . '/plugins/community-app';
+        $alternative_dir = WP_CONTENT_DIR . '/plugins/alternative-app';
+
+        foreach ( [ $community_dir, $alternative_dir ] as $plugin_dir ) {
+            if ( ! is_dir( $plugin_dir ) ) {
+                mkdir( $plugin_dir, 0777, true );
+            }
         }
-        $result = $method->invoke(
-            null,
-            [
+
+        $community_file   = $community_dir . '/community-app.php';
+        $alternative_file = $alternative_dir . '/alternative-app.php';
+
+        touch( $community_file );
+        touch( $alternative_file );
+        file_put_contents(
+            $alternative_dir . '/composer.lock',
+            wp_json_encode(
                 [
-                    'wp_app_package' => [
-                        'loaded' => [
-                            'version' => '2.0.0',
-                            'path'    => '/Users/example/Sites/wp-app',
+                    'packages' => [
+                        [
+                            'name'    => 'akirk/wp-app',
+                            'version' => 'dev-main',
                         ],
+                    ],
+                ]
+            )
+        );
+
+        $__wp_app_test_plugins = [
+            'community-app'   => [ 'community-app.php' => [] ],
+            'alternative-app' => [ 'alternative-app.php' => [] ],
+        ];
+        $__wp_app_test_plugin_data = [
+            $community_file   => [ 'Name' => 'Community App', 'Version' => '1.0.0' ],
+            $alternative_file => [ 'Name' => 'Alternative App', 'Version' => '1.0.0' ],
+        ];
+
+        Registry::register_app_metadata(
+            'community-app',
+            [
+                'name'           => 'Community App',
+                'url'            => 'https://example.org/community-app/',
+                'wp_app_package' => [
+                    'expected'        => 'dev-main',
+                    'expected_source' => $alternative_dir . '/composer.json',
+                    'loaded'          => [
+                        'version'       => '2.0.0',
+                        'path'          => '/Users/example/Sites/wp-app',
+                        'provider_path' => $community_dir . '/vendor/composer/autoload_real.php',
                     ],
                 ],
             ]
         );
 
-        $this->assertSame( 'wp-app (external checkout)', $result['slug'] );
-        $this->assertSame( '2.0.0', $result['version'] );
-    }
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
 
-    public function test_loaded_wp_app_uses_composer_loader_to_identify_symlink_provider() {
-        $method = new \ReflectionMethod( Settings::class, 'get_loaded_wp_app_provider' );
-        if ( PHP_VERSION_ID < 80100 ) {
-            $method->setAccessible( true );
-        }
-        $result = $method->invoke(
-            null,
-            [
-                [
-                    'wp_app_package' => [
-                        'loaded' => [
-                            'version'       => '2.0.0',
-                            'path'          => '/Users/example/Sites/wp-app',
-                            'provider_path' => WP_CONTENT_DIR . '/plugins/community-app/vendor/composer/autoload_real.php',
-                        ],
-                    ],
-                ],
-            ]
-        );
-
-        $this->assertSame( 'community-app', $result['slug'] );
-        $this->assertSame( '2.0.0', $result['version'] );
+        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( 'First plugin (community-app, wp-app 2.0.0)', $html );
     }
 
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
