@@ -846,8 +846,33 @@ class WpApp {
         $this->masterbar->add_menu_item( $id, $title, $href, $args );
     }
 
-    /** Register an app theme with optional template overrides. */
+    /**
+     * Register an app theme with optional template overrides.
+     *
+     * Theme names are commonly translated. Requiring registration on the
+     * app-specific init filter prevents those translations from being loaded
+     * before WordPress' init action.
+     *
+     * @return bool Whether the theme was registered.
+     */
     public function register_theme( $slug, $name, $template_directory = '' ) {
+        $init_filter = $this->get_init_filter_name();
+
+        if ( ! function_exists( 'doing_filter' ) || ! doing_filter( $init_filter ) ) {
+            if ( function_exists( '_doing_it_wrong' ) ) {
+                _doing_it_wrong(
+                    __METHOD__,
+                    sprintf(
+                        'Themes must be registered inside the %s filter so translated theme names are not loaded before init.',
+                        $init_filter
+                    ),
+                    '2.0.0'
+                );
+            }
+
+            return false;
+        }
+
         return $this->themes->register( $slug, $name, $template_directory );
     }
 

@@ -108,11 +108,21 @@ stores each logged-in user's choice separately for each app, and looks for route
 templates in the selected theme directory before falling back to the app's regular
 template directory.
 
+Register themes on the app-specific initialization filter. Direct registration
+is rejected so translating a theme name cannot trigger translation loading
+before WordPress `init`:
+
 ```php
-$app->register_theme(
-	'compact',
-	__( 'Compact', 'my-plugin' ),
-	plugin_dir_path( __FILE__ ) . 'templates/compact'
+add_filter(
+	'wp_app_init_reader',
+	function ( $app ) {
+		$app->register_theme(
+			'compact',
+			__( 'Compact', 'my-plugin' ),
+			plugin_dir_path( __FILE__ ) . 'templates/compact'
+		);
+		return $app;
+	}
 );
 ```
 

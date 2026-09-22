@@ -57,6 +57,18 @@ if ( ! function_exists( 'doing_action' ) ) {
 	}
 }
 
+if ( ! function_exists( 'doing_filter' ) ) {
+	function doing_filter( $hook_name = null ) {
+		global $__wp_app_test_filter_stack;
+
+		if ( null === $hook_name ) {
+			return ! empty( $__wp_app_test_filter_stack );
+		}
+
+		return in_array( $hook_name, (array) $__wp_app_test_filter_stack, true );
+	}
+}
+
 if ( ! function_exists( 'add_action' ) ) {
 	function add_action( $hook_name, $callback, $priority = 10, $accepted_args = 1 ) {
 		global $__wp_app_test_actions;
@@ -321,9 +333,12 @@ if ( ! function_exists( 'esc_attr__' ) ) {
 
 if ( ! function_exists( 'apply_filters' ) ) {
 	function apply_filters( $hook_name, $value, ...$args ) {
-		global $__wp_app_test_filters;
+		global $__wp_app_test_filters, $__wp_app_test_filter_stack;
+
+		$__wp_app_test_filter_stack[] = $hook_name;
 
 		if ( empty( $__wp_app_test_filters[ $hook_name ] ) ) {
+			array_pop( $__wp_app_test_filter_stack );
 			return $value;
 		}
 
@@ -331,6 +346,7 @@ if ( ! function_exists( 'apply_filters' ) ) {
 			$value = call_user_func( $callback, $value, ...$args );
 		}
 
+		array_pop( $__wp_app_test_filter_stack );
 		return $value;
 	}
 }

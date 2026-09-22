@@ -11,15 +11,42 @@ class ThemesTest extends TestCase {
 	private $theme_directory;
 
 	protected function setUp(): void {
-		global $__wp_app_test_user_options, $__wp_app_test_is_user_logged_in, $__wp_app_test_current_user_id;
+		global $__wp_app_test_user_options, $__wp_app_test_is_user_logged_in, $__wp_app_test_current_user_id,
+			$__wp_app_test_filters, $__wp_app_test_filter_stack, $__wp_app_test_doing_it_wrong;
 
 		Registry::reset();
 		$__wp_app_test_user_options      = [];
 		$__wp_app_test_is_user_logged_in = true;
 		$__wp_app_test_current_user_id   = 42;
+		$__wp_app_test_filters           = [];
+		$__wp_app_test_filter_stack      = [];
+		$__wp_app_test_doing_it_wrong    = [];
 		$_GET                            = [];
 		$this->base_directory            = __DIR__ . '/fixtures/templates';
 		$this->theme_directory           = $this->base_directory . '/compact';
+	}
+
+	private function register_theme( WpApp $app, $slug, $name, $template_directory = '' ) {
+		add_filter(
+			$app->get_init_filter_name(),
+			static function ( $app ) use ( $slug, $name, $template_directory ) {
+				$app->register_theme( $slug, $name, $template_directory );
+				return $app;
+			}
+		);
+
+		apply_filters( $app->get_init_filter_name(), $app );
+	}
+
+	public function test_theme_registration_outside_app_init_filter_is_rejected() {
+		global $__wp_app_test_doing_it_wrong;
+
+		$app = new WpApp( $this->base_directory, 'reader' );
+
+		$this->assertFalse( $app->register_theme( 'compact', 'Compact', $this->theme_directory ) );
+		$this->assertArrayNotHasKey( 'compact', $app->get_themes() );
+		$this->assertSame( 'WpApp\\WpApp::register_theme', $__wp_app_test_doing_it_wrong[0]['function'] );
+		$this->assertStringContainsString( 'wp_app_init_reader', $__wp_app_test_doing_it_wrong[0]['message'] );
 	}
 
 	protected function tearDown(): void {
@@ -30,7 +57,7 @@ class ThemesTest extends TestCase {
 		global $__wp_app_test_user_options;
 
 		$app = new WpApp( $this->base_directory, 'reader' );
-		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
+		$this->register_theme( $app, 'compact', 'Compact', $this->theme_directory );
 		$_GET['wp_app_theme'] = 'compact';
 
 		$this->assertSame( 'compact', $app->get_selected_theme() );
@@ -47,7 +74,7 @@ class ThemesTest extends TestCase {
 
 	public function test_theme_template_overrides_and_falls_back_to_app_templates() {
 		$app = new WpApp( $this->base_directory, 'reader' );
-		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
+		$this->register_theme( $app, 'compact', 'Compact', $this->theme_directory );
 		$_GET['wp_app_theme'] = 'compact';
 
 		$index   = $app->router()->locate_template( 'index.php' );
