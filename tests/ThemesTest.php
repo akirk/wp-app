@@ -95,7 +95,7 @@ class ThemesTest extends TestCase {
 		];
 
 		$app = new WpApp( $this->base_directory, 'reader' );
-		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
+		$this->register_theme( $app, 'compact', 'Compact', $this->theme_directory );
 
 		$this->assertSame( 'compact', $app->get_selected_theme() );
 		$this->assertSame( [ 'default', 'compact' ], array_keys( Registry::get_app_metadata()['reader']['themes'] ) );
@@ -112,7 +112,7 @@ class ThemesTest extends TestCase {
 		$__wp_app_test_user_options['wp_app_theme_reader'] = 'default';
 
 		$app = new WpApp( $this->base_directory, 'reader' );
-		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
+		$this->register_theme( $app, 'compact', 'Compact', $this->theme_directory );
 
 		$this->assertSame( 'default', $app->get_selected_theme() );
 	}

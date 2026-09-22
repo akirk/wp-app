@@ -73,7 +73,13 @@ class MasterbarSettingsTest extends TestCase {
 
     public function test_settings_page_renders_default_theme_for_apps_with_multiple_themes() {
         $app = new WpApp( '', 'reader', [ 'app_name' => 'Reader' ] );
-        $app->register_theme( 'compact', 'Compact' );
+        add_filter(
+            'wp_app_init_reader',
+            function () use ( $app ) {
+                $app->register_theme( 'compact', 'Compact' );
+            }
+        );
+        apply_filters( 'wp_app_init_reader', $app );
 
         ob_start();
         Settings::render_settings_page();
@@ -1171,6 +1177,7 @@ class MasterbarSettingsTest extends TestCase {
     public function test_settings_page_enqueues_jquery_ui_autocomplete() {
         global $wp_scripts;
 
+        // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Reset the test script registry.
         $wp_scripts = null;
 
         Settings::enqueue_settings_assets( 'settings_page_wp-apps' );
