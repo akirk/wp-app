@@ -68,4 +68,9 @@
 
 	<!-- Set minimum PHP version -->
 	<config name="minimum_supported_wp_version" value="5.0"/>
+
+	<!-- Tests intentionally use native filesystem functions to create fixtures. -->
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>*/tests/*</exclude-pattern>
+	</rule>
 </ruleset>
