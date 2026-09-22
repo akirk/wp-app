@@ -1390,6 +1390,26 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
     }
 
+    public function test_loaded_wp_app_outside_plugins_uses_external_checkout_label() {
+        $method = new \ReflectionMethod( Settings::class, 'get_loaded_wp_app_provider' );
+        $result = $method->invoke(
+            null,
+            [
+                [
+                    'wp_app_package' => [
+                        'loaded' => [
+                            'version' => '2.0.0',
+                            'path'    => '/Users/example/Sites/wp-app',
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertSame( 'wp-app (external checkout)', $result['slug'] );
+        $this->assertSame( '2.0.0', $result['version'] );
+    }
+
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
         Registry::register_app_metadata(
             'unknown-requirement-app',
