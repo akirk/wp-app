@@ -18,6 +18,7 @@
     },
     "autoload": {
         "files": [
+            "src/bootstrap.php",
             "src/class-openstation.php",
             "src/class-registry.php",
             "src/class-settings.php",

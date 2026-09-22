@@ -47,6 +47,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertTrue( $settings['only_show_active_app'] );
         $this->assertTrue( $settings['show_inactive_apps_in_overflow'] );
         $this->assertTrue( $settings['sort_overflow_menu_alphabetically'] );
+        $this->assertSame( '', $settings['provider'] );
         $this->assertSame( [ 'team/tools', 'badpath', 'reports_app' ], $settings['app_order'] );
         $this->assertArrayHasKey( 'team/tools', $settings['apps'] );
         $this->assertSame( 'Team Tools', $settings['apps']['team/tools']['title'] );
@@ -89,6 +90,12 @@ class MasterbarSettingsTest extends TestCase {
         $settings = Settings::get_settings();
 
         $this->assertFalse( $settings['sort_overflow_menu_alphabetically'] );
+    }
+
+    public function test_sanitize_settings_preserves_safe_provider_slug() {
+        $settings = Settings::sanitize_settings( [ 'provider' => '../Wordopedia!' ] );
+
+        $this->assertSame( 'wordopedia', $settings['provider'] );
     }
 
     public function test_registered_apps_follow_saved_order_before_new_apps() {
@@ -1215,7 +1222,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertSame( dirname( __DIR__ ), $apps['package-test-app']['wp_app_package']['loaded']['path'] );
     }
 
-    public function test_settings_page_renders_wp_app_package_metadata() {
+    public function test_settings_page_does_not_render_per_app_package_diagnostics() {
         $app = new WpApp(
             '',
             'configured-package-app',
@@ -1230,15 +1237,9 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( '<details class="wp-app-settings-package">', $html );
-        $this->assertStringContainsString( 'This app is using wp-app', $html );
-        $this->assertStringContainsString( 'This app asks for ~2.0 and is using wp-app', $html );
-        $this->assertStringContainsString( '<code>~2.0</code>', $html );
-        $this->assertStringContainsString( '<dt>Active wp-app</dt>', $html );
-        $this->assertStringNotContainsString( '<dt>Loaded from</dt>', $html );
-        $this->assertStringContainsString( '<dt>Launchers</dt>', $html );
-        $this->assertStringContainsString( 'OpenStation:', $html );
-        $this->assertStringContainsString( 'active, apps registered as desktop icons', $html );
+        $this->assertStringNotContainsString( '<details class="wp-app-settings-package">', $html );
+        $this->assertStringNotContainsString( '<dt>Active wp-app</dt>', $html );
+        $this->assertStringNotContainsString( '<dt>Launchers</dt>', $html );
     }
 
     public function test_settings_page_shows_when_another_plugins_wp_app_package_is_active() {
@@ -1260,6 +1261,19 @@ class MasterbarSettingsTest extends TestCase {
 
         touch( $memex_file );
         touch( $wordopedia_file );
+        file_put_contents(
+            $memex_dir . '/composer.lock',
+            wp_json_encode(
+                [
+                    'packages' => [
+                        [
+                            'name'    => 'akirk/wp-app',
+                            'version' => 'v2.1.0',
+                        ],
+                    ],
+                ]
+            )
+        );
 
         $__wp_app_test_plugins = [
             'memex'      => [
@@ -1291,7 +1305,7 @@ class MasterbarSettingsTest extends TestCase {
                     'expected_source' => WP_CONTENT_DIR . '/plugins/memex/composer.json',
                     'loaded'          => [
                         'name'    => 'akirk/wp-app',
-                        'version' => '1.2.4',
+                        'version' => '2.0.0',
                         'path'    => WP_CONTENT_DIR . '/plugins/wordopedia/vendor/composer/../akirk/wp-app',
                     ],
                 ],
@@ -1302,14 +1316,21 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'Memex 1.4.0 is using wp-app 1.2.4 from Wordopedia 2.1.0', $html );
-        $this->assertStringContainsString( 'Memex 1.4.0 includes wp-app, but the copy from Wordopedia 2.1.0 was loaded first.', $html );
-        $this->assertStringContainsString( '<dt>App plugin</dt>', $html );
-        $this->assertStringContainsString( 'Memex 1.4.0', $html );
-        $this->assertStringContainsString( '<dt>Active wp-app</dt>', $html );
-        $this->assertStringContainsString( 'from Wordopedia 2.1.0', $html );
-        $this->assertStringContainsString( 'wp-content/plugins/wordopedia/vendor/akirk/wp-app', $html );
-        $this->assertStringNotContainsString( 'vendor/composer/../akirk/wp-app', $html );
+        $this->assertStringNotContainsString( '<details class="wp-app-settings-package">', $html );
+        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( 'class="description wp-app-provider-loaded-version"', $html );
+        $this->assertStringContainsString( 'title="wordopedia"', $html );
+        $this->assertMatchesRegularExpression( '/wp-app-provider-loaded-version"[^>]*title="wordopedia"[^>]*>\s*2\.0\.0\s*<\/span>/', $html );
+        $this->assertStringNotContainsString( '<h2>WP App Version</h2>', $html );
+        $this->assertStringNotContainsString( '<h2>Global Display</h2>', $html );
+        $this->assertStringNotContainsString( '<h2>Installed Apps</h2>', $html );
+        $this->assertGreaterThan( strpos( $html, 'data-app-path="memex"' ), strpos( $html, 'App menu visibility' ) );
+        $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, 'Load WP Apps library from' ) );
+        $this->assertStringContainsString( 'First plugin (wordopedia, wp-app 2.0.0)', $html );
+        $this->assertStringContainsString( '<option value="memex"', $html );
+        $this->assertStringContainsString( '<option value="wordopedia"', $html );
+        $this->assertStringContainsString( 'Memex 1.4.0 — wp-app 2.1.0', $html );
+        $this->assertStringContainsString( 'Wordopedia 2.1.0 — wp-app 2.0.0 (active)', $html );
     }
 
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
@@ -1333,9 +1354,7 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'wp-app requirement not detected', $html );
-        $this->assertStringNotContainsString( 'This app asks for Not detected', $html );
-        $this->assertStringNotContainsString( 'Unknown Requirement App includes wp-app', $html );
+        $this->assertStringNotContainsString( '<details class="wp-app-settings-package">', $html );
     }
 
     public function test_app_link_styles_preserve_dashicons_font_inside_admin_bar() {
