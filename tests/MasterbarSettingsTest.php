@@ -1394,6 +1394,9 @@ class MasterbarSettingsTest extends TestCase {
 
     public function test_loaded_wp_app_outside_plugins_uses_external_checkout_label() {
         $method = new \ReflectionMethod( Settings::class, 'get_loaded_wp_app_provider' );
+        if ( PHP_VERSION_ID < 80100 ) {
+            $method->setAccessible( true );
+        }
         $result = $method->invoke(
             null,
             [
@@ -1414,6 +1417,9 @@ class MasterbarSettingsTest extends TestCase {
 
     public function test_loaded_wp_app_uses_composer_loader_to_identify_symlink_provider() {
         $method = new \ReflectionMethod( Settings::class, 'get_loaded_wp_app_provider' );
+        if ( PHP_VERSION_ID < 80100 ) {
+            $method->setAccessible( true );
+        }
         $result = $method->invoke(
             null,
             [
