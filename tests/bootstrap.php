@@ -578,6 +578,15 @@ if ( ! function_exists( 'get_user_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'update_user_option' ) ) {
+	function update_user_option( $user_id, $option, $value, $global = false ) {
+		global $__wp_app_test_user_options;
+
+		$__wp_app_test_user_options[ $option ] = $value;
+		return true;
+	}
+}
+
 if ( ! function_exists( 'get_user_meta' ) ) {
 	function get_user_meta( $user_id, $key = '', $single = false ) {
 		global $__wp_app_test_user_meta;

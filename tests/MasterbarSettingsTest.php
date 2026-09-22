@@ -1208,7 +1208,7 @@ class MasterbarSettingsTest extends TestCase {
         $apps = Settings::get_registered_apps();
 
         $this->assertSame( '^1.2', $apps['package-test-app']['wp_app_package']['expected'] );
-        $this->assertSame( $plugin_dir . '/composer.json', $apps['package-test-app']['wp_app_package']['expected_source'] );
+        $this->assertSame( realpath( $plugin_dir . '/composer.json' ), $apps['package-test-app']['wp_app_package']['expected_source'] );
         $this->assertSame( 'akirk/wp-app', $apps['package-test-app']['wp_app_package']['loaded']['name'] );
         $this->assertNotEmpty( $apps['package-test-app']['wp_app_package']['loaded']['path'] );
         $this->assertSame( WP_APP_VERSION, $apps['package-test-app']['wp_app_package']['loaded']['version'] );

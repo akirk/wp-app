@@ -539,7 +539,8 @@ if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
         $path = ltrim( (string) $path, '/' );
 
         if ( defined( 'WP_PLUGIN_DIR' ) && defined( 'WP_PLUGIN_URL' ) ) {
-            $plugin_dir = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
+            $resolved_plugin_dir = realpath( WP_PLUGIN_DIR );
+            $plugin_dir          = rtrim( str_replace( '\\', '/', $resolved_plugin_dir ? $resolved_plugin_dir : WP_PLUGIN_DIR ), '/' );
 
             foreach ( get_included_files() as $included_file ) {
                 $included_file = str_replace( '\\', '/', $included_file );
@@ -550,7 +551,14 @@ if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
 
                 $candidate = dirname( $included_file ) . '/akirk/wp-app/assets/' . $path;
 
-                if ( file_exists( $candidate ) && 0 === strpos( $candidate, $plugin_dir . '/' ) ) {
+                if ( ! file_exists( $candidate ) ) {
+                    continue;
+                }
+
+                $resolved_candidate = realpath( $candidate );
+                $candidate          = str_replace( '\\', '/', $resolved_candidate ? $resolved_candidate : $candidate );
+
+                if ( 0 === strpos( $candidate, $plugin_dir . '/' ) ) {
                     return rtrim( WP_PLUGIN_URL, '/' ) . substr( $candidate, strlen( $plugin_dir ) );
                 }
             }

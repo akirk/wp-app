@@ -1,0 +1,3 @@
+<?php
+
+echo 'compact-index';

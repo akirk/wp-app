@@ -25,6 +25,7 @@ foreach ( [
     'class-pwa.php',
     'class-router.php',
     'class-masterbar.php',
+    'class-themes.php',
     'class-wpapp.php',
     'class-client-encrypted-fields.php',
     'BaseStorage.php',

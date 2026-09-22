@@ -25,6 +25,7 @@ class WpApp {
     private $app_icon_shadow     = null;
     private $pwa_config          = null;
     private $wp_app_requirement  = null;
+    private $themes;
 
     public function __construct( $template_directory = '', $url_path = 'app', $config = [] ) {
         // Handle legacy parameter style
@@ -36,6 +37,8 @@ class WpApp {
         $this->template_directory = $template_directory;
         $this->router             = new Router( $template_directory, $url_path );
         $this->masterbar          = new Masterbar( $url_path, $this );
+        $this->themes             = new Themes( $url_path, $template_directory, $this->masterbar );
+        $this->router->set_template_directories_provider( [ $this->themes, 'get_template_directories' ] );
 
         // Apply configuration
         $this->apply_config( $config );
@@ -841,6 +844,21 @@ class WpApp {
      */
     public function add_menu_item( $id, $title, $href = '', $args = [] ) {
         $this->masterbar->add_menu_item( $id, $title, $href, $args );
+    }
+
+    /** Register an app theme with optional template overrides. */
+    public function register_theme( $slug, $name, $template_directory = '' ) {
+        return $this->themes->register( $slug, $name, $template_directory );
+    }
+
+    /** Get registered app themes. */
+    public function get_themes() {
+        return $this->themes->get_themes();
+    }
+
+    /** Get the current user's selected app theme. */
+    public function get_selected_theme() {
+        return $this->themes->get_selected();
     }
 
     /**
