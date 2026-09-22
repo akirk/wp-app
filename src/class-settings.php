@@ -280,7 +280,7 @@ class Settings {
             $slug    = self::get_wp_content_plugin_slug( $path );
 
             return [
-                'slug'    => '' !== $slug ? $slug : self::get_external_wp_app_label( $path ),
+                'slug'    => '' !== $slug ? $slug : self::get_symlinked_wp_app_label( $path ),
                 'version' => '' !== $version ? $version : ( defined( 'WP_APP_VERSION' ) ? WP_APP_VERSION : __( 'unknown' ) ),
             ];
         }
@@ -292,14 +292,12 @@ class Settings {
     }
 
     /**
-     * Describe a loaded wp-app package that is outside the plugins directory.
-     *
-     * This commonly occurs when Composer uses a symlink to a local checkout.
+     * Describe a loaded wp-app package reached through a Composer symlink.
      *
      * @param string $path Loaded wp-app package path.
      * @return string Human-readable source label.
      */
-    private static function get_external_wp_app_label( $path ) {
+    private static function get_symlinked_wp_app_label( $path ) {
         $path = rtrim( self::normalize_filesystem_path( $path ), '/' );
         $name = basename( $path );
 
@@ -307,8 +305,8 @@ class Settings {
             return __( 'unknown source' );
         }
 
-        /* translators: %s: Directory name of an external wp-app checkout. */
-        return sprintf( __( '%s (external checkout)' ), $name );
+        /* translators: %s: Directory name of a symlinked wp-app package. */
+        return sprintf( __( '%s (symlinked)' ), $name );
     }
 
     /**

@@ -1390,7 +1390,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
     }
 
-    public function test_settings_page_labels_loaded_wp_app_outside_plugins_as_external_checkout() {
+    public function test_settings_page_labels_loaded_wp_app_outside_plugins_as_symlinked() {
         global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
 
         $community_dir  = WP_CONTENT_DIR . '/plugins/community-app';
@@ -1464,7 +1464,7 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( 'Load WP Apps library from', $html );
-        $this->assertStringContainsString( 'First plugin (wp-app (external checkout), wp-app 2.0.0)', $html );
+        $this->assertStringContainsString( 'First plugin (wp-app (symlinked), wp-app 2.0.0)', $html );
     }
 
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
