@@ -362,6 +362,18 @@ if ( ! function_exists( 'update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'selected' ) ) {
+	function selected( $selected, $current = true, $display = true ) {
+		$result = (string) $selected === (string) $current ? ' selected="selected"' : '';
+
+		if ( $display ) {
+			echo $result;
+		}
+
+		return $result;
+	}
+}
+
 if ( ! function_exists( 'home_url' ) ) {
 	function home_url( $path = '', $scheme = null ) {
 		return 'https://example.org' . $path;

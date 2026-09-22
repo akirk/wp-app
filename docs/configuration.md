@@ -43,6 +43,8 @@ WpApp automatically exposes the current user's WordPress admin color scheme as C
 
 Global masterbar behavior can also be configured in **Settings > WP Apps**. The global display settings can hide inactive app links by default and, when enabled, collect all inactive app links under the `Apps` overflow menu while keeping the current app visible in the masterbar.
 
+When more than one registered plugin bundles wp-app, **Settings > WP Apps** can select which plugin provides the shared framework. The selection takes effect on the next request. Automatic mode retains the default first-loaded behavior. If the selected plugin is deactivated, removed, or does not contain a switcher-capable wp-app copy, loading safely falls back to automatic mode.
+
 ### Access Control
 
 | Option | Type | Default | Description |
