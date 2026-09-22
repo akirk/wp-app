@@ -142,7 +142,7 @@ Structure the app's own markup so an assistant looking at the current page finds
 - [ ] `permission_callback` reuses the app's capability and meta caps.
 - [ ] Namespace and category match the app's route slug; `meta.public` is left unset.
 
-The [community app example](../examples/community-app/) registers four abilities this way.
+The [community app example](https://github.com/akirk/wp-app-examples/tree/main/community-app) registers four abilities this way.
 
 ## Related Documentation
 

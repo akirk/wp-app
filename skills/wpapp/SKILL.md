@@ -259,7 +259,7 @@ Design rules — the description and schemas are the whole API for the caller:
 - Failures are `WP_Error` with stable codes (`not_found`), never `false`/`null`/`[]`.
 - `list-*` pages (`page`, `per_page` with a maximum) and returns summaries; `get-*` returns the full record.
 
-Full guidance and a worked example: `docs/abilities.md`, `examples/community-app/`.
+Full guidance and a worked example: `docs/abilities.md` and the [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) example.
 
 ## Verification
 
