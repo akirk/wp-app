@@ -112,6 +112,10 @@ Register themes on the app-specific initialization filter. Direct registration
 is rejected so translating a theme name cannot trigger translation loading
 before WordPress `init`:
 
+When an app registers more than one theme, administrators can choose its site-wide
+default under **Settings > WP Apps**. That default is used until a user makes a
+personal selection; an existing personal selection continues to take precedence.
+
 ```php
 add_filter(
 	'wp_app_init_reader',

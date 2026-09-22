@@ -56,6 +56,32 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertSame( '#fff', $settings['apps']['team/tools']['icon_color'] );
         $this->assertTrue( $settings['apps']['team/tools']['show_icon'] );
         $this->assertFalse( $settings['apps']['team/tools']['generate_letter_icon'] );
+        $this->assertSame( '', $settings['apps']['team/tools']['default_theme'] );
+    }
+
+    public function test_sanitize_settings_preserves_default_theme_slug() {
+        $settings = Settings::sanitize_settings(
+            [
+                'apps' => [
+                    'reader' => [ 'default_theme' => 'Compact Theme!' ],
+                ],
+            ]
+        );
+
+        $this->assertSame( 'compacttheme', $settings['apps']['reader']['default_theme'] );
+    }
+
+    public function test_settings_page_renders_default_theme_for_apps_with_multiple_themes() {
+        $app = new WpApp( '', 'reader', [ 'app_name' => 'Reader' ] );
+        $app->register_theme( 'compact', 'Compact' );
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( '>Default theme</label>', $html );
+        $this->assertStringContainsString( 'name="wp_app_masterbar_settings[apps][reader][default_theme]"', $html );
+        $this->assertStringContainsString( '<option value="compact"', $html );
     }
 
     public function test_sanitize_settings_rejects_unsafe_icon_color_values() {

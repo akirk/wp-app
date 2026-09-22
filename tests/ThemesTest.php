@@ -4,6 +4,7 @@ namespace WpApp\Tests;
 
 use PHPUnit\Framework\TestCase;
 use WpApp\Registry;
+use WpApp\Settings;
 use WpApp\WpApp;
 
 class ThemesTest extends TestCase {
@@ -82,5 +83,37 @@ class ThemesTest extends TestCase {
 
 		$this->assertSame( $this->theme_directory . '/index.php', $index );
 		$this->assertSame( $this->base_directory . '/details.php', $details );
+	}
+
+	public function test_site_default_theme_is_used_without_a_personal_selection() {
+		global $__wp_app_test_options;
+
+		$__wp_app_test_options[ Settings::OPTION ] = [
+			'apps' => [
+				'reader' => [ 'default_theme' => 'compact' ],
+			],
+		];
+
+		$app = new WpApp( $this->base_directory, 'reader' );
+		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
+
+		$this->assertSame( 'compact', $app->get_selected_theme() );
+		$this->assertSame( [ 'default', 'compact' ], array_keys( Registry::get_app_metadata()['reader']['themes'] ) );
+	}
+
+	public function test_personal_theme_selection_overrides_site_default() {
+		global $__wp_app_test_options, $__wp_app_test_user_options;
+
+		$__wp_app_test_options[ Settings::OPTION ]         = [
+			'apps' => [
+				'reader' => [ 'default_theme' => 'compact' ],
+			],
+		];
+		$__wp_app_test_user_options['wp_app_theme_reader'] = 'default';
+
+		$app = new WpApp( $this->base_directory, 'reader' );
+		$app->register_theme( 'compact', 'Compact', $this->theme_directory );
+
+		$this->assertSame( 'default', $app->get_selected_theme() );
 	}
 }

@@ -45,6 +45,9 @@ class Themes {
 			'name'               => (string) $name,
 			'template_directory' => '' === $template_directory ? '' : rtrim( $template_directory, '/\\' ),
 		];
+		if ( class_exists( __NAMESPACE__ . '\\Registry' ) ) {
+			Registry::register_app_metadata( $this->app_path, [ 'themes' => $this->themes ] );
+		}
 		$this->refresh_menu();
 
 		return true;
@@ -88,7 +91,9 @@ class Themes {
 
 		$selected = get_user_option( $this->get_user_option_name(), get_current_user_id() );
 		if ( ! is_string( $selected ) || ! isset( $this->themes[ $selected ] ) ) {
-			$selected = 'default';
+			$app_settings = class_exists( __NAMESPACE__ . '\\Settings' ) ? Settings::get_app_settings( $this->app_path ) : [];
+			$site_default = isset( $app_settings['default_theme'] ) ? sanitize_key( $app_settings['default_theme'] ) : '';
+			$selected     = isset( $this->themes[ $site_default ] ) ? $site_default : 'default';
 		}
 
 		if ( isset( $_GET['wp_app_theme'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- A validated, user-local display preference.
@@ -127,7 +132,12 @@ class Themes {
 
 		foreach ( $this->themes as $slug => $theme ) {
 			$selected = $this->selection_loaded ? $this->selected_theme : get_user_option( $this->get_user_option_name(), get_current_user_id() );
-			$title    = ( $slug === $selected || ( ! $selected && 'default' === $slug ) ? '✓ ' : '' ) . $theme['name'];
+			if ( ! is_string( $selected ) || ! isset( $this->themes[ $selected ] ) ) {
+				$app_settings = class_exists( __NAMESPACE__ . '\\Settings' ) ? Settings::get_app_settings( $this->app_path ) : [];
+				$site_default = isset( $app_settings['default_theme'] ) ? sanitize_key( $app_settings['default_theme'] ) : '';
+				$selected     = isset( $this->themes[ $site_default ] ) ? $site_default : 'default';
+			}
+			$title = ( $slug === $selected ? '✓ ' : '' ) . $theme['name'];
 			$this->masterbar->add_menu_item(
 				$parent_id . '-choice-' . $slug,
 				$title,
