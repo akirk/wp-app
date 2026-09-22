@@ -208,7 +208,7 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( Settings::OPTION . '[sort_overflow_menu_alphabetically]', $html );
-        $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order below)', $html );
+        $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order above)', $html );
     }
 
     public function test_global_admin_bar_links_follow_saved_app_order() {

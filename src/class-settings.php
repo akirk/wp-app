@@ -959,7 +959,7 @@ class Settings {
                             <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="0">
                             <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="1" <?php checked( ! empty( $settings['show_inactive_apps_in_overflow'] ) ); ?>> <?php echo esc_html__( 'Show inactive apps in the overflow menu on app pages' ); ?></label><br>
                             <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="0">
-                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="1" <?php checked( ! empty( $settings['sort_overflow_menu_alphabetically'] ) ); ?>> <?php echo esc_html__( 'Sort overflow menu alphabetically (override order below)' ); ?></label>
+                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="1" <?php checked( ! empty( $settings['sort_overflow_menu_alphabetically'] ) ); ?>> <?php echo esc_html__( 'Sort overflow menu alphabetically (override order above)' ); ?></label>
                             <?php if ( self::is_only_registered_app() ) : ?>
                                 <p class="description"><?php echo esc_html__( 'A single app is shown in the masterbar instead of being collapsed into a menu of its own. Uncheck Always show below to collapse it anyway.' ); ?></p>
                             <?php endif; ?>
