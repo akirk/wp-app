@@ -2,6 +2,8 @@
 
 A framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation.
 
+[Why?](#why-wordpress-for-web-applications) · [Quick Start](#quick-start) · [Examples](#try-it-now) · [WP Apps Site](#the-wp-apps-site) · [Documentation](#documentation) · [Manual Installation](#manual-installation) · [Requirements](#requirements)
+
 ## Quick Start
 
 Scaffold a new plugin with one command:
@@ -53,9 +55,13 @@ Which gives you something like this:
 
 <img width="788" height="681" alt="create-wp-app" src="https://github.com/user-attachments/assets/f0180015-96e9-4ae1-af64-1cec0bae9de1" />
 
+## The WP Apps Site
+
+Visit [wpapps.kirk.at](https://wpapps.kirk.at/) for a visual introduction to the WP Apps concept and a catalog of apps you can run on your own WordPress, including a travel app, a cookbook, and a family wiki.
+
 ## Try it Now
 
-Try the examples instantly in your browser with WordPress Playground:
+The examples are available in the [wp-app-examples repository](https://github.com/akirk/wp-app-examples). Try them instantly in your browser with WordPress Playground:
 
 - [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/minimal-app.json) - The simplest possible WpApp
 - [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/community-app.json) - Full-featured example with database, REST API, and admin integration
@@ -63,8 +69,6 @@ Try the examples instantly in your browser with WordPress Playground:
 ## Why WordPress for Web Applications?
 
 WordPress isn't just for blogs. It's a powerful foundation for web applications.
-
-See the [WP Apps showcase](https://wpapps.kirk.at/) for real apps built on this framework, such as a travel app, a cookbook, and a family wiki.
 
 **For developers:**
 - **Built-in User Management** - Authentication, roles, and permissions out of the box
