@@ -686,6 +686,16 @@ if ( ! function_exists( 'settings_fields' ) ) {
 	}
 }
 
+if ( ! function_exists( 'selected' ) ) {
+	function selected( $selected, $current = true, $display = true ) {
+		$result = (string) $selected === (string) $current ? ' selected="selected"' : '';
+		if ( $display ) {
+			echo $result;
+		}
+		return $result;
+	}
+}
+
 if ( ! function_exists( 'submit_button' ) ) {
 	function submit_button( $text = 'Save Changes' ) {
 		echo '<p class="submit"><input type="submit" class="button button-primary" value="' . esc_attr( $text ) . '"></p>';
@@ -721,7 +731,7 @@ if ( ! function_exists( 'openstation_register_icon' ) ) {
 
 if ( ! function_exists( 'sanitize_key' ) ) {
 	function sanitize_key( $key ) {
-		return strtolower( preg_replace( '/[^a-z0-9_\-]/', '', (string) $key ) );
+		return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $key ) );
 	}
 }
 

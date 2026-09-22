@@ -129,6 +129,7 @@ class Settings {
             'generate_letter_icon' => true,
             'show_text'            => true,
             'always_show'          => self::is_only_registered_app(),
+            'default_theme'        => '',
         ];
     }
 
@@ -437,6 +438,7 @@ class Settings {
                     'generate_letter_icon' => ! empty( $app_settings['generate_letter_icon'] ),
                     'show_text'            => ! empty( $app_settings['show_text'] ),
                     'always_show'          => ! empty( $app_settings['always_show'] ),
+                    'default_theme'        => isset( $app_settings['default_theme'] ) ? sanitize_key( $app_settings['default_theme'] ) : '',
                 ];
             }
         }
@@ -795,6 +797,7 @@ class Settings {
                         $app_name          = isset( $metadata['name'] ) ? $metadata['name'] : $app_path;
                         $visibility_status = self::get_masterbar_visibility_status( $app_path, $app_settings, $metadata );
                         $can_customize     = self::should_render_app_settings_controls( $visibility_status );
+                        $themes            = isset( $metadata['themes'] ) && is_array( $metadata['themes'] ) ? $metadata['themes'] : [];
                         ?>
                         <section
                             class="card wp-app-settings-card wp-app-settings-row"
@@ -859,6 +862,26 @@ class Settings {
                                                     >
                                                 </td>
                                             </tr>
+                                            <?php if ( count( $themes ) > 1 ) : ?>
+                                                <tr>
+                                                    <th scope="row">
+                                                        <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'default_theme' ) ); ?>"><?php echo esc_html__( 'Default theme' ); ?></label>
+                                                    </th>
+                                                    <td>
+                                                        <select
+                                                            id="<?php echo esc_attr( self::get_field_id( $app_path, 'default_theme' ) ); ?>"
+                                                            name="<?php echo esc_attr( self::get_field_name( $app_path, 'default_theme' ) ); ?>"
+                                                        >
+                                                            <?php foreach ( $themes as $theme_slug => $theme ) : ?>
+                                                                <option value="<?php echo esc_attr( $theme_slug ); ?>" <?php selected( $app_settings['default_theme'], $theme_slug ); ?>>
+                                                                    <?php echo esc_html( isset( $theme['name'] ) ? $theme['name'] : $theme_slug ); ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <p class="description"><?php echo esc_html__( 'Used when a user has not selected a personal app theme.' ); ?></p>
+                                                    </td>
+                                                </tr>
+                                            <?php endif; ?>
                                             <tr>
                                                 <th scope="row">
                                                     <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon' ) ); ?>"><?php echo esc_html__( 'Icon' ); ?></label>
@@ -936,7 +959,7 @@ class Settings {
                             <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="0">
                             <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="1" <?php checked( ! empty( $settings['show_inactive_apps_in_overflow'] ) ); ?>> <?php echo esc_html__( 'Show inactive apps in the overflow menu on app pages' ); ?></label><br>
                             <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="0">
-                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="1" <?php checked( ! empty( $settings['sort_overflow_menu_alphabetically'] ) ); ?>> <?php echo esc_html__( 'Sort overflow menu alphabetically (override order below)' ); ?></label>
+                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="1" <?php checked( ! empty( $settings['sort_overflow_menu_alphabetically'] ) ); ?>> <?php echo esc_html__( 'Sort overflow menu alphabetically (override order above)' ); ?></label>
                             <?php if ( self::is_only_registered_app() ) : ?>
                                 <p class="description"><?php echo esc_html__( 'A single app is shown in the masterbar instead of being collapsed into a menu of its own. Uncheck Always show below to collapse it anyway.' ); ?></p>
                             <?php endif; ?>
