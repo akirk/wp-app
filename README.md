@@ -2,6 +2,8 @@
 
 A framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation.
 
+**Contents:** [Why?](#why-wordpress-for-web-applications) · [Quick Start](#quick-start) · [Examples](#try-it-now) · [Documentation](#documentation) · [Manual Installation](#manual-installation) · [Requirements](#requirements)
+
 ## Quick Start
 
 Scaffold a new plugin with one command:
@@ -55,7 +57,7 @@ Which gives you something like this:
 
 ## Try it Now
 
-Try the examples instantly in your browser with WordPress Playground:
+The examples are available in the [wp-app-examples repository](https://github.com/akirk/wp-app-examples). Try them instantly in your browser with WordPress Playground:
 
 - [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/minimal-app.json) - The simplest possible WpApp
 - [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/community-app.json) - Full-featured example with database, REST API, and admin integration
