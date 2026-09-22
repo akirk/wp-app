@@ -320,7 +320,7 @@ class Settings {
      * @param bool   $is_loaded Whether this is the currently loaded copy.
      */
     private static function add_wp_app_provider( &$providers, $path, $version, $is_loaded ) {
-        if ( '' === $version || version_compare( $version, self::MINIMUM_SWITCHABLE_VERSION, '<' ) ) {
+        if ( '' === $version || ( ! self::is_development_version( $version ) && version_compare( $version, self::MINIMUM_SWITCHABLE_VERSION, '<' ) ) ) {
             return;
         }
 
@@ -346,6 +346,16 @@ class Settings {
         if ( ! isset( $providers[ $plugin_file ] ) || $is_loaded ) {
             $providers[ $plugin_file ] = [ 'label' => $label ];
         }
+    }
+
+    /**
+     * Whether a Composer package version identifies a development branch.
+     *
+     * @param string $version Composer package version.
+     * @return bool True for versions such as dev-main and 2.0.x-dev.
+     */
+    private static function is_development_version( $version ) {
+        return 1 === preg_match( '/^(?:dev-.+|.+-dev)$/i', $version );
     }
 
     /**

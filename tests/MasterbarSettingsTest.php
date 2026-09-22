@@ -1337,6 +1337,59 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'Wordopedia 2.1.0 — wp-app 2.0.0 (active)', $html );
     }
 
+    public function test_development_wp_app_versions_are_available_as_providers() {
+        global $__wp_app_test_plugin_data, $__wp_app_test_plugins;
+
+        $development_dir  = WP_CONTENT_DIR . '/plugins/development-provider';
+        $development_file = $development_dir . '/development-provider.php';
+
+        if ( ! is_dir( $development_dir ) ) {
+            mkdir( $development_dir, 0777, true );
+        }
+
+        touch( $development_file );
+        file_put_contents(
+            $development_dir . '/composer.lock',
+            wp_json_encode(
+                [
+                    'packages' => [
+                        [
+                            'name'    => 'akirk/wp-app',
+                            'version' => 'dev-main',
+                        ],
+                    ],
+                ]
+            )
+        );
+
+        $__wp_app_test_plugins = [
+            'development-provider' => [
+                'development-provider.php' => [],
+            ],
+        ];
+
+        $__wp_app_test_plugin_data = [
+            $development_file => [
+                'Name'    => 'Development Provider',
+                'Version' => '1.0.0',
+            ],
+        ];
+
+        $providers = Settings::get_wp_app_providers(
+            [
+                [
+                    'wp_app_package' => [
+                        'expected'        => 'dev-main',
+                        'expected_source' => $development_dir . '/composer.json',
+                    ],
+                ],
+            ]
+        );
+
+        $this->assertArrayHasKey( 'development-provider/development-provider.php', $providers );
+        $this->assertStringContainsString( 'wp-app dev-main', $providers['development-provider/development-provider.php']['label'] );
+    }
+
     public function test_settings_page_does_not_claim_app_includes_wp_app_when_requirement_is_unknown() {
         Registry::register_app_metadata(
             'unknown-requirement-app',
