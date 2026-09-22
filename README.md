@@ -197,13 +197,21 @@ Keep CSS and JavaScript in asset files and load them with the scoped enqueue hel
 
 ### App themes
 
-Apps and add-on plugins can register themes with their own template directories:
+Apps and add-on plugins register themes with their own template directories on
+the app-specific initialization filter. This runs on WordPress `init`, when it
+is safe to translate the theme name:
 
 ```php
-$app->register_theme(
-	'compact',
-	__( 'Compact', 'my-plugin' ),
-	plugin_dir_path( __FILE__ ) . 'templates/compact'
+add_filter(
+	'wp_app_init_minimal',
+	function ( $app ) {
+		$app->register_theme(
+			'compact',
+			__( 'Compact', 'my-plugin' ),
+			plugin_dir_path( __FILE__ ) . 'templates/compact'
+		);
+		return $app;
+	}
 );
 ```
 
