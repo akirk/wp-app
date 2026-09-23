@@ -98,7 +98,7 @@ class Settings {
         }
 
         if ( function_exists( 'wp_enqueue_style' ) ) {
-            wp_enqueue_style( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-settings.css' ), [], WP_APP_VERSION );
+            wp_enqueue_style( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-admin-settings.css' ), [], WP_APP_VERSION );
         }
     }
 
