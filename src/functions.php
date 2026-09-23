@@ -539,8 +539,8 @@ if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
         $path = ltrim( (string) $path, '/' );
 
         if ( defined( 'WP_PLUGIN_DIR' ) && defined( 'WP_PLUGIN_URL' ) ) {
-            $resolved_plugin_dir = realpath( WP_PLUGIN_DIR );
-            $plugin_dir          = rtrim( str_replace( '\\', '/', $resolved_plugin_dir ? $resolved_plugin_dir : WP_PLUGIN_DIR ), '/' );
+            $package_dir = realpath( dirname( __DIR__ ) );
+            $plugin_dir  = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
 
             foreach ( get_included_files() as $included_file ) {
                 $included_file = str_replace( '\\', '/', $included_file );
@@ -549,16 +549,27 @@ if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
                     continue;
                 }
 
-                $candidate = dirname( $included_file ) . '/akirk/wp-app/assets/' . $path;
+                $candidate_dir = dirname( $included_file ) . '/akirk/wp-app';
 
-                if ( ! file_exists( $candidate ) ) {
+                if ( ! $package_dir || realpath( $candidate_dir ) !== $package_dir ) {
                     continue;
                 }
 
-                $resolved_candidate = realpath( $candidate );
-                $candidate          = str_replace( '\\', '/', $resolved_candidate ? $resolved_candidate : $candidate );
+                $candidate = str_replace( '\\', '/', $candidate_dir . '/assets/' . $path );
 
-                if ( 0 === strpos( $candidate, $plugin_dir . '/' ) ) {
+                if ( file_exists( $candidate ) && 0 === strpos( $candidate, $plugin_dir . '/' ) ) {
+                    return rtrim( WP_PLUGIN_URL, '/' ) . substr( $candidate, strlen( $plugin_dir ) );
+                }
+            }
+
+            foreach ( (array) glob( $plugin_dir . '/*/vendor/akirk/wp-app', GLOB_ONLYDIR ) as $candidate_dir ) {
+                if ( ! $package_dir || realpath( $candidate_dir ) !== $package_dir ) {
+                    continue;
+                }
+
+                $candidate = str_replace( '\\', '/', $candidate_dir . '/assets/' . $path );
+
+                if ( file_exists( $candidate ) ) {
                     return rtrim( WP_PLUGIN_URL, '/' ) . substr( $candidate, strlen( $plugin_dir ) );
                 }
             }
