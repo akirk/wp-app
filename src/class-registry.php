@@ -2,6 +2,10 @@
 
 namespace WpApp;
 
+if ( ! defined( 'WP_APP_DIR' ) ) {
+    define( 'WP_APP_DIR', dirname( __DIR__ ) );
+}
+
 // Load the rest of this copy of wp-app from here rather than trusting the
 // Composer files autoload. Several plugins can bundle wp-app; the first
 // autoloader to run wins, and its generated file list may predate files

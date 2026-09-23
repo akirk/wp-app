@@ -1026,28 +1026,24 @@ class Settings {
                         </td>
                     </tr>
                     <?php $providers = self::get_wp_app_providers( $apps ); ?>
-                    <?php if ( count( $providers ) > 1 ) : ?>
-                        <?php $loaded_provider = self::get_loaded_wp_app_provider( $apps ); ?>
-                        <tr>
-                            <th scope="row">
-                                <label for="wp-app-provider"><?php echo esc_html__( 'Load WP Apps library from' ); ?></label>
-                                <span class="description wp-app-provider-loaded-version" title="<?php echo esc_attr( $loaded_provider['slug'] ); ?>"><?php echo esc_html( $loaded_provider['version'] ); ?></span>
-                            </th>
-                            <td>
-                                <select id="wp-app-provider" name="<?php echo esc_attr( self::OPTION ); ?>[provider]">
-                                    <option value=""><?php echo esc_html( sprintf( /* translators: 1: Plugin folder slug. 2: Loaded wp-app version. */ __( 'First plugin (%1$s, wp-app %2$s)' ), $loaded_provider['slug'], $loaded_provider['version'] ) ); ?></option>
-                                    <?php foreach ( $providers as $slug => $provider ) : ?>
-                                        <option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $settings['provider'], $slug ); ?>><?php echo esc_html( $provider['label'] ); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                    <?php $loaded_provider = self::get_loaded_wp_app_provider( $apps ); ?>
+                    <tr>
+                        <th scope="row">
+                            <label for="wp-app-provider"><?php echo esc_html__( 'WP Apps library' ); ?></label>
+                        </th>
+                        <td>
+                            <span><?php echo esc_html__( 'Load from' ); ?></span>
+                            <select id="wp-app-provider" name="<?php echo esc_attr( self::OPTION ); ?>[provider]">
+                                <option value=""><?php echo esc_html( sprintf( /* translators: 1: Plugin folder slug. 2: Loaded wp-app version. */ __( 'First plugin (%1$s, wp-app %2$s)' ), $loaded_provider['slug'], $loaded_provider['version'] ) ); ?></option>
+                                <?php foreach ( $providers as $slug => $provider ) : ?>
+                                    <option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $settings['provider'], $slug ); ?>><?php echo esc_html( $provider['label'] ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if ( count( $providers ) > 1 ) : ?>
                                 <p class="description"><?php echo esc_html__( 'Choose which active plugin supplies the shared wp-app framework. The change takes effect on the next request.' ); ?></p>
-                            </td>
-                        </tr>
-                    <?php else : ?>
-                        <tr hidden>
-                            <td colspan="2"><input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[provider]" value="<?php echo esc_attr( $settings['provider'] ); ?>"></td>
-                        </tr>
-                    <?php endif; ?>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                 </table>
 
                 <?php submit_button(); ?>

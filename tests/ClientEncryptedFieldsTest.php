@@ -82,28 +82,46 @@ class ClientEncryptedFieldsTest extends TestCase {
 		$this->assertArrayHasKey( 'journalist_source', $config['manifest']['cpts'] );
 	}
 
-	public function test_framework_asset_url_prefers_composer_vendor_path_inside_plugins() {
-		$plugin_vendor = WP_PLUGIN_DIR . '/wp-app-test-plugin/vendor';
-		$wp_app_assets = $plugin_vendor . '/akirk/wp-app/assets';
+	public function test_framework_asset_url_uses_the_loaded_package_inside_plugins() {
+		$decoy_vendor  = WP_PLUGIN_DIR . '/wp-app-first-plugin/vendor';
+		$decoy_assets  = $decoy_vendor . '/akirk/wp-app/assets';
+		$plugin_vendor = WP_PLUGIN_DIR . '/wp-app-selected-provider/vendor';
+		$wp_app_parent = $plugin_vendor . '/akirk';
+		$wp_app_path   = $wp_app_parent . '/wp-app';
 
-		if ( ! is_dir( $wp_app_assets ) ) {
+		if ( ! is_dir( $decoy_assets ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Test fixture setup.
-			mkdir( $wp_app_assets, 0777, true );
+			mkdir( $decoy_assets, 0777, true );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture setup.
+		file_put_contents( $decoy_vendor . '/autoload.php', "<?php\n" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture setup.
+		file_put_contents( $decoy_assets . '/wp-app-encrypted-fields.js', '' );
+		require_once $decoy_vendor . '/autoload.php';
+
+		if ( ! is_dir( $wp_app_parent ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Test fixture setup.
+			mkdir( $wp_app_parent, 0777, true );
+		}
+
+		if ( ! file_exists( $wp_app_path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_symlink -- Test fixture mirrors a Composer path repository.
+			symlink( dirname( __DIR__ ), $wp_app_path );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture setup.
 		file_put_contents( $plugin_vendor . '/autoload.php', "<?php\n" );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture setup.
-		file_put_contents( $wp_app_assets . '/wp-app-encrypted-fields.js', '' );
 
 		require_once $plugin_vendor . '/autoload.php';
 
 		$asset_url = wp_app_get_asset_url( 'wp-app-encrypted-fields.js' );
 
 		$this->assertSame(
-			'https://example.org/wp-content/plugins/wp-app-test-plugin/vendor/akirk/wp-app/assets/wp-app-encrypted-fields.js',
+			'https://example.org/wp-content/plugins/wp-app-selected-provider/vendor/akirk/wp-app/assets/wp-app-encrypted-fields.js',
 			$asset_url
 		);
+		$this->assertSame( realpath( dirname( __DIR__ ) ), realpath( WP_APP_DIR ) );
 	}
 
 	public function test_enqueue_assets_outputs_crypto_client_and_manifest_config_for_scope() {

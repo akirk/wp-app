@@ -211,6 +211,18 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order above)', $html );
     }
 
+    public function test_settings_page_always_renders_provider_selection() {
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( '>WP Apps library</label>', $html );
+        $this->assertStringContainsString( '>Load from</span>', $html );
+        $this->assertStringContainsString( 'id="wp-app-provider"', $html );
+        $this->assertStringContainsString( WP_APP_VERSION, $html );
+        $this->assertStringNotContainsString( 'Choose which active plugin supplies the shared wp-app framework.', $html );
+    }
+
     public function test_global_admin_bar_links_follow_saved_app_order() {
         global $__wp_app_test_options;
 
@@ -1354,20 +1366,19 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringNotContainsString( '<details class="wp-app-settings-package">', $html );
-        $this->assertStringContainsString( 'Load WP Apps library from', $html );
-        $this->assertStringContainsString( 'class="description wp-app-provider-loaded-version"', $html );
-        $this->assertStringContainsString( 'title="wordopedia"', $html );
-        $this->assertMatchesRegularExpression( '/wp-app-provider-loaded-version"[^>]*title="wordopedia"[^>]*>\s*2\.0\.0\s*<\/span>/', $html );
+        $this->assertStringContainsString( '>WP Apps library</label>', $html );
+        $this->assertStringNotContainsString( 'wp-app-provider-loaded-version', $html );
         $this->assertStringNotContainsString( '<h2>WP App Version</h2>', $html );
         $this->assertStringNotContainsString( '<h2>Global Display</h2>', $html );
         $this->assertStringNotContainsString( '<h2>Installed Apps</h2>', $html );
         $this->assertGreaterThan( strpos( $html, 'data-app-path="memex"' ), strpos( $html, 'App menu visibility' ) );
-        $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, 'Load WP Apps library from' ) );
+        $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, '>WP Apps library</label>' ) );
         $this->assertStringContainsString( 'First plugin (wordopedia, wp-app 2.0.0)', $html );
         $this->assertStringContainsString( '<option value="memex/memex.php"', $html );
         $this->assertStringContainsString( '<option value="wordopedia/wordopedia.php"', $html );
         $this->assertStringContainsString( 'Memex 1.4.0 — wp-app 2.1.0', $html );
         $this->assertStringContainsString( 'Wordopedia 2.1.0 — wp-app 2.0.0 (active)', $html );
+        $this->assertStringContainsString( 'Choose which active plugin supplies the shared wp-app framework.', $html );
     }
 
     public function test_development_wp_app_versions_are_available_as_providers() {
@@ -1500,7 +1511,7 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( '>WP Apps library</label>', $html );
         $this->assertStringContainsString( 'First plugin (alternative-app, wp-app 2.0.0)', $html );
     }
 
