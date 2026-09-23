@@ -165,20 +165,128 @@
     opacity: 0.58;
 }
 
-.wp-app-masterbar-preview-wrap #wpadminbar {
+.wp-app-masterbar-preview {
+    background: var(--wp-app-masterbar-background, #1d2327);
+    color: var(--wp-app-masterbar-text, #f0f0f1);
     display: inline-block;
+    font: normal 13px/2.46153846 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     min-width: 0;
-    position: static;
-    width: auto;
-    z-index: auto;
 }
 
-.wp-app-masterbar-preview-wrap #wpadminbar .ab-top-menu > li {
+.wp-app-settings-preview-link {
     position: relative;
 }
 
-.wp-app-masterbar-preview-wrap #wpadminbar .ab-sub-wrapper {
-    z-index: 2;
+.wp-app-settings-preview-item {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: default;
+    display: flex;
+    font: inherit;
+    height: 32px;
+    margin: 0;
+    padding: 0 8px;
+}
+
+.wp-app-settings-preview-link.has-menu .wp-app-settings-preview-item {
+    cursor: pointer;
+}
+
+.wp-app-settings-preview-link.has-menu:hover .wp-app-settings-preview-item,
+.wp-app-settings-preview-link.has-menu:focus-within .wp-app-settings-preview-item {
+    background: var(--wp-app-admin-color-subtle, #2c3338);
+    color: var(--wp-app-masterbar-highlight, #72aee6);
+}
+
+.wp-app-masterbar-preview .wp-app-link-title {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    height: 100%;
+}
+
+.wp-app-masterbar-preview .wp-app-link-icon {
+    align-items: center;
+    color: var(--wp-app-masterbar-text, #f0f0f1);
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 600;
+    height: 18px;
+    justify-content: center;
+    line-height: 18px;
+    overflow: hidden;
+    text-transform: uppercase;
+    width: 18px;
+}
+
+.wp-app-masterbar-preview .wp-app-link-icon-generated {
+    background: var(--wp-app-admin-color-subtle, #2c3338);
+    border-radius: 3px;
+}
+
+.wp-app-masterbar-preview .wp-app-link-icon img {
+    display: block;
+    height: 18px;
+    max-height: 18px;
+    max-width: 18px;
+    object-fit: contain;
+    width: 18px;
+}
+
+.wp-app-masterbar-preview .wp-app-link-icon-styled {
+    border-radius: 3px;
+}
+
+.wp-app-masterbar-preview .wp-app-link-icon .dashicons {
+    font-family: dashicons !important;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    height: 16px;
+    line-height: 16px;
+    text-transform: none;
+    width: 16px;
+}
+
+.wp-app-settings-preview-menu {
+    background: var(--wp-app-masterbar-background, #1d2327);
+    display: none;
+    left: 0;
+    min-width: 160px;
+    position: absolute;
+    top: 100%;
+    z-index: 10;
+}
+
+.wp-app-settings-preview-link.has-menu:hover .wp-app-settings-preview-menu,
+.wp-app-settings-preview-link.has-menu:focus-within .wp-app-settings-preview-menu {
+    display: block;
+}
+
+.wp-app-settings-preview-menu ul {
+    margin: 0;
+    padding: 6px 0;
+}
+
+.wp-app-settings-preview-menu li {
+    margin: 0;
+}
+
+.wp-app-settings-preview-menu a,
+.wp-app-settings-preview-menu span {
+    color: var(--wp-app-masterbar-text, #f0f0f1);
+    display: block;
+    line-height: 26px;
+    padding: 0 10px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.wp-app-settings-preview-menu a:focus,
+.wp-app-settings-preview-menu a:hover {
+    color: var(--wp-app-masterbar-highlight, #72aee6);
 }
 
 .wp-app-dashicon-autocomplete.ui-autocomplete {

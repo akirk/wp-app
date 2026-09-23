@@ -1536,33 +1536,29 @@ class Settings {
         $is_hidden  = ! self::app_settings_have_visible_preview_content( $app_settings, $metadata ) && ! $force_show_text;
         ?>
         <div class="wp-app-masterbar-preview-wrap<?php echo $is_hidden ? ' is-hidden' : ''; ?>">
-            <div id="wpadminbar" class="nojq">
-                <div class="quicklinks" id="wp-toolbar" role="navigation" aria-label="<?php echo esc_attr__( 'Toolbar' ); ?>">
-                    <ul role="menu" id="wp-admin-bar-root-default" class="ab-top-menu">
-                        <li role="group" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) ); ?>" class="<?php echo ! empty( $menu_items ) ? 'menupop ' : ''; ?>wp-app-settings-preview-link">
-                            <a class="ab-item" role="menuitem" href="<?php echo esc_url( isset( $metadata['url'] ) ? $metadata['url'] : '#' ); ?>"<?php echo ! empty( $menu_items ) ? ' aria-expanded="false"' : ''; ?>>
-                                <span class="wp-app-link-title">
-                                    <?php self::render_preview_icon( $app_path, $app_settings, $metadata, $title ); ?>
-                                    <span class="wp-app-link-text" <?php echo $show_text ? '' : 'hidden'; ?>><?php echo esc_html( $title ); ?></span>
-                                </span>
-                            </a>
-                            <?php if ( ! empty( $menu_items ) ) : ?>
-                                <div class="ab-sub-wrapper">
-                                    <ul role="menu" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) . '-default' ); ?>" class="ab-submenu">
-                                        <?php foreach ( $menu_items as $item ) : ?>
-                                            <li role="group">
-                                                <?php if ( ! empty( $item['href'] ) ) : ?>
-                                                    <a class="ab-item" role="menuitem" href="<?php echo esc_url( $item['href'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a>
-                                                <?php else : ?>
-                                                    <span class="ab-item"><?php echo esc_html( $item['title'] ); ?></span>
-                                                <?php endif; ?>
-                                            </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                </div>
-                            <?php endif; ?>
-                        </li>
-                    </ul>
+            <div class="wp-app-masterbar-preview" role="navigation" aria-label="<?php echo esc_attr__( 'Toolbar preview' ); ?>">
+                <div class="wp-app-settings-preview-link<?php echo ! empty( $menu_items ) ? ' has-menu' : ''; ?>">
+                    <button type="button" class="wp-app-settings-preview-item"<?php echo ! empty( $menu_items ) ? ' aria-haspopup="true" aria-expanded="false"' : ''; ?>>
+                        <span class="wp-app-link-title">
+                            <?php self::render_preview_icon( $app_path, $app_settings, $metadata, $title ); ?>
+                            <span class="wp-app-link-text" <?php echo $show_text ? '' : 'hidden'; ?>><?php echo esc_html( $title ); ?></span>
+                        </span>
+                    </button>
+                    <?php if ( ! empty( $menu_items ) ) : ?>
+                        <div class="wp-app-settings-preview-menu">
+                            <ul role="menu">
+                                <?php foreach ( $menu_items as $item ) : ?>
+                                    <li role="none">
+                                        <?php if ( ! empty( $item['href'] ) ) : ?>
+                                            <a role="menuitem" href="<?php echo esc_url( $item['href'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a>
+                                        <?php else : ?>
+                                            <span role="menuitem"><?php echo esc_html( $item['title'] ); ?></span>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

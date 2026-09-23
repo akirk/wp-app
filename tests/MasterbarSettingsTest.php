@@ -231,6 +231,7 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( 'class="wp-app-settings-preview-link"', $html );
+        $this->assertStringNotContainsString( '<div id="wpadminbar"', $html );
         $this->assertStringNotContainsString( 'class="wp-app-admin-link"', $html );
     }
 
