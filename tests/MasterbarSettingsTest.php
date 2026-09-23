@@ -216,7 +216,7 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( '>WP Apps library</label>', $html );
         $this->assertStringContainsString( 'id="wp-app-provider"', $html );
         $this->assertStringContainsString( WP_APP_VERSION, $html );
     }
@@ -1364,15 +1364,13 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringNotContainsString( '<details class="wp-app-settings-package">', $html );
-        $this->assertStringContainsString( 'Load WP Apps library from', $html );
-        $this->assertStringContainsString( 'class="description wp-app-provider-loaded-version"', $html );
-        $this->assertStringContainsString( 'title="wordopedia"', $html );
-        $this->assertMatchesRegularExpression( '/wp-app-provider-loaded-version"[^>]*title="wordopedia"[^>]*>\s*2\.0\.0\s*<\/span>/', $html );
+        $this->assertStringContainsString( '>WP Apps library</label>', $html );
+        $this->assertStringNotContainsString( 'wp-app-provider-loaded-version', $html );
         $this->assertStringNotContainsString( '<h2>WP App Version</h2>', $html );
         $this->assertStringNotContainsString( '<h2>Global Display</h2>', $html );
         $this->assertStringNotContainsString( '<h2>Installed Apps</h2>', $html );
         $this->assertGreaterThan( strpos( $html, 'data-app-path="memex"' ), strpos( $html, 'App menu visibility' ) );
-        $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, 'Load WP Apps library from' ) );
+        $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, '>WP Apps library</label>' ) );
         $this->assertStringContainsString( 'First plugin (wordopedia, wp-app 2.0.0)', $html );
         $this->assertStringContainsString( '<option value="memex/memex.php"', $html );
         $this->assertStringContainsString( '<option value="wordopedia/wordopedia.php"', $html );
@@ -1510,7 +1508,7 @@ class MasterbarSettingsTest extends TestCase {
         Settings::render_settings_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( '>WP Apps library</label>', $html );
         $this->assertStringContainsString( 'First plugin (alternative-app, wp-app 2.0.0)', $html );
     }
 

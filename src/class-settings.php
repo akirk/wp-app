@@ -1029,8 +1029,7 @@ class Settings {
                     <?php $loaded_provider = self::get_loaded_wp_app_provider( $apps ); ?>
                     <tr>
                         <th scope="row">
-                            <label for="wp-app-provider"><?php echo esc_html__( 'Load WP Apps library from' ); ?></label>
-                            <span class="description wp-app-provider-loaded-version" title="<?php echo esc_attr( $loaded_provider['slug'] ); ?>"><?php echo esc_html( $loaded_provider['version'] ); ?></span>
+                            <label for="wp-app-provider"><?php echo esc_html__( 'WP Apps library' ); ?></label>
                         </th>
                         <td>
                             <select id="wp-app-provider" name="<?php echo esc_attr( self::OPTION ); ?>[provider]">
