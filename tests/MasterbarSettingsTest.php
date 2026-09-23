@@ -211,6 +211,16 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order above)', $html );
     }
 
+    public function test_settings_page_always_renders_provider_selection() {
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'Load WP Apps library from', $html );
+        $this->assertStringContainsString( 'id="wp-app-provider"', $html );
+        $this->assertStringContainsString( WP_APP_VERSION, $html );
+    }
+
     public function test_global_admin_bar_links_follow_saved_app_order() {
         global $__wp_app_test_options;
 
