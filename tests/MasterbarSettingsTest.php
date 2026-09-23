@@ -217,8 +217,10 @@ class MasterbarSettingsTest extends TestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( '>WP Apps library</label>', $html );
+        $this->assertStringContainsString( '>Load from</span>', $html );
         $this->assertStringContainsString( 'id="wp-app-provider"', $html );
         $this->assertStringContainsString( WP_APP_VERSION, $html );
+        $this->assertStringNotContainsString( 'Choose which active plugin supplies the shared wp-app framework.', $html );
     }
 
     public function test_global_admin_bar_links_follow_saved_app_order() {
@@ -1376,6 +1378,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( '<option value="wordopedia/wordopedia.php"', $html );
         $this->assertStringContainsString( 'Memex 1.4.0 — wp-app 2.1.0', $html );
         $this->assertStringContainsString( 'Wordopedia 2.1.0 — wp-app 2.0.0 (active)', $html );
+        $this->assertStringContainsString( 'Choose which active plugin supplies the shared wp-app framework.', $html );
     }
 
     public function test_development_wp_app_versions_are_available_as_providers() {
