@@ -99,7 +99,7 @@ class Settings {
 
         if ( function_exists( 'wp_enqueue_style' ) ) {
             wp_enqueue_style( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-settings.css' ), [], WP_APP_VERSION );
-            wp_enqueue_style( 'wp-app-settings-mobile', wp_app_get_asset_url( 'wp-app-settings-mobile.css' ), [ 'wp-app-settings' ], WP_APP_VERSION );
+            wp_enqueue_style( 'wp-app-settings-mobile-layout', wp_app_get_asset_url( 'wp-app-settings-mobile-layout.css' ), [ 'wp-app-settings' ], WP_APP_VERSION );
         }
     }
 
