@@ -295,6 +295,43 @@ class PwaTest extends TestCase {
 		$this->assertContains( '^travel\\-app\\-routes/service\\-worker\\.js/?$', $rules );
 	}
 
+	public function test_pwa_endpoints_do_not_receive_canonical_redirects() {
+		global $wp_query;
+
+		Pwa::register(
+			'travel-app-canonical',
+			[
+				'manifest_path'       => 'manifest.webmanifest',
+				'service_worker_path' => 'service-worker.js',
+			]
+		);
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Query fixture for the canonical redirect filter.
+		$wp_query = (object) [
+			'query_vars' => [
+				'wp_app_path'    => 'travel-app-canonical',
+				'wp_app_request' => 'service-worker.js',
+			],
+		];
+
+		$this->assertFalse(
+			Pwa::filter_canonical_redirect(
+				'https://example.org/travel-app-canonical/service-worker.js/',
+				'https://example.org/travel-app-canonical/service-worker.js'
+			)
+		);
+
+		$wp_query->query_vars['wp_app_request'] = 'trip/123';
+
+		$this->assertSame(
+			'https://example.org/travel-app-canonical/trip/123/',
+			Pwa::filter_canonical_redirect(
+				'https://example.org/travel-app-canonical/trip/123/',
+				'https://example.org/travel-app-canonical/trip/123'
+			)
+		);
+	}
+
 	public function test_wpapp_exposes_manifest_url_with_query_args() {
 		$app = new WpApp( __DIR__ . '/fixtures/templates', 'travel-app-link' );
 		$app->enable_pwa(
