@@ -1,0 +1,21 @@
+@media (max-width: 782px) {
+	.wrap .wp-app-settings-row .wp-app-settings-row-summary {
+		grid-template-columns: 32px minmax(0, 1fr) 32px;
+		height: auto;
+	}
+
+	.wrap .wp-app-settings-row .wp-app-settings-row-preview {
+		grid-column: 2;
+	}
+
+	.wrap .wp-app-settings-row .wp-app-settings-row-toggles {
+		grid-column: 2;
+		grid-row: 2;
+		justify-content: flex-start;
+	}
+
+	.wrap .wp-app-settings-row .wp-app-settings-expand {
+		grid-column: 3;
+		grid-row: 1 / span 2;
+	}
+}

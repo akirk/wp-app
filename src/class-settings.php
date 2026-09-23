@@ -98,7 +98,8 @@ class Settings {
         }
 
         if ( function_exists( 'wp_enqueue_style' ) ) {
-            wp_enqueue_style( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-admin-settings.css' ), [], WP_APP_VERSION );
+            wp_enqueue_style( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-settings.css' ), [], WP_APP_VERSION );
+            wp_enqueue_style( 'wp-app-settings-mobile', wp_app_get_asset_url( 'wp-app-settings-mobile.css' ), [ 'wp-app-settings' ], WP_APP_VERSION );
         }
     }
 
@@ -526,6 +527,322 @@ class Settings {
         ?>
         <div class="wrap">
             <h1><?php echo esc_html__( 'WP Apps' ); ?></h1>
+            <style>
+                .wp-app-settings-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    margin-top: 16px;
+                    max-width: 1100px;
+                }
+
+                .wp-app-settings-row {
+                    box-sizing: border-box;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                    margin-top: 0;
+                    max-width: none;
+                    min-width: 0;
+                    padding: 0;
+                    width: 100%;
+                }
+
+                .wp-app-settings-row::before,
+                .wp-app-settings-row::after {
+                    background: #2271b1;
+                    content: "";
+                    display: none;
+                    height: 3px;
+                    margin: -2px 12px;
+                }
+
+                .wp-app-settings-row-summary {
+                    align-items: center;
+                    box-sizing: border-box;
+                    display: grid;
+                    gap: 14px;
+                    grid-template-columns: 32px minmax(0, 1fr) auto 32px;
+                    height: 64px;
+                    padding: 10px 12px;
+                }
+
+                .wp-app-settings-row.is-dragging {
+                    opacity: 0.35;
+                }
+
+                .wp-app-settings-row.is-drag-over {
+                    border-color: #c3c4c7;
+                    box-shadow: none;
+                }
+
+                .wp-app-settings-row.is-drop-before::before,
+                .wp-app-settings-row.is-drop-after::after {
+                    display: block;
+                }
+
+                .wp-app-settings-handle {
+                    align-items: center;
+                    background: transparent;
+                    border: 0;
+                    border-radius: 2px;
+                    color: #50575e;
+                    cursor: grab;
+                    display: grid;
+                    gap: 3px;
+                    grid-template-columns: repeat(2, 4px);
+                    justify-content: center;
+                    margin: 0;
+                    min-height: 32px;
+                    padding: 0;
+                    width: 32px;
+                }
+
+                .wp-app-settings-handle:active {
+                    cursor: grabbing;
+                }
+
+                .wp-app-settings-handle:focus {
+                    outline: 0;
+                }
+
+                .wp-app-settings-handle:focus-visible {
+                    box-shadow: 0 0 0 2px #2271b1;
+                    outline: 2px solid transparent;
+                }
+
+                .wp-app-settings-handle-dot {
+                    background: currentColor;
+                    border-radius: 50%;
+                    display: block;
+                    height: 4px;
+                    opacity: 0.72;
+                    width: 4px;
+                }
+
+                .wp-app-settings-row-preview {
+                    min-width: 0;
+                    overflow: hidden;
+                }
+
+                .wp-app-settings-row-toggles {
+                    align-items: center;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px 12px;
+                    justify-content: flex-end;
+                }
+
+                .wp-app-settings-row-toggles label {
+                    white-space: nowrap;
+                }
+
+                .wp-app-settings-row-details {
+                    border-top: 1px solid #dcdcde;
+                    display: grid;
+                    gap: 14px 20px;
+                    grid-template-columns: minmax(0, 1fr) auto;
+                    padding: 12px 12px 14px 58px;
+                }
+
+                .wp-app-settings-row-details[hidden] {
+                    display: none;
+                }
+
+                .wp-app-settings-row-fields,
+                .wp-app-settings-row-status {
+                    min-width: 0;
+                }
+
+                .wp-app-settings-expand {
+                    align-items: center;
+                    background: transparent;
+                    border: 0;
+                    color: #50575e;
+                    cursor: pointer;
+                    display: flex;
+                    height: 32px;
+                    justify-content: center;
+                    margin: 0;
+                    padding: 0;
+                    width: 32px;
+                }
+
+                .wp-app-settings-expand:focus {
+                    box-shadow: 0 0 0 2px #2271b1;
+                    outline: 2px solid transparent;
+                }
+
+                .wp-app-settings-expand .dashicons {
+                    height: 20px;
+                    transition: transform 120ms ease-in-out;
+                    width: 20px;
+                }
+
+                .wp-app-settings-row.is-expanded .wp-app-settings-expand .dashicons {
+                    transform: rotate(90deg);
+                }
+
+                .wp-app-masterbar-preview-wrap {
+                    display: inline-block;
+                    max-width: 100%;
+                    min-height: 32px;
+                    position: relative;
+                    vertical-align: top;
+                }
+
+                .wp-app-masterbar-preview-wrap.is-hidden {
+                    opacity: 0.58;
+                }
+
+                .wp-app-masterbar-preview-wrap #wpadminbar {
+                    display: inline-block;
+                    min-width: 0;
+                    position: static;
+                    width: auto;
+                    z-index: auto;
+                }
+
+                .wp-app-masterbar-preview-wrap #wpadminbar .ab-top-menu > li {
+                    position: relative;
+                }
+
+                .wp-app-masterbar-preview-wrap #wpadminbar .ab-sub-wrapper {
+                    z-index: 2;
+                }
+
+                .wp-app-dashicon-autocomplete.ui-autocomplete {
+                    background: #fff;
+                    border: 1px solid #c3c4c7;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+                    box-sizing: border-box;
+                    margin: 0;
+                    max-height: 260px;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                    padding: 4px 0;
+                    z-index: 100000;
+                }
+
+                .wp-app-dashicon-autocomplete .ui-menu-item-wrapper {
+                    align-items: center;
+                    color: #1d2327;
+                    display: flex;
+                    gap: 8px;
+                    line-height: 1.4;
+                    padding: 6px 10px;
+                }
+
+                .wp-app-dashicon-autocomplete .ui-menu-item-wrapper.ui-state-active {
+                    background: #2271b1;
+                    border: 0;
+                    color: #fff;
+                    margin: 0;
+                }
+
+                .wp-app-dashicon-autocomplete .dashicons {
+                    font-size: 18px;
+                    height: 18px;
+                    line-height: 18px;
+                    width: 18px;
+                }
+
+                .wp-app-dashicon-autocomplete code {
+                    background: transparent;
+                    color: inherit;
+                    font-size: 12px;
+                    padding: 0;
+                }
+
+                .wp-app-settings-row .form-table {
+                    margin-top: 0;
+                }
+
+                .wp-app-settings-row .form-table th {
+                    padding-bottom: 8px;
+                    padding-top: 8px;
+                    width: 120px;
+                }
+
+                .wp-app-settings-row .form-table td {
+                    padding-bottom: 8px;
+                    padding-top: 8px;
+                }
+
+                .wp-app-settings-row .regular-text {
+                    max-width: 100%;
+                    width: 100%;
+                }
+
+                .wp-app-settings-row .form-table td p {
+                    margin-bottom: 10px;
+                }
+
+                .wp-app-settings-field {
+                    margin: 0 0 10px;
+                }
+
+                .wp-app-settings-field:last-child {
+                    margin-bottom: 0;
+                }
+
+                .wp-app-masterbar-visibility-note {
+                    margin: 0;
+                }
+
+                .wp-app-masterbar-visibility-note code {
+                    font-size: 12px;
+                }
+
+                .wp-app-settings-card-actions {
+                    margin: 0;
+                    text-align: right;
+                }
+
+                .wp-app-settings-save-status {
+                    color: #50575e;
+                    display: inline-block;
+                    margin-left: 8px;
+                }
+
+                .wp-app-settings-save-status.is-saved {
+                    color: #008a20;
+                }
+
+                .wp-app-settings-save-status.is-failed {
+                    color: #b32d2e;
+                }
+
+                .wp-app-settings-drag-preview {
+                    background: #fff;
+                    border: 1px solid #2271b1;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+                    box-sizing: border-box;
+                    left: -9999px;
+                    max-width: 1100px;
+                    opacity: 0.96;
+                    pointer-events: none;
+                    position: fixed;
+                    top: -9999px;
+                    width: 720px;
+                    z-index: 100000;
+                }
+
+                .wp-app-settings-drag-preview .wp-app-settings-row-summary {
+                    height: 64px;
+                }
+
+                @media (max-width: 960px) {
+                    .wp-app-settings-row-details {
+                        grid-template-columns: 1fr;
+                        padding-left: 12px;
+                    }
+
+                    .wp-app-settings-card-actions {
+                        text-align: left;
+                    }
+                }
+            </style>
             <form method="post" action="options.php">
                 <?php settings_fields( 'wp_app_masterbar' ); ?>
 
@@ -1536,29 +1853,33 @@ class Settings {
         $is_hidden  = ! self::app_settings_have_visible_preview_content( $app_settings, $metadata ) && ! $force_show_text;
         ?>
         <div class="wp-app-masterbar-preview-wrap<?php echo $is_hidden ? ' is-hidden' : ''; ?>">
-            <div class="wp-app-masterbar-preview" role="navigation" aria-label="<?php echo esc_attr__( 'Toolbar preview' ); ?>">
-                <div class="wp-app-settings-preview-link<?php echo ! empty( $menu_items ) ? ' has-menu' : ''; ?>">
-                    <button type="button" class="wp-app-settings-preview-item"<?php echo ! empty( $menu_items ) ? ' aria-haspopup="true" aria-expanded="false"' : ''; ?>>
-                        <span class="wp-app-link-title">
-                            <?php self::render_preview_icon( $app_path, $app_settings, $metadata, $title ); ?>
-                            <span class="wp-app-link-text" <?php echo $show_text ? '' : 'hidden'; ?>><?php echo esc_html( $title ); ?></span>
-                        </span>
-                    </button>
-                    <?php if ( ! empty( $menu_items ) ) : ?>
-                        <div class="wp-app-settings-preview-menu">
-                            <ul role="menu">
-                                <?php foreach ( $menu_items as $item ) : ?>
-                                    <li role="none">
-                                        <?php if ( ! empty( $item['href'] ) ) : ?>
-                                            <a role="menuitem" href="<?php echo esc_url( $item['href'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a>
-                                        <?php else : ?>
-                                            <span role="menuitem"><?php echo esc_html( $item['title'] ); ?></span>
-                                        <?php endif; ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
+            <div id="wpadminbar" class="nojq">
+                <div class="quicklinks" id="wp-toolbar" role="navigation" aria-label="<?php echo esc_attr__( 'Toolbar' ); ?>">
+                    <ul role="menu" id="wp-admin-bar-root-default" class="ab-top-menu">
+                        <li role="group" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) ); ?>" class="<?php echo ! empty( $menu_items ) ? 'menupop ' : ''; ?>wp-app-admin-link">
+                            <a class="ab-item" role="menuitem" href="<?php echo esc_url( isset( $metadata['url'] ) ? $metadata['url'] : '#' ); ?>"<?php echo ! empty( $menu_items ) ? ' aria-expanded="false"' : ''; ?>>
+                                <span class="wp-app-link-title">
+                                    <?php self::render_preview_icon( $app_path, $app_settings, $metadata, $title ); ?>
+                                    <span class="wp-app-link-text" <?php echo $show_text ? '' : 'hidden'; ?>><?php echo esc_html( $title ); ?></span>
+                                </span>
+                            </a>
+                            <?php if ( ! empty( $menu_items ) ) : ?>
+                                <div class="ab-sub-wrapper">
+                                    <ul role="menu" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) . '-default' ); ?>" class="ab-submenu">
+                                        <?php foreach ( $menu_items as $item ) : ?>
+                                            <li role="group">
+                                                <?php if ( ! empty( $item['href'] ) ) : ?>
+                                                    <a class="ab-item" role="menuitem" href="<?php echo esc_url( $item['href'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a>
+                                                <?php else : ?>
+                                                    <span class="ab-item"><?php echo esc_html( $item['title'] ); ?></span>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
