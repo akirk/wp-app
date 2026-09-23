@@ -539,7 +539,7 @@ if ( ! function_exists( 'wp_app_get_asset_url' ) ) {
         $path = ltrim( (string) $path, '/' );
 
         if ( defined( 'WP_PLUGIN_DIR' ) && defined( 'WP_PLUGIN_URL' ) ) {
-            $package_dir = realpath( dirname( __DIR__ ) );
+            $package_dir = realpath( defined( 'WP_APP_DIR' ) ? WP_APP_DIR : dirname( __DIR__ ) );
             $plugin_dir  = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
 
             foreach ( get_included_files() as $included_file ) {

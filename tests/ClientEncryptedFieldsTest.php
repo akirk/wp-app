@@ -121,6 +121,7 @@ class ClientEncryptedFieldsTest extends TestCase {
 			'https://example.org/wp-content/plugins/wp-app-selected-provider/vendor/akirk/wp-app/assets/wp-app-encrypted-fields.js',
 			$asset_url
 		);
+		$this->assertSame( realpath( dirname( __DIR__ ) ), realpath( WP_APP_DIR ) );
 	}
 
 	public function test_enqueue_assets_outputs_crypto_client_and_manifest_config_for_scope() {
