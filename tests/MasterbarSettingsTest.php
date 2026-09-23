@@ -223,6 +223,17 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringNotContainsString( 'Choose which active plugin supplies the shared wp-app framework.', $html );
     }
 
+    public function test_settings_previews_do_not_use_the_live_masterbar_link_class() {
+        new WpApp( '', 'preview-class-app', [ 'app_name' => 'Preview Class App' ] );
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'class="wp-app-settings-preview-link"', $html );
+        $this->assertStringNotContainsString( 'class="wp-app-admin-link"', $html );
+    }
+
     public function test_global_admin_bar_links_follow_saved_app_order() {
         global $__wp_app_test_options;
 

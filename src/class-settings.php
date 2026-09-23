@@ -1539,7 +1539,7 @@ class Settings {
             <div id="wpadminbar" class="nojq">
                 <div class="quicklinks" id="wp-toolbar" role="navigation" aria-label="<?php echo esc_attr__( 'Toolbar' ); ?>">
                     <ul role="menu" id="wp-admin-bar-root-default" class="ab-top-menu">
-                        <li role="group" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) ); ?>" class="<?php echo ! empty( $menu_items ) ? 'menupop ' : ''; ?>wp-app-admin-link">
+                        <li role="group" id="<?php echo esc_attr( self::get_admin_bar_node_id( $app_path ) ); ?>" class="<?php echo ! empty( $menu_items ) ? 'menupop ' : ''; ?>wp-app-settings-preview-link">
                             <a class="ab-item" role="menuitem" href="<?php echo esc_url( isset( $metadata['url'] ) ? $metadata['url'] : '#' ); ?>"<?php echo ! empty( $menu_items ) ? ' aria-expanded="false"' : ''; ?>>
                                 <span class="wp-app-link-title">
                                     <?php self::render_preview_icon( $app_path, $app_settings, $metadata, $title ); ?>

@@ -326,6 +326,7 @@
 
 	.wp-app-settings-row-preview {
 		grid-column: 2;
+		overflow: visible;
 	}
 
 	.wp-app-settings-row-toggles {
