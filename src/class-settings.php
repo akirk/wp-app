@@ -98,57 +98,8 @@ class Settings {
         }
 
         if ( function_exists( 'wp_enqueue_style' ) ) {
-            wp_enqueue_style( 'wp-app-settings', self::get_settings_asset_url(), [], WP_APP_VERSION . '-mobile-layout' );
+            wp_enqueue_style( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-settings.css' ), [], WP_APP_VERSION . '-mobile-layout' );
         }
-    }
-
-    /**
-     * Get the settings stylesheet URL from the package that owns this class.
-     *
-     * Another plugin may have defined wp_app_get_asset_url() before the selected
-     * provider loaded. Resolve this asset locally so its CSS matches this class.
-     *
-     * @return string Settings stylesheet URL.
-     */
-    private static function get_settings_asset_url() {
-        $relative_path = 'assets/wp-app-settings.css';
-        $package_dir   = realpath( dirname( __DIR__ ) );
-
-        if ( $package_dir && defined( 'WP_PLUGIN_DIR' ) && defined( 'WP_PLUGIN_URL' ) ) {
-            $plugin_dir = rtrim( str_replace( '\\', '/', WP_PLUGIN_DIR ), '/' );
-
-            foreach ( get_included_files() as $included_file ) {
-                $included_file = str_replace( '\\', '/', $included_file );
-
-                if ( substr( $included_file, -20 ) !== '/vendor/autoload.php' ) {
-                    continue;
-                }
-
-                $candidate_dir = dirname( $included_file ) . '/akirk/wp-app';
-
-                if ( realpath( $candidate_dir ) !== $package_dir ) {
-                    continue;
-                }
-
-                $candidate = str_replace( '\\', '/', $candidate_dir . '/' . $relative_path );
-
-                if ( 0 === strpos( $candidate, $plugin_dir . '/' ) ) {
-                    return rtrim( WP_PLUGIN_URL, '/' ) . substr( $candidate, strlen( $plugin_dir ) );
-                }
-            }
-
-            foreach ( (array) glob( $plugin_dir . '/*/vendor/akirk/wp-app', GLOB_ONLYDIR ) as $candidate_dir ) {
-                if ( realpath( $candidate_dir ) !== $package_dir ) {
-                    continue;
-                }
-
-                $candidate = str_replace( '\\', '/', $candidate_dir . '/' . $relative_path );
-
-                return rtrim( WP_PLUGIN_URL, '/' ) . substr( $candidate, strlen( $plugin_dir ) );
-            }
-        }
-
-        return plugins_url( '../' . $relative_path, __FILE__ );
     }
 
     /**
