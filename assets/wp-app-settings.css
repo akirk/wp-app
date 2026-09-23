@@ -1,3 +1,29 @@
 .wp-app-provider-loaded-version {
 	margin-top: 24px;
 }
+
+@media (max-width: 782px) {
+	.wrap .wp-app-settings-row .wp-app-settings-row-summary {
+		grid-template-columns: 32px minmax(0, 1fr) 32px;
+		height: auto;
+	}
+
+	.wrap .wp-app-settings-row .wp-app-settings-row-preview {
+		grid-column: 2;
+	}
+
+	.wrap .wp-app-masterbar-preview-wrap #wpadminbar li.wp-app-admin-link {
+		display: block !important;
+	}
+
+	.wrap .wp-app-settings-row .wp-app-settings-row-toggles {
+		grid-column: 1 / -1;
+		grid-row: 2;
+		justify-content: center;
+	}
+
+	.wrap .wp-app-settings-row .wp-app-settings-expand {
+		grid-column: 3;
+		grid-row: 1;
+	}
+}
