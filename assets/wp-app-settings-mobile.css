@@ -8,14 +8,18 @@
 		grid-column: 2;
 	}
 
+	.wrap .wp-app-masterbar-preview-wrap #wpadminbar li.wp-app-admin-link {
+		display: block !important;
+	}
+
 	.wrap .wp-app-settings-row .wp-app-settings-row-toggles {
-		grid-column: 2;
+		grid-column: 1 / -1;
 		grid-row: 2;
-		justify-content: flex-start;
+		justify-content: center;
 	}
 
 	.wrap .wp-app-settings-row .wp-app-settings-expand {
 		grid-column: 3;
-		grid-row: 1 / span 2;
+		grid-row: 1;
 	}
 }
