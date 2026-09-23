@@ -23,6 +23,7 @@ class ThemesTest extends TestCase {
 		$__wp_app_test_filter_stack      = [];
 		$__wp_app_test_doing_it_wrong    = [];
 		$_GET                            = [];
+		$_SERVER['REQUEST_URI']          = '';
 		$this->base_directory            = __DIR__ . '/fixtures/templates';
 		$this->theme_directory           = $this->base_directory . '/compact';
 	}
@@ -71,6 +72,19 @@ class ThemesTest extends TestCase {
 		$this->assertSame( 'wp-app-theme-reader', $items['wp-app-theme-reader-choice-compact']['parent'] );
 		$this->assertSame( '✓ Compact', $items['wp-app-theme-reader-choice-compact']['title'] );
 		$this->assertArrayNotHasKey( 'wp-app-theme-reader-default', $items );
+	}
+
+	public function test_theme_menu_links_preserve_the_current_url() {
+		$_SERVER['REQUEST_URI'] = '/reader/books/42/?view=details';
+
+		$app = new WpApp( $this->base_directory, 'reader' );
+		$this->register_theme( $app, 'compact', 'Compact', $this->theme_directory );
+
+		$items = $app->masterbar()->get_preview_menu_items();
+		$this->assertSame(
+			'https://example.org/reader/books/42/?view=details&wp_app_theme=compact',
+			$items['wp-app-theme-reader-choice-compact']['href']
+		);
 	}
 
 	public function test_theme_template_overrides_and_falls_back_to_app_templates() {
