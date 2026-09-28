@@ -82,8 +82,21 @@ class ThemesTest extends TestCase {
 
 		$items = $app->masterbar()->get_preview_menu_items();
 		$this->assertSame(
-			'https://example.org/reader/books/42/?view=details&wp_app_theme=compact',
+			'/reader/books/42/?view=details&wp_app_theme=compact',
 			$items['wp-app-theme-reader-choice-compact']['href']
+		);
+	}
+
+	public function test_theme_menu_links_do_not_duplicate_the_home_path() {
+		$_SERVER['REQUEST_URI'] = '/scope:curious-busy-country/travel-app/trip/3/?view=details';
+
+		$app = new WpApp( $this->base_directory, 'travel-app' );
+		$this->register_theme( $app, 'compact', 'Compact', $this->theme_directory );
+
+		$items = $app->masterbar()->get_preview_menu_items();
+		$this->assertSame(
+			'/scope:curious-busy-country/travel-app/trip/3/?view=details&wp_app_theme=compact',
+			$items['wp-app-theme-travel-app-choice-compact']['href']
 		);
 	}
 

@@ -406,10 +406,10 @@ if ( ! function_exists( 'add_query_arg' ) ) {
 	function add_query_arg( ...$params ) {
 		if ( is_array( $params[0] ) ) {
 			$args = $params[0];
-			$url  = $params[1] ?? '';
+			$url  = $params[1] ?? ( $_SERVER['REQUEST_URI'] ?? '' );
 		} else {
 			$args = [ $params[0] => $params[1] ];
-			$url  = $params[2] ?? '';
+			$url  = $params[2] ?? ( $_SERVER['REQUEST_URI'] ?? '' );
 		}
 
 		return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $args );

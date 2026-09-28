@@ -128,7 +128,6 @@ class Themes {
 
 		$parent_id = 'wp-app-theme-' . $this->get_hook_suffix();
 		$this->masterbar->add_menu_item( $parent_id, __( 'Themes' ) );
-		$current_url = $this->get_current_url();
 
 		foreach ( $this->themes as $slug => $theme ) {
 			$selected = $this->selection_loaded ? $this->selected_theme : get_user_option( $this->get_user_option_name(), get_current_user_id() );
@@ -141,24 +140,10 @@ class Themes {
 			$this->masterbar->add_menu_item(
 				$parent_id . '-choice-' . $slug,
 				$title,
-				add_query_arg( 'wp_app_theme', $slug, $current_url ),
+				add_query_arg( 'wp_app_theme', $slug ),
 				[ 'parent' => $parent_id ]
 			);
 		}
-	}
-
-	/**
-	 * Return the current URL so changing themes does not reset the app route.
-	 *
-	 * @return string Current URL, or the app root when no request URL is available.
-	 */
-	private function get_current_url() {
-		if ( ! empty( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ) {
-			$request_uri = wp_unslash( $_SERVER['REQUEST_URI'] );
-			return home_url( '/' . ltrim( $request_uri, '/' ) );
-		}
-
-		return home_url( '/' . $this->app_path . '/' );
 	}
 
 	private function get_user_option_name() {
