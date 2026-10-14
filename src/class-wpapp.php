@@ -201,7 +201,8 @@ class WpApp {
         $this->masterbar->auto_render();
 
         // Hook into WordPress activation
-        add_action( 'wp_loaded', [ $this, 'on_wp_loaded' ] );
+        // Rebuild only after other plugins have registered their routes.
+        add_action( 'wp_loaded', [ $this, 'on_wp_loaded' ], 999 );
 
         // Register with My Apps plugin if enabled
         if ( $this->launcher !== false ) {
