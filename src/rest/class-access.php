@@ -79,6 +79,9 @@ class Access {
 	 * @return string Controller class name.
 	 */
 	public static function protect_post_type( $post_type, $capability = null, $collection_capability = null ) {
+		if ( ! isset( self::$post_type_caps[ $post_type ] ) ) {
+			add_filter( 'rest_' . $post_type . '_query', [ __CLASS__, 'filter_rest_query' ], 10, 2 );
+		}
 		self::$post_type_caps[ $post_type ] = self::normalize_caps( $capability, $collection_capability );
 		self::ensure_controllers_loaded();
 		self::hook_filters();
@@ -126,6 +129,9 @@ class Access {
 
 		add_filter( 'register_post_type_args', [ __CLASS__, 'filter_post_type_args' ], 10, 2 );
 		add_filter( 'register_taxonomy_args', [ __CLASS__, 'filter_taxonomy_args' ], 10, 2 );
+		add_filter( 'rest_attachment_query', [ __CLASS__, 'filter_rest_query' ], 10, 2 );
+		add_filter( 'rest_post_search_query', [ __CLASS__, 'filter_rest_query' ], 10, 2 );
+		add_filter( 'rest_request_before_callbacks', [ __CLASS__, 'guard_rest_request' ], 10, 3 );
 		self::$filters_hooked = true;
 	}
 
@@ -342,6 +348,106 @@ class Access {
 	 */
 	public static function get_protected_post_types() {
 		return array_keys( self::$post_type_caps );
+	}
+
+	/**
+	 * Check a record, or the app-owned parent of an attachment/revision.
+	 * The cloned request preserves share-token parameters but uses the parent's id.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public static function guard_record( $post, $request ) {
+		if ( in_array( $post->post_type, [ 'attachment', 'revision' ], true ) ) {
+			$post = $post->post_parent ? get_post( $post->post_parent ) : null;
+		}
+		if ( ! $post || ! isset( self::$post_type_caps[ $post->post_type ] ) ) {
+			return true;
+		}
+		$item_request = clone $request;
+		$item_request->set_param( 'id', $post->ID );
+		return self::guard_post_type_item( $post->post_type, $item_request );
+	}
+
+	/**
+	 * Exclude inaccessible records before pagination, including media and search.
+	 * Arbitrary meta-cap mappings require checking each candidate record. Do not
+	 * cache this across requests: users, sharing tokens and permissions can differ.
+	 */
+	public static function filter_rest_query( $args, $request ) {
+		if ( ! self::$post_type_caps ) {
+			return $args;
+		}
+		$posts = get_posts(
+            [
+				'post_type'        => self::get_protected_post_types(),
+				'post_status'      => get_post_stati(),
+				'posts_per_page'   => -1,
+				'suppress_filters' => true,
+				'no_found_rows'    => true,
+			]
+        );
+		if ( $posts ) {
+			$attachments = get_posts(
+                [
+					'post_type'        => 'attachment',
+					'post_status'      => get_post_stati(),
+					'post_parent__in'  => array_map(
+                        static function ( $post ) {
+							return (int) $post->ID;
+						},
+						$posts
+                    ),
+					'posts_per_page'   => -1,
+					'suppress_filters' => true,
+					'no_found_rows'    => true,
+				]
+            );
+			$posts       = array_merge( $posts, $attachments );
+		}
+		$excluded = isset( $args['post__not_in'] ) ? $args['post__not_in'] : [];
+		foreach ( $posts as $post ) {
+			if ( is_wp_error( self::guard_record( $post, $request ) ) ) {
+				$excluded[] = (int) $post->ID;
+			}
+		}
+		// WP_Query ignores post__not_in when post__in is present.
+		if ( ! empty( $args['post__in'] ) ) {
+			$args['post__in'] = array_values( array_diff( $args['post__in'], $excluded ) );
+			if ( ! $args['post__in'] ) {
+				$args['post__in'] = [ 0 ];
+			}
+		}
+		$args['post__not_in'] = array_values( array_unique( $excluded ) );
+		return $args;
+	}
+
+	/**
+	 * Gate registered post routes independently of their controller class.
+	 * Also runs for embedded REST requests. Core still enforces its own permissions.
+	 */
+	public static function guard_rest_request( $response, $handler, $request ) {
+		if ( null !== $response || ! in_array( $request->get_method(), [ 'GET', 'HEAD' ], true ) ) {
+			return $response;
+		}
+		foreach ( get_post_types( [ 'show_in_rest' => true ], 'objects' ) as $type ) {
+			if ( 'attachment' !== $type->name && ! isset( self::$post_type_caps[ $type->name ] ) ) {
+				continue;
+			}
+			$namespace = ! empty( $type->rest_namespace ) ? $type->rest_namespace : 'wp/v2';
+			$base      = ! empty( $type->rest_base ) ? $type->rest_base : $type->name;
+			$prefix    = '/' . $namespace . '/' . $base;
+			if ( ! preg_match( '#^' . preg_quote( $prefix, '#' ) . '(?:/([0-9]+))?(?:/|$)#', $request->get_route(), $match ) ) {
+				continue;
+			}
+			if ( ! empty( $match[1] ) ) {
+				$post = get_post( (int) $match[1] );
+				$gate = $post ? self::guard_record( $post, $request ) : true;
+			} else {
+				$gate = 'attachment' === $type->name ? true : self::guard_post_type_collection( $type->name, $request );
+			}
+			return is_wp_error( $gate ) ? $gate : $response;
+		}
+		return $response;
 	}
 
 	/**

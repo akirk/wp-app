@@ -352,6 +352,40 @@ add_filter( 'wp_app_rest_public_read', function ( $allow, $object_name, $request
 Keep the default (`false`) for everything else so app data stays private.
 
 
+### Uploads attached to app records
+
+Use standard WordPress upload APIs and attach uploads to an app-owned CPT record:
+
+```php
+$attachment_id = media_handle_upload( 'file', $record_id );
+```
+
+Check that the uploader may edit the target record before accepting the upload.
+For sideloads, pass the record ID to `media_handle_sideload()` in the same way.
+No ownership tags or special upload helper are required.
+
+Attachments inherit the REST read restriction of their app-owned parent. This
+covers individual media reads, embedded media requests, media collections and
+REST post search. Unattached uploads and attachments to other post types retain
+normal WordPress behavior. Attach the upload when creating it; an unattached
+upload is outside this protection until a parent is assigned.
+
+CPT collections and REST post search exclude records that fail their individual
+read capability before pagination, so pagination totals also exclude them. For
+arbitrary per-record capability mappings this requires checking all app records
+and their attachments, which adds work on large datasets.
+
+The route-level read gate also covers explicit custom controllers on the post
+type's registered REST namespace/base, including revision routes. Custom collection
+controllers must use the standard `rest_{$post_type}_query` filter (or call
+`Access::filter_rest_query()` themselves); arbitrary custom endpoints and queries
+must enforce their own permissions. Core write permissions remain in place.
+
+Upload filenames, directories and direct file URLs are unchanged. Anyone with a
+file URL can still download it. This feature restricts REST discovery; it does
+not make the files private or change attachment pages, feeds or sitemaps.
+
+
 ## Related Documentation
 
 - [Configuration](configuration.md) - Access control config options

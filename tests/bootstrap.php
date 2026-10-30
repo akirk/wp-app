@@ -461,6 +461,9 @@ if ( ! function_exists( 'current_user_can' ) ) {
 
 		$__wp_app_test_cap_calls[] = [ $capability, $args ];
 
+		if ( is_callable( $__wp_app_test_current_user_can ?? null ) ) {
+			return $__wp_app_test_current_user_can( $capability, ...$args );
+		}
 		if ( is_array( $__wp_app_test_current_user_can ?? null ) ) {
 			return ! empty( $__wp_app_test_current_user_can[ $capability ] );
 		}
@@ -819,6 +822,18 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 			$this->params = $params;
 		}
 
+		public function set_param( $key, $value ) {
+			$this->params[ $key ] = $value;
+		}
+
+		public function get_method() {
+			return $this->params['_method'] ?? 'GET';
+		}
+
+		public function get_route() {
+			return $this->params['_route'] ?? '';
+		}
+
 		public function get_param( $key ) {
 			return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null;
 		}
@@ -863,3 +878,33 @@ if ( ! class_exists( 'WP_REST_Terms_Controller' ) ) {
 
 
 require_once __DIR__ . '/../vendor/autoload.php';
+
+if ( ! function_exists( 'get_post' ) ) {
+	function get_post( $id ) {
+		return $GLOBALS['__wp_app_test_posts'][ $id ] ?? null;
+	}
+}
+if ( ! function_exists( 'get_posts' ) ) {
+	function get_posts( $args ) {
+		return array_values(
+            array_filter(
+                $GLOBALS['__wp_app_test_posts'] ?? [],
+                function ( $post ) use ( $args ) {
+                    return in_array( $post->post_type, (array) $args['post_type'], true )
+                    && ( ! isset( $args['post_parent__in'] ) || in_array( $post->post_parent, $args['post_parent__in'], true ) );
+                }
+            )
+        );
+	}
+}
+if ( ! function_exists( 'get_post_types' ) ) {
+	function get_post_types( $args = [], $output = 'names' ) {
+		return $GLOBALS['__wp_app_test_post_types'] ?? [];
+	}
+}
+
+if ( ! function_exists( 'get_post_stati' ) ) {
+	function get_post_stati() {
+		return [ 'publish', 'private', 'draft', 'inherit', 'trash', 'auto-draft' ];
+	}
+}
