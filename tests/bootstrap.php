@@ -886,20 +886,45 @@ if ( ! function_exists( 'get_post' ) ) {
 }
 if ( ! function_exists( 'get_posts' ) ) {
 	function get_posts( $args ) {
-		return array_values(
-            array_filter(
-                $GLOBALS['__wp_app_test_posts'] ?? [],
-                function ( $post ) use ( $args ) {
-                    return in_array( $post->post_type, (array) $args['post_type'], true )
-                    && ( ! isset( $args['post_parent__in'] ) || in_array( $post->post_parent, $args['post_parent__in'], true ) );
-                }
-            )
+		$GLOBALS['__wp_app_test_post_queries'][] = $args;
+		$posts                                   = array_filter(
+            $GLOBALS['__wp_app_test_posts'] ?? [],
+            function ( $post ) use ( $args ) {
+				return in_array( $post->post_type, (array) $args['post_type'], true )
+				&& ( empty( $args['post__in'] ) || in_array( $post->ID, $args['post__in'], true ) )
+				&& ( ! empty( $args['post__in'] ) || empty( $args['post__not_in'] ) || ! in_array( $post->ID, $args['post__not_in'], true ) )
+				&& ( ! isset( $args['post_parent'] ) || $post->post_parent === $args['post_parent'] )
+				&& ( empty( $args['s'] ) || false !== strpos( $post->post_title ?? '', $args['s'] ) );
+			}
         );
+		$posts                                   = array_slice( array_values( $posts ), $args['offset'] ?? 0, $args['posts_per_page'] ?? 5 );
+		if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+			return array_map(
+                function ( $post ) {
+                    return $post->ID;
+                },
+                $posts
+            );
+		}
+		if ( 'id=>parent' === ( $args['fields'] ?? '' ) ) {
+			$parents = [];
+			foreach ( $posts as $post ) {
+				$parents[ $post->ID ] = $post->post_parent;
+			}
+			return $parents;
+		}
+		return $posts;
 	}
 }
 if ( ! function_exists( 'get_post_types' ) ) {
 	function get_post_types( $args = [], $output = 'names' ) {
-		return $GLOBALS['__wp_app_test_post_types'] ?? [];
+		$types = $GLOBALS['__wp_app_test_post_types'] ?? [];
+		return 'objects' === $output ? $types : array_map(
+            function ( $type ) {
+                return $type->name;
+            },
+            $types
+        );
 	}
 }
 

@@ -372,8 +372,11 @@ upload is outside this protection until a parent is assigned.
 
 CPT collections and REST post search exclude records that fail their individual
 read capability before pagination, so pagination totals also exclude them. For
-arbitrary per-record capability mappings this requires checking all app records
-and their attachments, which adds work on large datasets.
+arbitrary per-record capability mappings this requires checking matching
+candidates. Queries retain their search, author, parent, include, status and
+taxonomy/meta constraints; unrelated post types are skipped. Candidates are
+fetched in batches of 200 using only IDs (and parent IDs for attachments). Broad
+queries can still require many capability checks and a large exclusion list.
 
 The route-level read gate also covers explicit custom controllers on the post
 type's registered REST namespace/base, including revision routes. Custom collection
@@ -384,6 +387,15 @@ must enforce their own permissions. Core write permissions remain in place.
 Upload filenames, directories and direct file URLs are unchanged. Anyone with a
 file URL can still download it. This feature restricts REST discovery; it does
 not make the files private or change attachment pages, feeds or sitemaps.
+
+To run the REST integration fixture in a fresh WordPress Playground installation
+from the repository root:
+
+```sh
+npx @wp-playground/cli run-blueprint --mount "$PWD:/wp-app" --blueprint tests/integration/rest-access.blueprint.json
+```
+
+The fixture creates test users, records and attachments in the isolated site.
 
 
 ## Related Documentation

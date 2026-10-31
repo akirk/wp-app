@@ -377,39 +377,61 @@ class Access {
 		if ( ! self::$post_type_caps ) {
 			return $args;
 		}
-		$posts = get_posts(
-            [
-				'post_type'        => self::get_protected_post_types(),
-				'post_status'      => get_post_stati(),
-				'posts_per_page'   => -1,
-				'suppress_filters' => true,
-				'no_found_rows'    => true,
-			]
-        );
-		if ( $posts ) {
-			$attachments = get_posts(
+		$types = $args['post_type'] ?? ( empty( $args['tax_query'] ) ? 'post' : 'any' );
+		if ( 'any' === $types ) {
+			$types = get_post_types( [ 'exclude_from_search' => false ] );
+		}
+		$types = array_intersect( (array) $types, array_merge( self::get_protected_post_types(), [ 'attachment' ] ) );
+		if ( ! $types ) {
+			return $args;
+		}
+		$excluded = $args['post__not_in'] ?? [];
+		foreach ( $types as $type ) {
+			// Preserve search, status, author, parent, include and taxonomy/meta
+			// constraints, but check all matching candidates before pagination.
+			$query = array_merge(
+                $args,
                 [
-					'post_type'        => 'attachment',
-					'post_status'      => get_post_stati(),
-					'post_parent__in'  => array_map(
-                        static function ( $post ) {
-							return (int) $post->ID;
-						},
-						$posts
-                    ),
-					'posts_per_page'   => -1,
-					'suppress_filters' => true,
-					'no_found_rows'    => true,
+					'post_type'              => $type,
+					'fields'                 => 'attachment' === $type ? 'id=>parent' : 'ids',
+					// phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page -- Bounded permission-check batch; IDs only.
+					'posts_per_page'         => 200,
+					'posts_per_archive_page' => 200,
+					// phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_numberposts -- Match the bounded batch for get_posts().
+					'numberposts'            => 200,
+					'nopaging'               => false,
+					'paged'                  => 1,
+					'offset'                 => 0,
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'no_found_rows'          => true,
+					'ignore_sticky_posts'    => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+					'cache_results'          => false,
+					'suppress_filters'       => $args['suppress_filters'] ?? false,
 				]
             );
-			$posts       = array_merge( $posts, $attachments );
+			do {
+				$candidates = get_posts( $query );
+				foreach ( $candidates as $key => $candidate ) {
+					// id=>parent can be returned as objects on older core paths.
+					$id     = 'attachment' === $type ? ( is_object( $candidate ) ? $candidate->ID : $key ) : $candidate;
+					$parent = 'attachment' === $type ? ( is_object( $candidate ) ? $candidate->post_parent : $candidate ) : 0;
+					$post   = (object) [
+						'ID'          => (int) $id,
+						'post_type'   => $type,
+						'post_parent' => (int) $parent,
+					];
+					if ( is_wp_error( self::guard_record( $post, $request ) ) ) {
+						$excluded[] = (int) $id;
+					}
+				}
+				$count            = count( $candidates );
+				$query['offset'] += 200;
+			} while ( 200 === $count );
 		}
-		$excluded = isset( $args['post__not_in'] ) ? $args['post__not_in'] : [];
-		foreach ( $posts as $post ) {
-			if ( is_wp_error( self::guard_record( $post, $request ) ) ) {
-				$excluded[] = (int) $post->ID;
-			}
-		}
+
 		// WP_Query ignores post__not_in when post__in is present.
 		if ( ! empty( $args['post__in'] ) ) {
 			$args['post__in'] = array_values( array_diff( $args['post__in'], $excluded ) );
@@ -440,8 +462,12 @@ class Access {
 				continue;
 			}
 			if ( ! empty( $match[1] ) ) {
-				$post = get_post( (int) $match[1] );
-				$gate = $post ? self::guard_record( $post, $request ) : true;
+				// Use the same effective parameters as core, including query/body
+				// overrides. Revision/autosave routes identify the post as parent.
+				$is_child = preg_match( '#^' . preg_quote( $prefix, '#' ) . '/[0-9]+/(?:revisions|autosaves)(?:/|$)#', $request->get_route() );
+				$id       = $request->get_param( $is_child ? 'parent' : 'id' );
+				$post     = get_post( (int) ( null !== $id ? $id : $match[1] ) );
+				$gate     = $post ? self::guard_record( $post, $request ) : true;
 			} else {
 				$gate = 'attachment' === $type->name ? true : self::guard_post_type_collection( $type->name, $request );
 			}

@@ -15,6 +15,7 @@ class RestAccessTest extends TestCase {
 		$GLOBALS['__wp_app_test_cap_calls']         = [];
 		$GLOBALS['__wp_app_test_posts']             = [];
 		$GLOBALS['__wp_app_test_post_types']        = [];
+		$GLOBALS['__wp_app_test_post_queries']      = [];
 		Access::reset();
 	}
 
@@ -240,14 +241,27 @@ class RestAccessTest extends TestCase {
 			return 'read' === $cap || 1 === $id;
 		};
 		foreach ( [ 'rest_note_query', 'rest_attachment_query', 'rest_post_search_query' ] as $hook ) {
-			$args = apply_filters( $hook, [ 'post__not_in' => [ 99 ] ], $this->request() );
+			$args = apply_filters(
+                $hook,
+                [
+					'post_type'    => [ 'note', 'attachment' ],
+					'post__not_in' => [ 99 ],
+				],
+				$this->request()
+            );
 			$this->assertSame( [ 99, 2, 4 ], $args['post__not_in'] );
 		}
 	}
 
 	public function test_include_cannot_bypass_exclusions_or_become_an_empty_unrestricted_query() {
 		$this->records();
-		$args = Access::filter_rest_query( [ 'post__in' => [ 2, 4 ] ], $this->request() );
+		$args = Access::filter_rest_query(
+            [
+				'post_type' => [ 'note', 'attachment' ],
+				'post__in'  => [ 2, 4 ],
+			],
+			$this->request()
+        );
 		$this->assertSame( [ 0 ], $args['post__in'] );
 	}
 
@@ -305,5 +319,108 @@ class RestAccessTest extends TestCase {
 		$this->assertTrue( Access::guard_record( get_post( 3 ), $request ) );
 		$this->assertSame( 3, $request->get_param( 'id' ) );
 		$this->assertInstanceOf( \WP_Error::class, Access::guard_record( get_post( 4 ), $request ) );
+	}
+	public function test_query_id_override_cannot_bypass_media_gate() {
+		$this->records();
+		$request = $this->request(
+            [
+				'_route' => '/app/v1/attachment/5',
+				'id'     => 3,
+			]
+        );
+		$this->assertInstanceOf( \WP_Error::class, Access::guard_rest_request( null, [], $request ) );
+		$request = $this->request(
+            [
+				'_route' => '/app/v1/attachment/3',
+				'id'     => 5,
+			]
+        );
+		$this->assertNull( Access::guard_rest_request( null, [], $request ) );
+	}
+
+	public function test_effective_parent_is_checked_for_revisions_and_autosaves() {
+		$this->records();
+		$GLOBALS['__wp_app_test_current_user_can'] = function ( $cap, $id = null ) {
+			return 1 === $id;
+		};
+		foreach ( [ 'revisions', 'autosaves' ] as $child ) {
+			$request = $this->request(
+                [
+					'_route' => '/app/v1/note/1/' . $child,
+					'parent' => 2,
+				]
+            );
+			$this->assertInstanceOf( \WP_Error::class, Access::guard_rest_request( null, [], $request ) );
+			$request = $this->request(
+                [
+					'_route' => '/app/v1/note/2/' . $child . '/42',
+					'parent' => 1,
+					'id'     => 42,
+				]
+            );
+			$this->assertNull( Access::guard_rest_request( null, [], $request ) );
+		}
+	}
+
+	public function test_any_post_type_query_checks_registered_searchable_types() {
+		$this->records();
+		$result = Access::filter_rest_query( [ 'post_type' => 'any' ], $this->request() );
+		$this->assertSame( [ 1, 2, 3, 4 ], $result['post__not_in'] );
+	}
+
+	public function test_unrelated_search_does_not_scan_app_records() {
+		$this->records();
+		$GLOBALS['__wp_app_test_post_queries'] = [];
+		$args                                  = [
+			'post_type' => 'post',
+			's'         => 'public',
+		];
+		$this->assertSame( $args, Access::filter_rest_query( $args, $this->request() ) );
+		$this->assertSame( [], $GLOBALS['__wp_app_test_post_queries'] );
+	}
+
+	public function test_candidates_respect_search_include_and_parent_constraints() {
+		$this->records();
+		$GLOBALS['__wp_app_test_posts'][3]->post_title = 'matching';
+		$GLOBALS['__wp_app_test_posts'][4]->post_title = 'other';
+		$GLOBALS['__wp_app_test_post_queries']         = [];
+		$args   = [
+			'post_type'   => 'attachment',
+			's'           => 'matching',
+			'post_parent' => 1,
+			'post__in'    => [ 3, 4 ],
+		];
+		$result = Access::filter_rest_query( $args, $this->request() );
+		$this->assertSame( [ 3 ], $result['post__not_in'] );
+		$this->assertSame( [ 4 ], $result['post__in'] );
+		$this->assertCount( 1, $GLOBALS['__wp_app_test_post_queries'] );
+		$this->assertSame( 'id=>parent', $GLOBALS['__wp_app_test_post_queries'][0]['fields'] );
+		$this->assertSame( 1, $GLOBALS['__wp_app_test_post_queries'][0]['post_parent'] );
+	}
+
+	public function test_matching_candidates_are_checked_in_bounded_batches_before_pagination() {
+		$this->records();
+		for ( $id = 10; $id < 460; ++$id ) {
+			$GLOBALS['__wp_app_test_posts'][ $id ] = (object) [
+				'ID'          => $id,
+				'post_type'   => 'note',
+				'post_parent' => 0,
+			];
+		}
+		$GLOBALS['__wp_app_test_post_queries'] = [];
+		$args                                  = [
+			'post_type'      => 'note',
+			'posts_per_page' => 2,
+			'offset'         => 400,
+		];
+		$result                                = Access::filter_rest_query( $args, $this->request() );
+		$this->assertCount( 452, $result['post__not_in'] );
+		$this->assertSame( 400, $result['offset'] );
+		$this->assertSame( 2, $result['posts_per_page'] );
+		$this->assertSame( [ 0, 200, 400 ], array_column( $GLOBALS['__wp_app_test_post_queries'], 'offset' ) );
+		foreach ( $GLOBALS['__wp_app_test_post_queries'] as $query ) {
+			$this->assertSame( 'ids', $query['fields'] );
+			$this->assertSame( 200, $query['posts_per_page'] );
+		}
 	}
 }
