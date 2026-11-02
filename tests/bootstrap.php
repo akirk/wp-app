@@ -461,6 +461,9 @@ if ( ! function_exists( 'current_user_can' ) ) {
 
 		$__wp_app_test_cap_calls[] = [ $capability, $args ];
 
+		if ( is_callable( $__wp_app_test_current_user_can ?? null ) ) {
+			return $__wp_app_test_current_user_can( $capability, ...$args );
+		}
 		if ( is_array( $__wp_app_test_current_user_can ?? null ) ) {
 			return ! empty( $__wp_app_test_current_user_can[ $capability ] );
 		}
@@ -819,6 +822,18 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 			$this->params = $params;
 		}
 
+		public function set_param( $key, $value ) {
+			$this->params[ $key ] = $value;
+		}
+
+		public function get_method() {
+			return $this->params['_method'] ?? 'GET';
+		}
+
+		public function get_route() {
+			return $this->params['_route'] ?? '';
+		}
+
 		public function get_param( $key ) {
 			return isset( $this->params[ $key ] ) ? $this->params[ $key ] : null;
 		}
@@ -863,3 +878,58 @@ if ( ! class_exists( 'WP_REST_Terms_Controller' ) ) {
 
 
 require_once __DIR__ . '/../vendor/autoload.php';
+
+if ( ! function_exists( 'get_post' ) ) {
+	function get_post( $id ) {
+		return $GLOBALS['__wp_app_test_posts'][ $id ] ?? null;
+	}
+}
+if ( ! function_exists( 'get_posts' ) ) {
+	function get_posts( $args ) {
+		$GLOBALS['__wp_app_test_post_queries'][] = $args;
+		$posts                                   = array_filter(
+            $GLOBALS['__wp_app_test_posts'] ?? [],
+            function ( $post ) use ( $args ) {
+				return in_array( $post->post_type, (array) $args['post_type'], true )
+				&& ( empty( $args['post__in'] ) || in_array( $post->ID, $args['post__in'], true ) )
+				&& ( ! empty( $args['post__in'] ) || empty( $args['post__not_in'] ) || ! in_array( $post->ID, $args['post__not_in'], true ) )
+				&& ( ! isset( $args['post_parent'] ) || $post->post_parent === $args['post_parent'] )
+				&& ( empty( $args['s'] ) || false !== strpos( $post->post_title ?? '', $args['s'] ) );
+			}
+        );
+		$posts                                   = array_slice( array_values( $posts ), $args['offset'] ?? 0, $args['posts_per_page'] ?? 5 );
+		if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+			return array_map(
+                function ( $post ) {
+                    return $post->ID;
+                },
+                $posts
+            );
+		}
+		if ( 'id=>parent' === ( $args['fields'] ?? '' ) ) {
+			$parents = [];
+			foreach ( $posts as $post ) {
+				$parents[ $post->ID ] = $post->post_parent;
+			}
+			return $parents;
+		}
+		return $posts;
+	}
+}
+if ( ! function_exists( 'get_post_types' ) ) {
+	function get_post_types( $args = [], $output = 'names' ) {
+		$types = $GLOBALS['__wp_app_test_post_types'] ?? [];
+		return 'objects' === $output ? $types : array_map(
+            function ( $type ) {
+                return $type->name;
+            },
+            $types
+        );
+	}
+}
+
+if ( ! function_exists( 'get_post_stati' ) ) {
+	function get_post_stati() {
+		return [ 'publish', 'private', 'draft', 'inherit', 'trash', 'auto-draft' ];
+	}
+}

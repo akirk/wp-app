@@ -1,0 +1,12 @@
+{
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "steps": [
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/wp-load.php'; require '/wp-app/tests/integration/rest-access.php';"
+    }
+  ]
+}
