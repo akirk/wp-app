@@ -5,8 +5,8 @@
  *
  * Each current wp-app copy runs this file before any declarations. When an
  * active provider has been selected, copies in other plugin directories mark
- * their own Composer files as loaded and stand down. The selected copy will
- * then be the first one allowed to declare the shared classes and functions.
+ * their shared Composer files as loaded and immediately load the selected
+ * copy before the current plugin can use framework classes.
  */
 
 $wp_app_package_files = [
@@ -69,7 +69,14 @@ if ( '' !== $wp_app_selected_provider && defined( 'WP_PLUGIN_DIR' ) ) {
         foreach ( $wp_app_package_files as $wp_app_file ) {
             $GLOBALS['__composer_autoload_files'][ md5( 'akirk/wp-app:src/' . $wp_app_file ) ] = true;
         }
-    }
+        // Plugins may extend framework classes as soon as their autoloader returns.
+        // Load the selected provider now, before the current plugin continues.
+        // Load package files directly: Composer has already marked their shared
+        // identifiers as loaded, so requiring its autoloader would skip them.
+        foreach ( $wp_app_package_files as $wp_app_file ) {
+            require_once $wp_app_plugin_root . $wp_app_selected_directory . '/' . $wp_app_package_suffix . '/src/' . $wp_app_file;
+        }
+	}
 }
 
 unset(
