@@ -48,7 +48,18 @@ if ( ! function_exists( 'wp_app_head' ) ) {
 
         if ( function_exists( 'wp_head' ) ) {
             wp_app_remove_core_title_tag();
+            $favicon = wp_app_get_favicon_url();
+            $site_icon_priority = has_action( 'wp_head', 'wp_site_icon' );
+            if ( '' !== $favicon && false !== $site_icon_priority ) {
+                remove_action( 'wp_head', 'wp_site_icon', $site_icon_priority );
+            }
             wp_head();
+            if ( '' !== $favicon ) {
+                echo '<link rel="icon" href="' . esc_url( $favicon ) . '">' . "\n";
+                if ( false !== $site_icon_priority ) {
+                    add_action( 'wp_head', 'wp_site_icon', $site_icon_priority );
+                }
+            }
         } else {
             // Basic meta tags (fallback when WordPress is not present)
             echo '<meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '">' . "\n";
@@ -70,6 +81,34 @@ if ( ! function_exists( 'wp_app_head' ) ) {
         wp_app_do_scoped_action( 'wp_app_head_meta' );
         wp_app_do_scoped_action( 'wp_app_head_styles' );
         wp_app_do_scoped_action( 'wp_app_head_scripts' );
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_favicon_url' ) ) {
+    /**
+     * Use the active app's image icon as its browser favicon.
+     *
+     * Font and text icons retain the WordPress site icon.
+     *
+     * @return string Image URL, or an empty string for the site default.
+     */
+    function wp_app_get_favicon_url() {
+        $app_path = wp_app_get_current_app_path();
+        if ( '' === $app_path ) {
+            return '';
+        }
+
+        $apps = \WpApp\Registry::get_app_metadata();
+        $metadata = isset( $apps[ $app_path ] ) ? $apps[ $app_path ] : [];
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
+        $override = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
+        $icon = '' !== $override ? $override : ( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' );
+
+        if ( ! is_string( $icon ) || ! preg_match( '#^(?:https?://|/[^/])#i', $icon ) ) {
+            return '';
+        }
+
+        return esc_url( $icon );
     }
 }
 
