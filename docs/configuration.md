@@ -77,7 +77,7 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 
 The three styling options only apply to Dashicon and letter icons (images bring their own look). Values are restricted to colour, gradient and shadow syntax; anything else — `url()`, `var()`, stray punctuation — is dropped so the tile falls back to the launcher default. My Apps renders them in the launcher grid, and the masterbar app link uses background and colour for its small icon.
 
-On app pages, an image URL in `app_icon` also becomes the browser favicon automatically. An icon URL set in Settings > WP Apps takes precedence. Apps using Dashicons, text icons, or no icon keep the WordPress site icon.
+On app pages, an image URL in `app_icon` also becomes the browser favicon automatically. An icon URL set in Settings > WP Apps takes precedence. Dashicons are converted to SVG favicons using WordPress’s bundled icon artwork. Apps using text icons or no icon keep the WordPress site icon.
 
 `my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 

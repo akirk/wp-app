@@ -55,7 +55,7 @@ if ( ! function_exists( 'wp_app_head' ) ) {
             }
             wp_head();
             if ( '' !== $favicon ) {
-                echo '<link rel="icon" href="' . esc_url( $favicon ) . '">' . "\n";
+                echo '<link rel="icon" href="' . esc_attr( $favicon ) . '">' . "\n";
                 if ( false !== $site_icon_priority ) {
                     add_action( 'wp_head', 'wp_site_icon', $site_icon_priority );
                 }
@@ -86,9 +86,7 @@ if ( ! function_exists( 'wp_app_head' ) ) {
 
 if ( ! function_exists( 'wp_app_get_favicon_url' ) ) {
     /**
-     * Use the active app's image icon as its browser favicon.
-     *
-     * Font and text icons retain the WordPress site icon.
+     * Use the active app's icon as its browser favicon.
      *
      * @return string Image URL, or an empty string for the site default.
      */
@@ -102,7 +100,20 @@ if ( ! function_exists( 'wp_app_get_favicon_url' ) ) {
         $metadata = isset( $apps[ $app_path ] ) ? $apps[ $app_path ] : [];
         $settings = \WpApp\Settings::get_app_settings( $app_path );
         $override = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
-        $icon = '' !== $override ? $override : ( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' );
+        $icon = '' !== $override ? $override : ( ! empty( $metadata['dashicon'] ) ? $metadata['dashicon'] : ( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' ) );
+
+        if ( is_string( $icon ) && preg_match( '/^dashicons-([a-z0-9-]+)$/', $icon, $match ) && defined( 'ABSPATH' ) && defined( 'WPINC' ) ) {
+            $sprite_path = ABSPATH . WPINC . '/fonts/dashicons.svg';
+            if ( is_readable( $sprite_path ) ) {
+                $sprite = file_get_contents( $sprite_path );
+                $pattern = '/<symbol\b[^>]*\bid="' . preg_quote( $match[1], '/' ) . '"[^>]*>(.*?)<\/symbol>/s';
+                if ( preg_match( $pattern, $sprite, $symbol ) ) {
+                    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><rect width="20" height="20" rx="3" fill="white"/>' . $symbol[1] . '</svg>';
+                    return 'data:image/svg+xml,' . rawurlencode( $svg );
+                }
+            }
+            return '';
+        }
 
         if ( ! is_string( $icon ) || ! preg_match( '#^(?:https?://|/[^/])#i', $icon ) ) {
             return '';
