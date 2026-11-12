@@ -77,6 +77,8 @@ Apps are announced to launchers automatically: the [My Apps](https://wordpress.o
 
 The three styling options only apply to Dashicon and letter icons (images bring their own look). Values are restricted to colour, gradient and shadow syntax; anything else — `url()`, `var()`, stray punctuation — is dropped so the tile falls back to the launcher default. My Apps renders them in the launcher grid, and the masterbar app link uses background and colour for its small icon.
 
+On app pages, an image URL in `app_icon` also becomes the browser favicon automatically. An icon URL set in Settings > WP Apps takes precedence. Dashicons are converted to SVG favicons using WordPress’s bundled icon artwork, with the masterbar tile’s colors, linear gradient, rounded corners, and glyph sizing. Apps using text icons or no icon keep the WordPress site icon.
+
 `my_apps` and `my_apps_icon` are accepted as older names for `launcher` and `app_icon`.
 
 Apps also appear in the OpenStation dock, with their masterbar menu items as window tabs; the admin menus of the app's own [post types](#app-content) are hidden from the dock. Inside an OpenStation window (a chromeless request) the masterbar is hidden, the body gets a `wp-app-chromeless` class, and the shell's iframe bridge script is loaded so the window picks up the page title and theme colors. Apps with `require_capability` are only shown to users who have that capability. The pre-rename `desktop_mode_*` API is supported as a fallback.

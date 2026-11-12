@@ -48,7 +48,18 @@ if ( ! function_exists( 'wp_app_head' ) ) {
 
         if ( function_exists( 'wp_head' ) ) {
             wp_app_remove_core_title_tag();
+            $favicon            = wp_app_get_favicon_url();
+            $site_icon_priority = has_action( 'wp_head', 'wp_site_icon' );
+            if ( '' !== $favicon && false !== $site_icon_priority ) {
+                remove_action( 'wp_head', 'wp_site_icon', $site_icon_priority );
+            }
             wp_head();
+            if ( '' !== $favicon ) {
+                echo '<link rel="icon" href="' . esc_attr( $favicon ) . '">' . "\n";
+                if ( false !== $site_icon_priority ) {
+                    add_action( 'wp_head', 'wp_site_icon', $site_icon_priority );
+                }
+            }
         } else {
             // Basic meta tags (fallback when WordPress is not present)
             echo '<meta charset="' . esc_attr( get_bloginfo( 'charset' ) ) . '">' . "\n";
@@ -70,6 +81,106 @@ if ( ! function_exists( 'wp_app_head' ) ) {
         wp_app_do_scoped_action( 'wp_app_head_meta' );
         wp_app_do_scoped_action( 'wp_app_head_styles' );
         wp_app_do_scoped_action( 'wp_app_head_scripts' );
+    }
+}
+
+if ( ! function_exists( 'wp_app_get_favicon_url' ) ) {
+    /**
+     * Use the active app's icon as its browser favicon.
+     *
+     * @return string Image URL, or an empty string for the site default.
+     */
+    function wp_app_get_favicon_url() {
+        $app_path = wp_app_get_current_app_path();
+        if ( '' === $app_path ) {
+            return '';
+        }
+
+        $apps     = \WpApp\Registry::get_app_metadata();
+        $metadata = isset( $apps[ $app_path ] ) ? $apps[ $app_path ] : [];
+        $settings = \WpApp\Settings::get_app_settings( $app_path );
+        $override = isset( $settings['icon'] ) ? trim( $settings['icon'] ) : '';
+        $icon     = '' !== $override ? $override : ( ! empty( $metadata['dashicon'] ) ? $metadata['dashicon'] : ( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' ) );
+
+        if ( is_string( $icon ) && preg_match( '/^dashicons-([a-z0-9-]+)$/', $icon, $match ) && defined( 'ABSPATH' ) && defined( 'WPINC' ) ) {
+            $sprite_path = ABSPATH . WPINC . '/fonts/dashicons.svg';
+            if ( is_readable( $sprite_path ) ) {
+                // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read trusted local WordPress artwork, not a remote URL.
+                $sprite  = file_get_contents( $sprite_path );
+                $pattern = '/<symbol\b[^>]*\bid="' . preg_quote( $match[1], '/' ) . '"[^>]*>(.*?)<\/symbol>/s';
+                if ( preg_match( $pattern, $sprite, $symbol ) ) {
+                    foreach ( [ 'icon_background', 'icon_color' ] as $key ) {
+                        $value = isset( $settings[ $key ] ) ? \WpApp\WpApp::sanitize_icon_css_value( $settings[ $key ] ) : '';
+                        if ( '' !== $value ) {
+                            $metadata[ $key ] = $value;
+                        }
+                    }
+                    $svg = wp_app_build_favicon_svg( $symbol[1], $metadata );
+                    return 'data:image/svg+xml,' . rawurlencode( $svg );
+                }
+            }
+            return '';
+        }
+
+        if ( ! is_string( $icon ) || ! preg_match( '#^(?:https?://|/[^/])#i', $icon ) ) {
+            return '';
+        }
+
+        return esc_url( $icon );
+    }
+}
+
+if ( ! function_exists( 'wp_app_build_favicon_svg' ) ) {
+    /**
+     * Render bundled Dashicon artwork with the masterbar tile's colours and sizing.
+     *
+     * @param string $artwork Trusted artwork from the WordPress SVG sprite.
+     * @param array  $metadata Effective app icon metadata.
+     * @return string SVG image markup.
+     */
+    function wp_app_build_favicon_svg( $artwork, $metadata ) {
+        $background = isset( $metadata['icon_background'] ) ? \WpApp\WpApp::sanitize_icon_css_value( $metadata['icon_background'] ) : '';
+        $color      = isset( $metadata['icon_color'] ) ? \WpApp\WpApp::sanitize_icon_css_value( $metadata['icon_color'] ) : '';
+        $color      = '' !== $color ? $color : '#f0f0f1';
+        $defs       = '';
+        $fill       = '' !== $background ? $background : 'none';
+
+        if ( preg_match( '/^linear-gradient\((.*)\)$/i', $background, $gradient ) ) {
+            $stops = preg_split( '/,(?![^()]*\))/', $gradient[1] );
+            $angle = 180;
+            if ( preg_match( '/^\s*(-?[0-9.]+)deg\s*$/', $stops[0], $degrees ) ) {
+                $angle = (float) $degrees[1];
+                array_shift( $stops );
+            }
+            $directions = [
+				'to top'    => 0,
+				'to right'  => 90,
+				'to bottom' => 180,
+				'to left'   => 270,
+			];
+            if ( isset( $directions[ trim( $stops[0] ) ] ) ) {
+                $angle = $directions[ trim( array_shift( $stops ) ) ];
+            }
+            $dx     = sin( deg2rad( $angle ) );
+            $dy     = -cos( deg2rad( $angle ) );
+            $extent = abs( $dx ) + abs( $dy );
+            $defs   = '<defs><linearGradient id="tile" x1="' . ( 50 - 50 * $dx * $extent ) . '%" y1="' . ( 50 - 50 * $dy * $extent ) . '%" x2="' . ( 50 + 50 * $dx * $extent ) . '%" y2="' . ( 50 + 50 * $dy * $extent ) . '%">';
+            foreach ( $stops as $index => $stop ) {
+                $offset = count( $stops ) > 1 ? 100 * $index / ( count( $stops ) - 1 ) : 0;
+                if ( preg_match( '/^(.*?)\s+([0-9.]+)%\s*$/', trim( $stop ), $position ) ) {
+                    $stop   = $position[1];
+                    $offset = (float) $position[2];
+                }
+                $defs .= '<stop offset="' . $offset . '%" stop-color="' . esc_attr( trim( $stop ) ) . '"/>';
+            }
+            $defs .= '</linearGradient></defs>';
+            $fill  = 'url(#tile)';
+        }
+
+        // The masterbar uses an 18px tile with a centred 16px Dashicon.
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18">' . $defs .
+            '<rect width="18" height="18" rx="3" fill="' . esc_attr( $fill ) . '"/>' .
+            '<g transform="translate(1 1) scale(.8)" fill="' . esc_attr( $color ) . '">' . $artwork . '</g></svg>';
     }
 }
 
