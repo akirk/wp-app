@@ -14,7 +14,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 }
 
 if ( ! defined( 'WP_APP_VERSION' ) ) {
-    define( 'WP_APP_VERSION', '2.1.0' );
+    define( 'WP_APP_VERSION', '2.1.1' );
 }
 
 if ( ! function_exists( 'wp_app_is_app_request' ) ) {
