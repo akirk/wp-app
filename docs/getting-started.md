@@ -78,6 +78,9 @@ Helper functions for use in templates:
 | `wp_app_language_attributes()` | Print language attributes for the `<html>` tag |
 | `wp_app_enqueue_style( $handle, $src, $deps, $ver, $scope )` | Enqueue styles for app pages |
 | `wp_app_enqueue_script( $handle, $src, $deps, $ver, $in_footer, $scope )` | Enqueue scripts for app pages |
+| `wp_app_enqueue_block_styles()` | Enqueue core default styles for Gutenberg content before the head |
+
+For pages displaying WordPress block content, see [Rendering Gutenberg content](gutenberg-content.md) for CSS setup and rendering order.
 
 ## Testing with WordPress Playground
 

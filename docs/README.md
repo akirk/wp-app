@@ -17,6 +17,8 @@ Start with the [README](../README.md) for the two-command quick start, then work
 
 ## Make the app do more
 
+- [Rendering Gutenberg Content](gutenberg-content.md) — core block CSS, rendering order, galleries and lightboxes
+
 - [Abilities](abilities.md) — expose the app to assistants, automation and other apps, and design abilities worth calling
 - [Offline PWA Support](offline-pwa.md) — manifest, service worker, offline caching
 - [Client-Side Encryption](encryption.md) — encrypt fields in the browser before they reach the server
