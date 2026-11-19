@@ -199,6 +199,34 @@ class AnonymousAccessTest extends \PHPUnit\Framework\TestCase {
         $this->assertStringContainsString( 'Automatic (404 when the login URL is modified)', $output );
     }
 
+    /**
+     * Show the control only when relevant, retaining access to saved overrides.
+     *
+     * @dataProvider settingVisibility
+     */
+    public function test_setting_visibility( $url, $mode, $visible ) {
+        $GLOBALS['__wp_app_test_current_user_can']            = true;
+        $GLOBALS['__wp_app_test_login_url']                   = $url;
+        $GLOBALS['__wp_app_test_options'][ Settings::OPTION ] = [ 'anonymous_access' => $mode ];
+        ob_start();
+        try {
+            Settings::render_settings_page();
+            $output = ob_get_contents();
+        } finally {
+            ob_end_clean();
+        }
+        $this->assertSame( $visible, false !== strpos( $output, 'id="wp-app-anonymous-access"' ) );
+    }
+
+    public static function settingVisibility() {
+        return [
+            [ 'https://example.org/wp-login.php', 'auto', false ],
+            [ 'https://example.org/secret-login/', 'auto', true ],
+            [ 'https://example.org/wp-login.php', '404', true ],
+            [ 'https://example.org/wp-login.php', 'redirect', true ],
+        ];
+    }
+
     public function test_signed_in_user_without_capability_still_receives_403() {
         $router = new Router( __DIR__ . '/fixtures/templates', 'private-app' );
         $router->set_required_capability( 'manage_options' );

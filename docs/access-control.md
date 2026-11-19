@@ -431,3 +431,8 @@ The fixture creates test users, records and attachments in the isolated site.
 - [Routing](routing.md) - Per-route capabilities
 - [BaseApp Pattern](baseapp.md) - Organized access control setup
 - [Abilities](abilities.md) - Reusing the app capability in ability permission callbacks
+
+The anonymous-access setting is shown when the login URL is modified or an explicit
+override is saved. On ordinary sites using Automatic, it stays hidden. Saved
+overrides remain visible so administrators can return to Automatic after disabling
+a login-hiding plugin.

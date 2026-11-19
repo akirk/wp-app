@@ -176,18 +176,25 @@ class Settings {
             return $settings['anonymous_access'];
         }
 
+        return self::is_login_url_modified() ? '404' : 'redirect';
+    }
+
+    /**
+     * Whether the effective login URL differs from the normal WordPress URL.
+     */
+    public static function is_login_url_modified() {
         $default_url = rtrim( get_option( 'siteurl', home_url() ), '/' ) . '/wp-login.php';
         $default     = wp_parse_url( $default_url );
         $actual      = wp_parse_url( wp_login_url() );
         if ( ! is_array( $actual ) || ! is_array( $default ) ) {
-            return '404';
+            return true;
         }
         unset( $default['scheme'], $actual['scheme'] );
 
         ksort( $default );
         ksort( $actual );
 
-        return $default === $actual ? 'redirect' : '404';
+        return $default !== $actual;
     }
 
     /**
@@ -1056,6 +1063,7 @@ class Settings {
                             <?php endif; ?>
                         </td>
                     </tr>
+                    <?php if ( self::is_login_url_modified() || in_array( $settings['anonymous_access'], [ '404', 'redirect' ], true ) ) : ?>
                     <tr>
                         <th scope="row"><label for="wp-app-anonymous-access"><?php echo esc_html__( 'Anonymous access to restricted apps' ); ?></label></th>
                         <td>
@@ -1067,6 +1075,7 @@ class Settings {
                             <p class="description" id="wp-app-anonymous-access-description"><?php echo esc_html__( 'Applies to all WP Apps on this site. Automatic treats a modified login URL as an indication that it should stay hidden. Choose Redirect to login to allow redirects to a custom login or SSO page. With 404 responses, visitors must sign in before opening an app. Public apps remain public.' ); ?></p>
                         </td>
                     </tr>
+                    <?php endif; ?>
                     <?php $providers = self::get_wp_app_providers( $apps ); ?>
                     <?php $loaded_provider = self::get_loaded_wp_app_provider( $apps ); ?>
                     <tr>
