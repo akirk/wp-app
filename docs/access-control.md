@@ -40,13 +40,10 @@ $app->require_capability( 'access_my_app' );
 ### Login redirects
 
 Restricted apps normally redirect anonymous visitors to login. If the login URL
-is modified, **Automatic** instead returns a non-cacheable 404 without a login
-link. HTTPS-only changes are ignored.
-
-Under **Settings → WP Apps**, administrators can choose **Return 404** or
-**Redirect to login**, for example to allow a public custom login or SSO page.
-This site-wide setting appears only when the login URL is modified or an explicit
-override is saved. No app configuration is needed.
+is modified, by default wp-app returns a non-cacheable 404 without a login
+link. This can be overridden under **Settings → WP Apps → Login redirects**,
+for example to allow redirects to a public custom login or SSO page.
+HTTPS-only changes are ignored.
 
 With 404 responses, visitors must sign in before opening the app, including after
 session expiry. The check runs before canonical redirects and covers query-string
