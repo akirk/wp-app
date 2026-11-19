@@ -9,6 +9,10 @@
 
 ## Gutenberg content in app templates
 
-- Render `the_content` before `wp_app_head()` so block styles, support styles, and script module dependencies are discovered before the head is printed. Keep `wp_app_body_close()` for footer assets and native lightbox markup.
-- WpApp removes `global-styles`, including core flex and grid layout rules. Apps rendering blocks must supply those core rules separately; loading gallery/image block CSS alone does not restore them. Call `wp_app_enqueue_block_styles()` before the head. See [Rendering Gutenberg content](docs/getting-started.md#rendering-gutenberg-content).
-- Verify actual CSS rules and browser behavior. `*-inline-css` can contain full WordPress block stylesheets, not only overrides; the presence of those tags alone does not prove gallery layout or lightbox behavior works.
+Block content needs both core layout CSS and the assets discovered while rendering individual blocks. Prepare both before printing the head:
+
+1. Call `wp_app_enqueue_block_styles()` to supply core default CSS. WpApp removes `global-styles`, which includes shared flex and grid rules; gallery/image block CSS alone does not replace them.
+2. Render content through the `the_content` filter into a variable before calling `wp_app_head()` or including a header that calls it. Rendering discovers block styles, support styles, and script module dependencies so they can be printed in the head. The CSS helper does not perform this rendering step.
+3. Print the saved content in the body and keep `wp_app_body_close()` at the end for footer assets and native lightbox markup.
+
+Verify the rendered page: check gallery flex/grid rules, image sizing, and lightbox behavior in the browser. The presence of `*-inline-css` tags alone does not prove these work; those tags can contain complete block stylesheets. See [Rendering Gutenberg content](docs/getting-started.md#rendering-gutenberg-content) for an example and diagnostic checks.
