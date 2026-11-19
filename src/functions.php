@@ -576,6 +576,31 @@ if ( ! function_exists( 'wp_app_enqueue_style' ) ) {
     }
 }
 
+if ( ! function_exists( 'wp_app_enqueue_block_styles' ) ) {
+    /**
+     * Enqueue WordPress core default styles for Gutenberg content in this request.
+     *
+     * Call from an app template before wp_app_head(). Content must also be rendered
+     * before the head so WordPress can discover individual block dependencies.
+     * Does not restore the active theme's global styles. Requires WordPress 5.9+.
+     */
+    function wp_app_enqueue_block_styles() {
+        if ( ! class_exists( '\\WP_Theme_JSON_Resolver' ) ) {
+            return;
+        }
+
+        $handle = 'wp-app-block-styles';
+        if ( ! wp_style_is( $handle, 'registered' ) ) {
+            wp_register_style( $handle, false, [], WP_APP_VERSION );
+            wp_add_inline_style(
+                $handle,
+                \WP_Theme_JSON_Resolver::get_core_data()->get_stylesheet( [ 'styles' ], [ 'default' ] )
+            );
+        }
+        wp_enqueue_style( $handle );
+    }
+}
+
 if ( ! function_exists( 'wp_app_enqueue_script' ) ) {
     /**
      * Enqueue a script for app pages
