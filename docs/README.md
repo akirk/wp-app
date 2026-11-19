@@ -1,34 +1,40 @@
 # WpApp Documentation
 
-Start with the [README](../README.md) for the two-command quick start, then work through these in order. Each page is short and single-topic.
+Start with [Getting Started](getting-started.md) to install the framework and create a minimal app. Follow the [Tutorial](../TUTORIAL.md) for a walkthrough, or choose a topic below for the task at hand.
 
-## Build your first app
+## Start an App
 
-1. [Getting Started](getting-started.md) — install, the minimal `WpApp` setup, template functions
-2. [Tutorial](../TUTORIAL.md) — step by step from a single route to a full app
-3. [BaseApp Pattern](baseapp.md) — the structure the scaffolder generates for larger apps
+- [Getting Started](getting-started.md) — installation, minimal app, and local development
+- [Tutorial](../TUTORIAL.md) — build from a single route to an app with storage and REST endpoints
+- [BaseApp Pattern](baseapp.md) — app structure, BaseStorage, database schema, and data access
 
-## Reference
+## Build Pages
 
-- [Configuration](configuration.md) — every constructor option
-- [Routing](routing.md) — URL patterns, parameters, templates, per-route capabilities
-- [Masterbar](masterbar.md) — admin bar menu, icon, app switcher
-- [Access Control](access-control.md) — login, capabilities, gating REST reads, per-object meta caps
+- [Routing](routing.md) — URL patterns, parameters, template selection, and rewrite rules
+- [Templates](templates.md) — page structure, template helpers, and rendering order
+- [CSS and JavaScript Assets](assets.md) — external files, app scopes, and dynamic values
+- [Rendering Gutenberg Content](gutenberg-content.md) — block CSS, galleries, and lightboxes
 
-## Make the app do more
+## Customize Appearance and Navigation
 
-- [Rendering Gutenberg Content](gutenberg-content.md) — core block CSS, rendering order, galleries and lightboxes
+- [Masterbar](masterbar.md) — app menus, user menus, and visibility
+- [App Themes](themes.md) — register template variants, choose defaults, and load theme assets
+- [Colors and Dark Mode](colors.md) — admin color tokens, foreground/background pairs, and default styles
+- [Configuration](configuration.md) — constructor options, launcher integration, and common configurations
 
-- [Abilities](abilities.md) — expose the app to assistants, automation and other apps, and design abilities worth calling
-- [Offline PWA Support](offline-pwa.md) — manifest, service worker, offline caching
+## Data, Permissions, and Integrations
+
+- [Access Control](access-control.md) — login, roles, capabilities, REST reads, and per-object permissions
+- [Abilities](abilities.md) — expose app actions to assistants, automation, and other apps
+- [Offline PWA Support](offline-pwa.md) — manifests, service workers, and offline caching
 - [Client-Side Encryption](encryption.md) — encrypt fields in the browser before they reach the server
 
 ## Examples
 
-- [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) — BaseApp, BaseStorage, custom tables, REST endpoints, abilities
-- [`encrypted-contacts-app`](https://github.com/akirk/wp-app-examples/tree/main/encrypted-contacts-app) — client-side encryption in practice
 - [`minimal-app`](https://github.com/akirk/wp-app-examples/tree/main/minimal-app) — the smallest working plugin
+- [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) — BaseApp, BaseStorage, custom tables, REST endpoints, and abilities
+- [`encrypted-contacts-app`](https://github.com/akirk/wp-app-examples/tree/main/encrypted-contacts-app) — client-side encryption in practice
 
-## For agents
+## For Agents
 
-[`skills/wpapp/SKILL.md`](../skills/wpapp/SKILL.md) condenses these pages into a skill for coding assistants; the scaffolder installs it into generated projects.
+[`skills/wpapp/SKILL.md`](../skills/wpapp/SKILL.md) condenses the framework guidance into a skill for coding assistants; the scaffolder installs it into generated projects.

@@ -1,5 +1,7 @@
 # Rendering Gutenberg content
 
+[Documentation index](README.md)
+
 Render post content through `the_content` **before** calling `wp_app_head()` (or including a header partial that calls it), then print the rendered HTML in the body. Set up the post context first if the blocks need it.
 
 ```php

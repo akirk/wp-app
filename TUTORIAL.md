@@ -2,6 +2,8 @@
 
 This tutorial will guide you through building web applications using the WpApp framework, starting from the minimal example and gradually adding features using the BaseApp pattern.
 
+For topic guides and reference, see the [documentation index](docs/README.md).
+
 ## Why Build on WordPress?
 
 Before diving into code, let's understand why WordPress is an excellent foundation for web applications:
@@ -409,8 +411,8 @@ $current_user = wp_get_current_user();
 <html <?php wp_app_language_attributes(); ?>>
 <head>
 	<title><?php wp_app_the_title( 'My Dashboard' ); ?></title>
+	<?php wp_app_enqueue_style( 'my-app-style', plugin_dir_url( __FILE__ ) . '../assets/style.css', [], '1.0.0', 'my-app' ); ?>
 	<?php wp_app_head(); ?>
-	<?php wp_app_enqueue_style( 'my-app-style', plugin_dir_url( __FILE__ ) . '../assets/style.css', [], false, 'my-app' ); ?>
 </head>
 <body class="wp-app-body">
 	<?php wp_app_body_open(); ?>
