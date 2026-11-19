@@ -37,7 +37,7 @@ $app->require_capability( 'manage_options' );
 $app->require_capability( 'access_my_app' );
 ```
 
-### Anonymous requests without a login redirect
+### Login redirects
 
 Restricted apps normally redirect anonymous visitors to login. If the login URL
 is modified, **Automatic** instead returns a non-cacheable 404 without a login

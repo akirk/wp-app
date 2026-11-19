@@ -208,8 +208,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 ] );
 ```
 
-Anonymous login redirects are controlled site-wide under **Settings → WP Apps**;
-see [Anonymous access](access-control.md#anonymous-requests-without-a-login-redirect).
+Login redirects are controlled under **Settings → WP Apps**;
+see [Login redirects](access-control.md#login-redirects).
 
 ## Related Documentation
 

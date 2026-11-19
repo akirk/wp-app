@@ -162,7 +162,7 @@ class Settings {
     }
 
     /**
-     * Resolve the site's anonymous access policy at request time.
+     * Resolve the site's login redirect behavior at request time.
      *
      * A modified login URL is a strong indicator of login hiding. Compare with
      * the stored site URL: site_url() itself can be rewritten by login hiders.
@@ -1065,7 +1065,7 @@ class Settings {
                     </tr>
                     <?php if ( self::is_login_url_modified() || in_array( $settings['anonymous_access'], [ '404', 'redirect' ], true ) ) : ?>
                     <tr>
-                        <th scope="row"><label for="wp-app-anonymous-access"><?php echo esc_html__( 'Anonymous access to restricted apps' ); ?></label></th>
+                        <th scope="row"><label for="wp-app-anonymous-access"><?php echo esc_html__( 'Login redirects' ); ?></label></th>
                         <td>
                             <select id="wp-app-anonymous-access" name="<?php echo esc_attr( self::OPTION ); ?>[anonymous_access]" aria-describedby="wp-app-anonymous-access-description">
                                 <option value="auto" <?php selected( $settings['anonymous_access'], 'auto' ); ?>><?php echo esc_html__( 'Automatic (404 when the login URL is modified)' ); ?></option>
