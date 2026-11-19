@@ -208,8 +208,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 ] );
 ```
 
-When the login URL is nonstandard or an override is saved, login redirects can be
-configured under **Settings → WP Apps**; see [Login redirects](access-control.md#login-redirects).
+When the login URL is nonstandard, login redirects can be configured under **Settings → WP Apps**; see [Login redirects](access-control.md#login-redirects).
 
 ## Related Documentation
 
