@@ -1,5 +1,7 @@
 # Getting Started
 
+[Documentation index](README.md)
+
 Build modern web applications on WordPress with routing, admin bar integration, and theme isolation.
 
 ## Why WordPress for Web Applications?
@@ -66,21 +68,7 @@ Your app is now available at `/minimal`!
 
 ## Template Functions
 
-Helper functions for use in templates:
-
-| Function | Description |
-|----------|-------------|
-| `wp_app_head()` | HTML head with WordPress hooks |
-| `wp_app_body_open()` | Body open hook (renders admin bar) |
-| `wp_app_body_close()` | Body close hook |
-| `wp_app_the_title( 'Page' )` | Print the page title with the site name, escaped |
-| `wp_app_get_title( 'Page' )` | The same title as plain text, for you to escape |
-| `wp_app_language_attributes()` | Print language attributes for the `<html>` tag |
-| `wp_app_enqueue_style( $handle, $src, $deps, $ver, $scope )` | Enqueue styles for app pages |
-| `wp_app_enqueue_script( $handle, $src, $deps, $ver, $in_footer, $scope )` | Enqueue scripts for app pages |
-| `wp_app_enqueue_block_styles()` | Enqueue core default styles for Gutenberg content before the head |
-
-For pages displaying WordPress block content, see [Rendering Gutenberg content](gutenberg-content.md) for CSS setup and rendering order.
+See [Templates](templates.md) for the page skeleton and helper reference, [Assets](assets.md) for CSS and JavaScript, and [Rendering Gutenberg Content](gutenberg-content.md) for block content.
 
 ## Testing with WordPress Playground
 

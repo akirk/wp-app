@@ -1,5 +1,7 @@
 # BaseApp Pattern
 
+[Documentation index](README.md)
+
 For larger applications, extend `BaseApp` for better organization. This pattern separates concerns into database setup, route registration, and menu configuration.
 
 `BaseApp::init()` should be called from `plugins_loaded` so WpApp can register

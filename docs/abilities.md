@@ -1,5 +1,7 @@
 # Abilities
 
+[Documentation index](README.md)
+
 An ability is a named, described, schema-typed operation that your app exposes through the [WordPress Abilities API](https://developer.wordpress.org/apis/abilities-api/). Routes are how people use your app; abilities are how everything else does: AI assistants, automation tools like Pipes, other apps on the same site, and MCP clients — none of which have read your code.
 
 That last point is what makes abilities different from a REST endpoint. A REST endpoint is called by a developer who read the docs. An ability is called by something that read only the ability's own description and schemas, and decided from those whether, when, and how to call it. **The description and schemas *are* the API.** Most of this page is about writing them well.

@@ -1,5 +1,7 @@
 # Offline PWA Support
 
+[Documentation index](README.md)
+
 WpApp can provide the WordPress-specific plumbing needed to make an app installable and offline capable:
 
 - app-scoped web app manifest URL

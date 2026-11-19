@@ -1,5 +1,7 @@
 # Client-Side Encrypted Fields
 
+[Documentation index](README.md)
+
 WpApp can add client-side encrypted fields to existing WordPress post types. WordPress still owns the content model: register custom post types and taxonomies normally in PHP, then use a JSON manifest to mark selected fields as encrypted.
 
 This protects against database disclosure. It does not protect against compromised plugin code, XSS, a compromised browser, or a server that serves malicious JavaScript.

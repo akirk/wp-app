@@ -1,5 +1,7 @@
 # Routing
 
+[Documentation index](README.md)
+
 WpApp provides pattern-based URL routing using WordPress rewrite rules.
 
 ## Basic Routes

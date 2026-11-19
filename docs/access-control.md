@@ -1,5 +1,7 @@
 # Access Control
 
+[Documentation index](README.md)
+
 WpApp uses WordPress capabilities to control access to your app and individual routes. If the app registers post types or taxonomies, declare them with the `post_types` / `taxonomies` options so their REST reads are gated too — see [REST API Access Control](#rest-api-access-control).
 
 ## App-Wide Access Control
