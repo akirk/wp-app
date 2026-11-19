@@ -226,4 +226,3 @@ a login-hiding plugin.
 
 - [Masterbar](masterbar.md) - Detailed admin bar customization
 - [Access Control](access-control.md) - Capabilities and roles
-
