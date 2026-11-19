@@ -107,6 +107,7 @@ This starts a local WordPress instance with your plugin mounted and activated.
 |-------|-------------|
 | [Getting Started](docs/getting-started.md) | Installation, quick start, template functions |
 | [Configuration](docs/configuration.md) | All configuration options |
+| [Rendering Gutenberg Content](docs/gutenberg-content.md) | Block CSS, rendering order, galleries and lightboxes |
 | [Routing](docs/routing.md) | URL patterns, parameters, templates |
 | [Masterbar](docs/masterbar.md) | Admin bar customization |
 | [Access Control](docs/access-control.md) | Capabilities, roles, permissions |
