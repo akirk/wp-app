@@ -37,6 +37,27 @@ $app->require_capability( 'manage_options' );
 $app->require_capability( 'access_my_app' );
 ```
 
+### Anonymous requests without a login redirect
+
+Restricted apps redirect anonymous visitors to the site's login URL by default.
+To avoid disclosing a custom login URL, opt into a generic, non-cacheable 404:
+
+```php
+$app = new WpApp( __DIR__ . '/templates', 'my-app', [
+    'require_login'    => true,
+    'anonymous_access' => '404',
+] );
+```
+
+Visitors must sign in through the site's normal login entry before opening the
+app. This includes reopening the app after a session expires. The response has
+no login link and is sent before canonical redirects for both pretty permalinks
+and equivalent `wp_app_path` query-string requests, including nonexistent routes.
+Signed-in users still receive the usual capability checks and 403 responses.
+Public apps remain public; restricted routes within them also honor this option
+when access is denied to an anonymous visitor. REST permissions and public media
+URLs are unaffected.
+
 ### How `require_login` and `require_capability` work together
 
 `require_login` is the simple switch: does a visitor need to be logged in at all?

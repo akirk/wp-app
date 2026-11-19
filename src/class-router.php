@@ -14,6 +14,7 @@ class Router {
     private $template_directory            = '';
     private $url_path                      = 'app';
     private $required_capability           = null;
+    private $anonymous_access              = 'redirect';
     private $template_directories_provider = null;
 
     public function __construct( $template_directory = '', $url_path = 'app' ) {
@@ -123,6 +124,39 @@ class Router {
      */
     public function set_required_capability( $capability ) {
         $this->required_capability = $capability;
+    }
+
+    /**
+     * Choose how anonymous visitors to restricted routes are handled.
+     *
+     * @param string $behavior 'redirect' (default) or '404'.
+     */
+    public function set_anonymous_access( $behavior ) {
+        $this->anonymous_access = '404' === $behavior ? '404' : 'redirect';
+    }
+
+    /**
+     * Stop anonymous requests to a private app before canonical redirects.
+     */
+    public function protect_anonymous_app_request() {
+        if ( ! empty( $this->required_capability ) && '404' === $this->anonymous_access && ! is_user_logged_in() ) {
+            $this->deny_anonymous_access();
+        }
+    }
+
+    /**
+     * Return a generic response without templates that could expose login links.
+     */
+    private function deny_anonymous_access() {
+        nocache_headers();
+        wp_die(
+            esc_html__( 'Not found.', 'wp-app' ),
+            esc_html__( 'Not found', 'wp-app' ),
+            [
+				'response'  => 404,
+				'back_link' => false,
+			]
+        );
     }
 
     /**
@@ -260,6 +294,8 @@ class Router {
      * Handle internal app routing and 404s
      */
     private function handle_app_request( $request_path ) {
+        $this->protect_anonymous_app_request();
+
         // Check capability requirements first
         if ( ! $this->check_access_permission( $request_path ) ) {
             $this->handle_unauthorized_access( $request_path );
@@ -534,6 +570,11 @@ class Router {
     private function handle_unauthorized_access( $request_path ) {
         // If user is not logged in, redirect to login
         if ( ! is_user_logged_in() ) {
+            if ( '404' === $this->anonymous_access ) {
+                $this->deny_anonymous_access();
+                return;
+            }
+
             $login_url = wp_login_url( home_url( '/' . $this->url_path . '/' . ltrim( $request_path, '/' ) ) );
             wp_redirect( $login_url );
             exit;
