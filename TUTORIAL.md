@@ -393,9 +393,7 @@ Access the endpoint at: `/wp-json/my-app/v1/user-stats`
 
 ## Step 7: WordPress Integration Best Practices
 
-Use WordPress functions in your templates. WpApp requires login by default and
-handles anonymous requests according to the site-wide policy under Settings → WP Apps.
-Avoid adding a separate login redirect in the template; see
+Use WordPress functions in your templates. WpApp handles login requirements and
 [anonymous access](docs/access-control.md#anonymous-requests-without-a-login-redirect).
 
 ```php

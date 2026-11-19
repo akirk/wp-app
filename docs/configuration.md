@@ -208,19 +208,8 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 ] );
 ```
 
-## Site-wide anonymous access
-
-Settings → WP Apps controls anonymous access to restricted apps across the site.
-The default, **Automatic**, returns a non-cacheable 404 when the login URL differs
-from the site's normal `wp-login.php` URL; otherwise it redirects to login.
-Administrators can force **Return 404** or **Redirect to login**, including for
-custom public login pages and SSO. Apps do not need a constructor option.
-See [Anonymous access](access-control.md#anonymous-requests-without-a-login-redirect).
-
-The anonymous-access setting is shown when the login URL is modified or an explicit
-override is saved. On ordinary sites using Automatic, it stays hidden. Saved
-overrides remain visible so administrators can return to Automatic after disabling
-a login-hiding plugin.
+Anonymous login redirects are controlled site-wide under **Settings → WP Apps**;
+see [Anonymous access](access-control.md#anonymous-requests-without-a-login-redirect).
 
 ## Related Documentation
 
