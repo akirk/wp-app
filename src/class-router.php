@@ -126,6 +126,30 @@ class Router {
     }
 
     /**
+     * Stop anonymous requests to a private app before canonical redirects.
+     */
+    public function protect_anonymous_app_request() {
+        if ( ! empty( $this->required_capability ) && ! is_user_logged_in() && '404' === Settings::get_anonymous_access() ) {
+            $this->deny_anonymous_access();
+        }
+    }
+
+    /**
+     * Return a generic response without templates that could expose login links.
+     */
+    private function deny_anonymous_access() {
+        nocache_headers();
+        wp_die(
+            esc_html__( 'Not found.', 'wp-app' ),
+            esc_html__( 'Not found', 'wp-app' ),
+            [
+				'response'  => 404,
+				'back_link' => false,
+			]
+        );
+    }
+
+    /**
      * Set a callback that returns template directories in lookup order.
      *
      * @param callable $provider Template directory provider.
@@ -260,6 +284,8 @@ class Router {
      * Handle internal app routing and 404s
      */
     private function handle_app_request( $request_path ) {
+        $this->protect_anonymous_app_request();
+
         // Check capability requirements first
         if ( ! $this->check_access_permission( $request_path ) ) {
             $this->handle_unauthorized_access( $request_path );
@@ -534,6 +560,11 @@ class Router {
     private function handle_unauthorized_access( $request_path ) {
         // If user is not logged in, redirect to login
         if ( ! is_user_logged_in() ) {
+            if ( '404' === Settings::get_anonymous_access() ) {
+                $this->deny_anonymous_access();
+                return;
+            }
+
             $login_url = wp_login_url( home_url( '/' . $this->url_path . '/' . ltrim( $request_path, '/' ) ) );
             wp_redirect( $login_url );
             exit;

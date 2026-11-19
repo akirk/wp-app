@@ -128,6 +128,7 @@ class Registry {
             add_action( 'init', [ __CLASS__, 'add_all_rewrite_rules' ], 99 );
         }
 
+        add_action( 'template_redirect', [ __CLASS__, 'protect_anonymous_app_request' ], 0 );
         add_filter( 'template_include', [ __CLASS__, 'handle_template_include' ] );
         add_filter( 'query_vars', [ __CLASS__, 'add_query_vars' ] );
 
@@ -186,6 +187,16 @@ class Registry {
         }
 
         return $vars;
+    }
+
+    /**
+     * Apply anonymous access policy using the resolved app query variable.
+     */
+    public static function protect_anonymous_app_request() {
+        $app_path = get_query_var( 'wp_app_path' );
+        if ( is_string( $app_path ) && isset( self::$apps[ $app_path ] ) ) {
+            self::$apps[ $app_path ]->protect_anonymous_app_request();
+        }
     }
 
     /**

@@ -393,17 +393,12 @@ Access the endpoint at: `/wp-json/my-app/v1/user-stats`
 
 ## Step 7: WordPress Integration Best Practices
 
-Use WordPress functions in your templates:
+Use WordPress functions in your templates. WpApp handles login requirements and
+[login redirects](docs/access-control.md#login-redirects).
 
 ```php
 <?php
 // templates/dashboard.php
-
-// Check authentication
-if ( ! is_user_logged_in() ) {
-	wp_redirect( wp_login_url( home_url( '/my-app/dashboard' ) ) );
-	exit;
-}
 
 $current_user = wp_get_current_user();
 ?>

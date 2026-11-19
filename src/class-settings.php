@@ -7,7 +7,7 @@ if ( class_exists( 'WpApp\Settings' ) ) {
 }
 
 /**
- * Admin settings for global WpApp masterbar behavior.
+ * Admin settings for global WpApp behavior.
  */
 class Settings {
     const OPTION                     = 'wp_app_masterbar_settings';
@@ -110,6 +110,7 @@ class Settings {
             'only_show_active_app'              => true,
             'show_inactive_apps_in_overflow'    => true,
             'sort_overflow_menu_alphabetically' => false,
+            'anonymous_access'                  => 'auto',
             'provider'                          => '',
             'app_order'                         => [],
             'apps'                              => [],
@@ -158,6 +159,42 @@ class Settings {
         }
 
         return array_merge( self::get_default_settings(), $settings );
+    }
+
+    /**
+     * Resolve the site's login redirect behavior at request time.
+     *
+     * A modified login URL is a strong indicator of login hiding. Compare with
+     * the stored site URL: site_url() itself can be rewritten by login hiders.
+     * Ignore scheme changes such as WordPress forcing HTTPS for login.
+     *
+     * @return string '404' or 'redirect'.
+     */
+    public static function get_anonymous_access() {
+        $settings = self::get_settings();
+        if ( in_array( $settings['anonymous_access'], [ '404', 'redirect' ], true ) ) {
+            return $settings['anonymous_access'];
+        }
+
+        return self::is_login_url_modified() ? '404' : 'redirect';
+    }
+
+    /**
+     * Whether the effective login URL differs from the normal WordPress URL.
+     */
+    public static function is_login_url_modified() {
+        $default_url = rtrim( get_option( 'siteurl', home_url() ), '/' ) . '/wp-login.php';
+        $default     = wp_parse_url( $default_url );
+        $actual      = wp_parse_url( wp_login_url() );
+        if ( ! is_array( $actual ) || ! is_array( $default ) ) {
+            return true;
+        }
+        unset( $default['scheme'], $actual['scheme'] );
+
+        ksort( $default );
+        ksort( $actual );
+
+        return $default !== $actual;
     }
 
     /**
@@ -507,6 +544,7 @@ class Settings {
             'only_show_active_app'              => ! empty( $value['only_show_active_app'] ),
             'show_inactive_apps_in_overflow'    => ! empty( $value['show_inactive_apps_in_overflow'] ),
             'sort_overflow_menu_alphabetically' => ! empty( $value['sort_overflow_menu_alphabetically'] ),
+            'anonymous_access'                  => isset( $value['anonymous_access'] ) && in_array( $value['anonymous_access'], [ 'auto', '404', 'redirect' ], true ) ? $value['anonymous_access'] : 'auto',
             'provider'                          => isset( $value['provider'] ) ? self::sanitize_provider_plugin_file( $value['provider'] ) : '',
             'app_order'                         => $order,
             'apps'                              => $apps,
@@ -1025,6 +1063,19 @@ class Settings {
                             <?php endif; ?>
                         </td>
                     </tr>
+                    <?php if ( self::is_login_url_modified() || in_array( $settings['anonymous_access'], [ '404', 'redirect' ], true ) ) : ?>
+                    <tr>
+                        <th scope="row"><label for="wp-app-anonymous-access"><?php echo esc_html__( 'Login redirects' ); ?></label></th>
+                        <td>
+                            <select id="wp-app-anonymous-access" name="<?php echo esc_attr( self::OPTION ); ?>[anonymous_access]" aria-describedby="wp-app-anonymous-access-description">
+                                <option value="auto" <?php selected( $settings['anonymous_access'], 'auto' ); ?>><?php echo esc_html__( 'Automatic (404 when the login URL is modified)' ); ?></option>
+                                <option value="404" <?php selected( $settings['anonymous_access'], '404' ); ?>><?php echo esc_html__( 'Return 404' ); ?></option>
+                                <option value="redirect" <?php selected( $settings['anonymous_access'], 'redirect' ); ?>><?php echo esc_html__( 'Redirect to login' ); ?></option>
+                            </select>
+                            <p class="description" id="wp-app-anonymous-access-description"><?php echo esc_html__( 'Applies to all WP Apps on this site. Automatic treats a modified login URL as an indication that it should stay hidden. Choose Redirect to login to allow redirects to a custom login or SSO page. With 404 responses, visitors must sign in before opening an app. Public apps remain public.' ); ?></p>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
                     <?php $providers = self::get_wp_app_providers( $apps ); ?>
                     <?php $loaded_provider = self::get_loaded_wp_app_provider( $apps ); ?>
                     <tr>

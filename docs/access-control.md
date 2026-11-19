@@ -37,6 +37,19 @@ $app->require_capability( 'manage_options' );
 $app->require_capability( 'access_my_app' );
 ```
 
+### Login redirects
+
+Restricted apps normally redirect anonymous visitors to login. If the login URL
+is modified, by default wp-app returns a non-cacheable 404 without a login
+link. This can be overridden under **Settings → WP Apps → Login redirects**,
+for example to allow redirects to a public custom login or SSO page.
+HTTPS-only changes are ignored.
+
+With 404 responses, visitors must sign in before opening the app, including after
+session expiry. The check runs before canonical redirects and covers query-string
+URLs and nonexistent routes. Public routes, signed-in permissions, REST access,
+and public media URLs are unchanged.
+
 ### How `require_login` and `require_capability` work together
 
 `require_login` is the simple switch: does a visitor need to be logged in at all?
