@@ -14,7 +14,6 @@ class Router {
     private $template_directory            = '';
     private $url_path                      = 'app';
     private $required_capability           = null;
-    private $anonymous_access              = 'redirect';
     private $template_directories_provider = null;
 
     public function __construct( $template_directory = '', $url_path = 'app' ) {
@@ -127,19 +126,10 @@ class Router {
     }
 
     /**
-     * Choose how anonymous visitors to restricted routes are handled.
-     *
-     * @param string $behavior 'redirect' (default) or '404'.
-     */
-    public function set_anonymous_access( $behavior ) {
-        $this->anonymous_access = '404' === $behavior ? '404' : 'redirect';
-    }
-
-    /**
      * Stop anonymous requests to a private app before canonical redirects.
      */
     public function protect_anonymous_app_request() {
-        if ( ! empty( $this->required_capability ) && '404' === $this->anonymous_access && ! is_user_logged_in() ) {
+        if ( ! empty( $this->required_capability ) && ! is_user_logged_in() && '404' === Settings::get_anonymous_access() ) {
             $this->deny_anonymous_access();
         }
     }
@@ -570,7 +560,7 @@ class Router {
     private function handle_unauthorized_access( $request_path ) {
         // If user is not logged in, redirect to login
         if ( ! is_user_logged_in() ) {
-            if ( '404' === $this->anonymous_access ) {
+            if ( '404' === Settings::get_anonymous_access() ) {
                 $this->deny_anonymous_access();
                 return;
             }

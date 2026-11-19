@@ -69,8 +69,6 @@ class WpApp {
             $this->masterbar->admin_bar_app_link( $config['admin_bar_app_link'] );
         }
 
-        $this->router->set_anonymous_access( $config['anonymous_access'] ?? 'redirect' );
-
         // Access control configuration.
         // require_capability (or its alias minimal_capability) always wins:
         // any capability check implies a logged-in user. require_login only

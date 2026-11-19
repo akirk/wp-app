@@ -14,7 +14,6 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 	'show_site_name'               => true,
 	'admin_bar_app_link'           => true,
 	'require_login'                => true,
-	'anonymous_access'             => 'redirect',
 	'require_capability'           => null,
 	'post_types'                   => [],
 	'taxonomies'                   => [],
@@ -53,7 +52,6 @@ When more than one registered plugin bundles wp-app, **Settings > WP Apps** can 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `require_login` | bool | `true` | Require users to be logged in (shorthand for `require_capability => 'read'`). Set to `false` to make the app public |
-| `anonymous_access` | string | `'redirect'` | Set to `'404'` to return a non-cacheable 404 without a login link for anonymous requests to a restricted app. Public apps remain public |
 | `require_capability` | string | `null` | WordPress capability required to access the app. Takes precedence over `require_login`: a capability always implies a logged-in user. See [Access Control](access-control.md#how-require_login-and-require_capability-work-together) |
 
 ### App Content
@@ -214,3 +212,12 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 
 - [Masterbar](masterbar.md) - Detailed admin bar customization
 - [Access Control](access-control.md) - Capabilities and roles
+
+## Site-wide anonymous access
+
+Settings → WP Apps controls anonymous access to restricted apps across the site.
+The default, **Automatic**, returns a non-cacheable 404 when the login URL differs
+from the site's normal `wp-login.php` URL; otherwise it redirects to login.
+Administrators can force **Return 404** or **Redirect to login**, including for
+custom public login pages and SSO. Apps do not need a constructor option.
+See [Anonymous access](access-control.md#anonymous-requests-without-a-login-redirect).

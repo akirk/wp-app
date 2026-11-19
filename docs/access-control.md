@@ -39,24 +39,28 @@ $app->require_capability( 'access_my_app' );
 
 ### Anonymous requests without a login redirect
 
-Restricted apps redirect anonymous visitors to the site's login URL by default.
-To avoid disclosing a custom login URL, opt into a generic, non-cacheable 404:
+Anonymous access is controlled site-wide under **Settings → WP Apps**, with three choices:
 
-```php
-$app = new WpApp( __DIR__ . '/templates', 'my-app', [
-    'require_login'    => true,
-    'anonymous_access' => '404',
-] );
-```
+- **Automatic** (default): return a generic, non-cacheable 404 if `wp_login_url()`
+  differs from the stored site's normal `wp-login.php` URL; otherwise redirect to login.
+- **Return 404**: always return 404 for anonymous requests to restricted apps.
+- **Redirect to login**: always use the site's login URL, including a custom login or SSO page.
 
-Visitors must sign in through the site's normal login entry before opening the
-app. This includes reopening the app after a session expires. The response has
-no login link and is sent before canonical redirects for both pretty permalinks
-and equivalent `wp_app_path` query-string requests, including nonexistent routes.
-Signed-in users still receive the usual capability checks and 403 responses.
-Public apps remain public; restricted routes within them also honor this option
-when access is denied to an anonymous visitor. REST permissions and public media
-URLs are unaffected.
+A modified login URL is treated as a strong indication of login hiding, without
+requiring detection of particular plugins. It can also indicate a public custom
+login page or SSO; administrators can override Automatic in those cases. HTTPS-only
+login changes are ignored. Detection runs at request time, after plugins have
+registered their URL filters, and compares against the stored site URL because
+login hiders can also filter `site_url()`. Subdirectory installs use that site's
+WordPress installation URL. In multisite, the setting belongs to each site.
+
+With 404 responses, visitors must sign in through the site's normal login entry
+before opening the app, including after a session expires. The response contains
+no login link and is sent before canonical redirects for pretty permalinks and
+`wp_app_path` query-string requests, including nonexistent routes. Signed-in
+capability checks and 403 responses are preserved. Public apps remain public;
+restricted routes within them honor the site policy when denying anonymous access.
+REST permissions and public media URLs are unaffected.
 
 ### How `require_login` and `require_capability` work together
 
