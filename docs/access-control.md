@@ -46,6 +46,11 @@ Anonymous access is controlled site-wide under **Settings → WP Apps**, with th
 - **Return 404**: always return 404 for anonymous requests to restricted apps.
 - **Redirect to login**: always use the site's login URL, including a custom login or SSO page.
 
+The anonymous-access setting is shown when the login URL is modified or an explicit
+override is saved. On ordinary sites using Automatic, it stays hidden. Saved
+overrides remain visible so administrators can return to Automatic after disabling
+a login-hiding plugin.
+
 A modified login URL is treated as a strong indication of login hiding, without
 requiring detection of particular plugins. It can also indicate a public custom
 login page or SSO; administrators can override Automatic in those cases. HTTPS-only
@@ -431,8 +436,3 @@ The fixture creates test users, records and attachments in the isolated site.
 - [Routing](routing.md) - Per-route capabilities
 - [BaseApp Pattern](baseapp.md) - Organized access control setup
 - [Abilities](abilities.md) - Reusing the app capability in ability permission callbacks
-
-The anonymous-access setting is shown when the login URL is modified or an explicit
-override is saved. On ordinary sites using Automatic, it stays hidden. Saved
-overrides remain visible so administrators can return to Automatic after disabling
-a login-hiding plugin.

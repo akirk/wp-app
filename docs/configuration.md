@@ -208,11 +208,6 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 ] );
 ```
 
-## Related Documentation
-
-- [Masterbar](masterbar.md) - Detailed admin bar customization
-- [Access Control](access-control.md) - Capabilities and roles
-
 ## Site-wide anonymous access
 
 Settings → WP Apps controls anonymous access to restricted apps across the site.
@@ -226,3 +221,9 @@ The anonymous-access setting is shown when the login URL is modified or an expli
 override is saved. On ordinary sites using Automatic, it stays hidden. Saved
 overrides remain visible so administrators can return to Automatic after disabling
 a login-hiding plugin.
+
+## Related Documentation
+
+- [Masterbar](masterbar.md) - Detailed admin bar customization
+- [Access Control](access-control.md) - Capabilities and roles
+

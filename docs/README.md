@@ -20,7 +20,7 @@ Start with [Getting Started](getting-started.md) to install the framework and cr
 - [Masterbar](masterbar.md) — app menus, user menus, and visibility
 - [App Themes](themes.md) — register template variants, choose defaults, and load theme assets
 - [Colors and Dark Mode](colors.md) — admin color tokens, foreground/background pairs, and default styles
-- [Configuration](configuration.md) — constructor options, launcher integration, and common configurations
+- [Configuration](configuration.md) — constructor options, site-wide anonymous access, launcher integration, and common configurations
 
 ## Data, Permissions, and Integrations
 
