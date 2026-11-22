@@ -1,8 +1,14 @@
 # WpApp Framework
 
-A framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation.
+A framework to build frontend apps on WordPress, each with its own URL space and user interface.
 
 [Why?](#why-wordpress-for-web-applications) · [Quick Start](#quick-start) · [Examples](#try-it-now) · [WP Apps Site](#the-wp-apps-site) · [Documentation](#documentation) · [Manual Installation](#manual-installation) · [Requirements](#requirements)
+
+## Two Core Concepts
+
+**An app owns a URL subdirectory of your WordPress site.** An app at `/my-app/` handles its own pages and routes beneath that path, alongside the rest of your site. App pages are private by default: visitors must sign in with their WordPress account. You can make the whole app public, or expose selected pages while keeping others behind login or capability checks. See [Routing](docs/routing.md) and [Access Control](docs/access-control.md) for configuration, including separate controls for REST data access.
+
+**An app gets a blank, theme-independent canvas.** WpApp serves the app's own templates instead of the active WordPress theme, so each app can bring its own layout, styling, and interactions. Your app controls its HTML, CSS, and JavaScript while retaining access to WordPress users, data, and APIs. See [Templates](docs/templates.md) and [Assets](docs/assets.md) to build your UI.
 
 ## Quick Start
 
