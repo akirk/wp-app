@@ -1,8 +1,8 @@
 # WpApp Framework
 
-A framework to build frontend apps on WordPress with routing, admin bar integration, and theme isolation.
+A framework to build frontend apps on WordPress, each with its own URL space and user interface.
 
-[Why?](#why-wordpress-for-web-applications) · [Quick Start](#quick-start) · [Examples](#try-it-now) · [WP Apps Site](#the-wp-apps-site) · [Documentation](#documentation) · [Manual Installation](#manual-installation) · [Requirements](#requirements)
+[Why?](#why-wordpress-for-web-applications) · [Quick Start](#quick-start) · [Examples](#examples) · [WP Apps Site](#the-wp-apps-site) · [Documentation](#documentation) · [Manual Installation](#manual-installation) · [Requirements](#requirements)
 
 ## Quick Start
 
@@ -59,12 +59,12 @@ Which gives you something like this:
 
 Visit [wpapps.kirk.at](https://wpapps.kirk.at/) for a visual introduction to the WP Apps concept and a catalog of apps you can run on your own WordPress, including a travel app, a cookbook, and a family wiki.
 
-## Try it Now
+## Examples
 
 The examples are available in the [wp-app-examples repository](https://github.com/akirk/wp-app-examples). Try them instantly in your browser with WordPress Playground:
 
-- [Minimal App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/minimal-app.json) - The simplest possible WpApp
-- [Community App](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/community-app.json) - Full-featured example with database, REST API, and admin integration
+- **[Minimal App](https://github.com/akirk/wp-app-examples/tree/main/minimal-app)** — the smallest working app. [Try in Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/minimal-app.json).
+- **[Community App](https://github.com/akirk/wp-app-examples/tree/main/community-app)** — BaseApp, database storage, user progress tracking, REST endpoints, and admin integration. [Try in Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/community-app.json).
 
 ## Why WordPress for Web Applications?
 
@@ -82,14 +82,13 @@ WordPress isn't just for blogs. It's a powerful foundation for web applications.
 
 ## Features
 
-- **URL Routing** - Pattern-based routing with WordPress rewrite rules
-- **Theme Isolation** - Clean HTML output separate from your WordPress theme
-- **Admin Bar Integration** - WordPress-style navigation for your app
-- **Admin Color Scheme Tokens** - CSS variables from each user's WordPress admin color profile
-- **Access Control** - WordPress capability-based authentication
-- **Offline PWA Support** - App-scoped manifests and service workers for installable apps
-- **BaseApp Pattern** - Structured architecture for complex applications
-- **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
+- **Own URL Space, Private by Default** - Each app owns a subdirectory of your WordPress site, such as `/my-app/`, and handles the routes beneath it. App pages require login by default; apps can be fully public or combine public pages with routes protected by WordPress capabilities. See [Routing](docs/routing.md) and [Access Control](docs/access-control.md), including separate controls for REST data access.
+- **A Blank Canvas for Your UI** - App templates run independently of the active WordPress theme. Bring your own HTML, CSS, and JavaScript to control the layout, styling, and interactions while using WordPress users, data, and APIs. See [Templates](docs/templates.md) and [Assets](docs/assets.md).
+- **[Admin Bar Integration](docs/masterbar.md)** - WordPress-style navigation for your app
+- **[Access Control](docs/access-control.md)** - WordPress capability-based authentication
+- **[Offline PWA Support](docs/offline-pwa.md)** - App-scoped manifests and service workers for installable apps
+- **[BaseApp Pattern](src/abstract-baseapp.php)** - Structured architecture for complex applications
+- **[BaseStorage Pattern](src/BaseStorage.php)** - Database abstraction with schema management using `dbDelta`
 
 ## Local Development
 
@@ -118,22 +117,6 @@ Get AI assistance for WpApp development in [Claude Code](https://claude.ai/code)
 /plugin marketplace add akirk/wp-app
 /plugin install wpapp@wp-app
 ```
-
-## Examples
-
-### Minimal Example
-See the [`minimal-app`](https://github.com/akirk/wp-app-examples/tree/main/minimal-app) example — the simplest possible WpApp (3 lines of code).
-
-[Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/minimal-app.json)
-
-### Community App Example
-See the [`community-app`](https://github.com/akirk/wp-app-examples/tree/main/community-app) example — a full BaseApp pattern demonstration with:
-- BaseStorage with schema management
-- User progress tracking
-- REST API endpoints
-- Admin integration
-
-[Try in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/akirk/wp-app-examples/main/community-app.json)
 
 ## Manual Installation
 
@@ -174,14 +157,6 @@ Create `templates/index.php`:
 ```
 
 Your app is now available at `/minimal`!
-
-### App-scoped assets
-
-See [Assets](docs/assets.md) for scoped CSS and JavaScript and [Templates](docs/templates.md) for page helpers and rendering order.
-
-### App themes
-
-See [App Themes](docs/themes.md) for template variants, theme-specific assets, and user theme selection.
 
 ## Requirements
 
