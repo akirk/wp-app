@@ -84,11 +84,11 @@ WordPress isn't just for blogs. It's a powerful foundation for web applications.
 
 - **Own URL Space, Private by Default** - Each app owns a subdirectory of your WordPress site, such as `/my-app/`, and handles the routes beneath it. App pages require login by default; apps can be fully public or combine public pages with routes protected by WordPress capabilities. See [Routing](docs/routing.md) and [Access Control](docs/access-control.md), including separate controls for REST data access.
 - **A Blank Canvas for Your UI** - App templates run independently of the active WordPress theme. Bring your own HTML, CSS, and JavaScript to control the layout, styling, and interactions while using WordPress users, data, and APIs. See [Templates](docs/templates.md) and [Assets](docs/assets.md).
-- **Admin Bar Integration** - WordPress-style navigation for your app
-- **Access Control** - WordPress capability-based authentication
-- **Offline PWA Support** - App-scoped manifests and service workers for installable apps
-- **BaseApp Pattern** - Structured architecture for complex applications
-- **BaseStorage Pattern** - Database abstraction with schema management using `dbDelta`
+- **[Admin Bar Integration](docs/masterbar.md)** - WordPress-style navigation for your app
+- **[Access Control](docs/access-control.md)** - WordPress capability-based authentication
+- **[Offline PWA Support](docs/offline-pwa.md)** - App-scoped manifests and service workers for installable apps
+- **[BaseApp Pattern](src/abstract-baseapp.php)** - Structured architecture for complex applications
+- **[BaseStorage Pattern](src/BaseStorage.php)** - Database abstraction with schema management using `dbDelta`
 
 ## Local Development
 
