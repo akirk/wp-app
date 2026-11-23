@@ -581,9 +581,8 @@ class Masterbar {
 
         self::$admin_bar_overflow_styles_output = true;
 
-        echo '<style id="wp-app-admin-bar-overflow-styles">';
-        echo self::get_admin_bar_overflow_styles();
-        echo '</style>';
+        wp_enqueue_style( 'wp-app-admin-overflow', wp_app_get_asset_url( 'wp-app-admin-overflow.css' ), [], WP_APP_VERSION );
+        wp_print_styles( 'wp-app-admin-overflow' );
     }
 
     /**
@@ -748,109 +747,8 @@ class Masterbar {
      * @return string CSS.
      */
     public static function get_admin_bar_overflow_styles() {
-        return '
-            #wpadminbar {
-                z-index: 100100;
-            }
-
-            #wpadminbar .ab-sub-wrapper {
-                z-index: 100101;
-            }
-
-            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow.wp-app-admin-overflow-sticky > .ab-item {
-                color: #a7aaad;
-                cursor: pointer;
-                overflow: hidden;
-                padding: 0;
-                position: relative;
-                text-indent: 100%;
-                white-space: nowrap;
-                width: 32px;
-            }
-
-            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow.wp-app-admin-overflow-sticky > .ab-item .ab-icon {
-                height: 32px;
-                margin: 0;
-                padding: 0;
-                width: 32px;
-            }
-
-            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon:before {
-                content: "\f347";
-                display: block;
-                font: normal 20px/1 dashicons;
-                height: 32px;
-                line-height: 27px;
-                text-align: center;
-                text-indent: 0;
-                top: 0;
-                width: 32px;
-            }
-
-            #wpadminbar li#wp-admin-bar-wp-app-admin-overflow-settings {
-                border-top: 1px solid rgba(255, 255, 255, 0.16);
-                margin-top: 4px;
-                padding-top: 4px;
-            }
-
-            @media screen and (max-width: 782px) {
-                #wpadminbar li.wp-app-admin-link {
-                    display: none !important;
-                }
-
-                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow {
-                    display: block !important;
-                }
-
-                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item {
-                    color: #a7aaad;
-                    overflow: hidden;
-                    padding: 0;
-                    position: relative;
-                    text-indent: 100%;
-                    white-space: nowrap;
-                    width: 52px;
-                }
-
-                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon {
-                    height: 46px;
-                    margin: 0;
-                    padding: 0;
-                    width: 52px;
-                }
-
-                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow > .ab-item .ab-icon:before {
-                    font: normal 32px/1 dashicons;
-                    height: 46px;
-                    line-height: 46px;
-                    width: 52px;
-                }
-
-                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow .ab-sub-wrapper {
-                    left: auto;
-                    max-height: calc(100vh - 54px);
-                    max-width: calc(100vw - 16px);
-                    overflow-y: auto;
-                    right: 0;
-                    width: max-content;
-                }
-
-                #wpadminbar li#wp-admin-bar-wp-app-admin-overflow .ab-submenu .ab-item {
-                    box-sizing: border-box;
-                    display: block;
-                    height: auto !important;
-                    line-height: 22px !important;
-                    max-width: calc(100vw - 16px);
-                    min-height: 44px;
-                    overflow: visible;
-                    padding-bottom: 10px;
-                    padding-top: 10px;
-                    text-overflow: ellipsis;
-                    white-space: normal;
-                    word-break: break-word;
-                }
-            }
-        ';
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a bundled local stylesheet.
+        return file_get_contents( dirname( __DIR__ ) . '/assets/wp-app-admin-overflow.css' );
     }
 
     /**
