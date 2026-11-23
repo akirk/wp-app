@@ -255,7 +255,7 @@ class Pwa {
 	private static function register_template_hooks( $app_path, $config ) {
 		$enqueue = static function () use ( $app_path, $config ) {
 			foreach ( $config['runtime_assets'] as $handle => $url ) {
-				wp_app_enqueue_script( $handle, $url, [], false, false, $app_path );
+				wp_app_enqueue_script( $handle, $url, [], null, false, $app_path );
 			}
 		};
 		if ( function_exists( 'did_action' ) && did_action( 'wp_enqueue_scripts' ) ) {
