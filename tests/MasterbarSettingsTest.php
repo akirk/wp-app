@@ -202,13 +202,14 @@ class MasterbarSettingsTest extends TestCase {
         );
     }
 
-    public function test_settings_page_renders_alphabetical_overflow_checkbox() {
+    public function test_settings_page_keeps_legacy_sort_choice_but_exposes_independent_orders() {
         ob_start();
         Settings::render_settings_page();
         $html = ob_get_clean();
 
         $this->assertStringContainsString( Settings::OPTION . '[sort_overflow_menu_alphabetically]', $html );
-        $this->assertStringContainsString( 'Sort overflow menu alphabetically (override order above)', $html );
+        $this->assertStringContainsString( 'data-order-inputs="launcher"', $html );
+        $this->assertStringContainsString( 'data-order-inputs="desktop"', $html );
     }
 
     public function test_settings_page_always_renders_provider_selection() {
@@ -438,7 +439,7 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertArrayHasKey( 'wp-app-active_always_show_app', $admin_bar->nodes );
         $this->assertArrayHasKey( 'wp-app-link-pinned_always_show_app', $admin_bar->nodes );
-        $this->assertArrayNotHasKey( 'wp-app-admin-overflow-pinned-always-show-app', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-pinned-always-show-app', $admin_bar->nodes );
     }
 
     public function test_always_show_inactive_app_includes_app_dropdown_items() {
@@ -556,7 +557,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertArrayHasKey( 'wp-app-admin-overflow', $admin_bar->nodes );
         $this->assertArrayHasKey( 'wp-app-admin-overflow-first-registered-overflow-app', $admin_bar->nodes );
         $this->assertArrayHasKey( 'wp-app-admin-overflow-second-registered-overflow-app', $admin_bar->nodes );
-        $this->assertArrayNotHasKey( 'wp-app-admin-overflow-active-registered-overflow-app', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-active-registered-overflow-app', $admin_bar->nodes );
     }
 
     public function test_overflow_adds_wp_apps_settings_link_at_bottom_for_admins() {
@@ -827,6 +828,68 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertStringContainsString( '<span class="wp-app-link-text">Kochbuch</span>', $title );
         $this->assertStringNotContainsString( 'screen-reader-text', $title );
+    }
+
+    public function test_mobile_launcher_keeps_icon_and_name_when_desktop_display_is_disabled() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'launcher-display-app', [ 'app_name' => 'Launcher Display App' ] );
+        $app->init();
+        $disabled = new WpApp( '', 'launcher-disabled-app', [ 'app_name' => 'Disabled App' ] );
+        $disabled->admin_bar_app_link( false );
+        $disabled->init();
+
+        foreach ( [ false, true ] as $show_text ) {
+            $__wp_app_test_options[ Settings::OPTION ] = [
+                'only_show_active_app'           => true,
+                'show_inactive_apps_in_overflow' => true,
+                'apps'                          => [
+                    'launcher-display-app' => [
+                        'title'       => 'My Launcher App',
+                        'show_icon'   => false,
+                        'show_text'   => $show_text,
+                        'always_show' => false,
+                    ],
+                ],
+            ];
+
+            $admin_bar = new FakeAdminBar();
+            Masterbar::add_admin_bar_overflow_menu( $admin_bar );
+            $node = $admin_bar->nodes['wp-app-admin-overflow-launcher-display-app'];
+
+            $this->assertStringContainsString( 'wp-app-link-icon-generated', $node['title'] );
+            $this->assertStringContainsString( '<span class="wp-app-link-text">My Launcher App</span>', $node['title'] );
+            $this->assertStringNotContainsString( 'wp-app-admin-overflow-mobile-only', $node['meta']['class'] );
+            $this->assertArrayNotHasKey( 'wp-app-admin-overflow-launcher-disabled-app', $admin_bar->nodes );
+        }
+    }
+
+    public function test_settings_app_identity_remains_visible_when_desktop_display_is_disabled() {
+        global $__wp_app_test_options;
+
+        $app = new WpApp( '', 'launcher-preview-app', [ 'app_name' => 'Launcher Preview App' ] );
+        $app->init();
+        $__wp_app_test_options[ Settings::OPTION ] = [
+            'only_show_active_app'           => true,
+            'show_inactive_apps_in_overflow' => true,
+            'apps'                          => [
+                'launcher-preview-app' => [
+                    'title'       => 'Preview Name',
+                    'show_icon'   => false,
+                    'show_text'   => false,
+                    'always_show' => false,
+                ],
+            ],
+        ];
+
+        ob_start();
+        Settings::render_settings_page();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString( 'Show in launcher', $html );
+        $this->assertStringContainsString( 'Pin to desktop top bar', $html );
+        $this->assertStringContainsString( '<strong data-app-name>Preview Name</strong>', $html );
+        $this->assertStringNotContainsString( 'Mobile launcher preview', $html );
     }
 
     public function test_active_app_link_forces_visible_text_for_icon_only_app() {
@@ -1156,34 +1219,16 @@ class MasterbarSettingsTest extends TestCase {
     public function test_settings_icon_control_includes_dashicon_autocomplete_source() {
         $app = new WpApp( '', 'dashicon-autocomplete-app', [ 'app_name' => 'Dashicon Autocomplete App' ] );
         $app->init();
-
         ob_start();
         Settings::render_settings_page();
         $html = ob_get_clean();
-
+        preg_match( '/data-wp-app-config="([^"]+)"/', $html, $matches );
+        $config = json_decode( html_entity_decode( $matches[1], ENT_QUOTES ), true );
+        $this->assertContains( 'dashicons-admin-home', $config['dashicons'] );
+        $this->assertNotContains( 'dashicons-home', $config['dashicons'] );
         $this->assertStringContainsString( 'data-wp-app-dashicon-autocomplete="1"', $html );
-        $this->assertStringContainsString( 'const wpAppDashiconOptions = ["dashicons-admin-appearance"', $html );
-        $this->assertStringContainsString( '"dashicons-admin-home"', $html );
-        $this->assertStringContainsString( '_renderItem', $html );
-        $this->assertStringContainsString( '.addClass("dashicons " + item.value)', $html );
-        $this->assertStringContainsString( 'autocomplete("search", "")', $html );
-        $this->assertStringContainsString( 'wpAppUpdateMasterbarPreview({ target: input }, ui.item.value)', $html );
-        $this->assertStringContainsString( 'close: function() {', $html );
-        $this->assertStringContainsString( 'function wpAppUpdateMasterbarPreview(event, previewIcon)', $html );
-        $this->assertStringContainsString( 'typeof previewIcon === "string" ? previewIcon.trim() : iconField.value.trim()', $html );
-        $this->assertStringContainsString( 'document.addEventListener("input", wpAppAutosaveSettingChange)', $html );
-        $this->assertStringContainsString( 'function wpAppAutosaveSettingChange(event)', $html );
-        $this->assertStringContainsString( 'event.type === "input" ? 500 : 250', $html );
-        $this->assertStringContainsString( 'document.addEventListener("keydown", wpAppPreventAutosaveFieldSubmit)', $html );
-        $this->assertStringContainsString( 'function wpAppPreventAutosaveFieldSubmit(event)', $html );
-        $this->assertStringContainsString( 'event.preventDefault()', $html );
-        $this->assertStringContainsString( 'document.addEventListener("submit", wpAppSubmitSettingsForm)', $html );
-        $this->assertStringContainsString( 'function wpAppSubmitSettingsForm(event)', $html );
-        $this->assertStringContainsString( 'form.querySelector("[name^=', $html );
-        $this->assertStringContainsString( 'window.addEventListener("load", wpAppSetupDashiconAutocomplete)', $html );
-        $this->assertStringContainsString( 'wpAppDashiconAutocompleteReady', $html );
-        $this->assertStringNotContainsString( '"dashicons-home"', $html );
-        $this->assertStringNotContainsString( '<datalist id="wp-app-dashicon-options">', $html );
+        $this->assertStringNotContainsString( '<script', $html );
+        $this->assertStringNotContainsString( '<style', $html );
     }
 
     public function test_settings_page_enqueues_jquery_ui_autocomplete() {
@@ -1371,8 +1416,8 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringNotContainsString( '<h2>WP App Version</h2>', $html );
         $this->assertStringNotContainsString( '<h2>Global Display</h2>', $html );
         $this->assertStringNotContainsString( '<h2>Installed Apps</h2>', $html );
-        $this->assertGreaterThan( strpos( $html, 'data-app-path="memex"' ), strpos( $html, 'App menu visibility' ) );
-        $this->assertGreaterThan( strpos( $html, 'App menu visibility' ), strpos( $html, '>WP Apps library</label>' ) );
+        $this->assertGreaterThan( strpos( $html, 'data-app-path="memex"' ), strpos( $html, 'data-navigation-preview="launcher"' ) );
+        $this->assertGreaterThan( strpos( $html, 'data-navigation-preview="desktop"' ), strpos( $html, '>WP Apps library</label>' ) );
         $this->assertStringContainsString( 'First plugin (wordopedia, wp-app 2.0.0)', $html );
         $this->assertStringContainsString( '<option value="memex/memex.php"', $html );
         $this->assertStringContainsString( '<option value="wordopedia/wordopedia.php"', $html );
@@ -1582,7 +1627,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertStringContainsString( 'no masterbar entry to customize', $status['message'] );
     }
 
-    public function test_single_app_is_shown_instead_of_a_one_entry_overflow() {
+    public function test_single_app_can_be_pinned_and_still_appears_in_launcher() {
         global $__wp_app_test_options;
 
         $app = new WpApp( '', 'lonely-app', [ 'app_name' => 'Lonely App' ] );
@@ -1598,7 +1643,8 @@ class MasterbarSettingsTest extends TestCase {
         Masterbar::add_admin_bar_overflow_menu( $admin_bar );
 
         $this->assertArrayHasKey( 'wp-app-link-lonely_app', $admin_bar->nodes );
-        $this->assertArrayNotHasKey( 'wp-app-admin-overflow', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow', $admin_bar->nodes );
+        $this->assertArrayHasKey( 'wp-app-admin-overflow-lonely-app', $admin_bar->nodes );
     }
 
     public function test_single_app_always_show_default_can_be_unchecked() {
@@ -1647,7 +1693,7 @@ class MasterbarSettingsTest extends TestCase {
         $this->assertArrayHasKey( 'wp-app-admin-overflow-second-of-two-app', $admin_bar->nodes );
     }
 
-    public function test_single_app_link_carries_the_settings_item() {
+    public function test_single_app_settings_item_belongs_to_launcher() {
         global $__wp_app_test_options;
 
         $app = new WpApp( '', 'settings-item-app', [ 'app_name' => 'Settings Item App' ] );
@@ -1660,11 +1706,12 @@ class MasterbarSettingsTest extends TestCase {
 
         $admin_bar = new FakeAdminBar();
         $app->masterbar()->add_wp_admin_bar_admin_context_items( $admin_bar );
+        Masterbar::add_admin_bar_overflow_menu( $admin_bar );
 
         $this->assertArrayHasKey( 'wp-app-admin-overflow-settings', $admin_bar->nodes );
-        $this->assertSame( 'wp-app-link-settings_item_app', $admin_bar->nodes['wp-app-admin-overflow-settings']['parent'] );
-        $this->assertStringContainsString( 'menupop', $admin_bar->nodes['wp-app-link-settings_item_app']['meta']['class'] );
-        $this->assertStringContainsString( 'wp-app-admin-link-standalone', $admin_bar->nodes['wp-app-link-settings_item_app']['meta']['class'] );
+        $this->assertSame( 'wp-app-admin-overflow', $admin_bar->nodes['wp-app-admin-overflow-settings']['parent'] );
+        $this->assertStringContainsString( 'wp-app-desktop-pin', $admin_bar->nodes['wp-app-link-settings_item_app']['meta']['class'] );
+        $this->assertStringNotContainsString( 'wp-app-admin-link-standalone', $admin_bar->nodes['wp-app-link-settings_item_app']['meta']['class'] );
     }
 
     public function test_settings_item_stays_in_the_overflow_for_several_apps() {

@@ -43,7 +43,7 @@ $app = new WpApp( __DIR__ . '/templates', 'my-app', [
 
 WpApp automatically exposes the current user's WordPress admin color scheme as CSS custom properties on app pages. Use those variables in app styles instead of hard-coding brand colors.
 
-Global masterbar behavior can also be configured in **Settings > WP Apps**. The global display settings can hide inactive app links by default and, when enabled, collect all inactive app links under the `Apps` overflow menu while keeping the current app visible in the masterbar.
+Configure navigation in **Settings > WP Apps**: edit shared app names and icons, choose which apps appear in the launcher grid on desktop and mobile, and pin icons to the desktop top bar. Launcher visibility and desktop pinning are independent, with a separate order for each. See [Apps, Launcher, and Desktop Pins](masterbar.md#apps-launcher-and-desktop-pins).
 
 When more than one registered plugin bundles wp-app, **Settings > WP Apps** can select which plugin provides the shared framework. The selection takes effect on the next request. Automatic mode retains the default first-loaded behavior. If the selected plugin is deactivated, removed, or does not contain a switcher-capable wp-app copy, loading safely falls back to automatic mode.
 

@@ -57,11 +57,19 @@ When disabled:
 
 ## Display Options
 
-### Global App Visibility
+### Apps, Launcher, and Desktop Pins
 
-Use **Settings > WP Apps** to control how registered app links appear across the masterbar. `Only show the active app by default` keeps inactive apps out of the top-level masterbar unless an individual app is marked `Always show this menu entry`.
+**Settings > WP Apps** has three collapsible sections:
 
-Enable `Show inactive apps in the overflow menu on app pages` to keep the current app visible while collecting the other registered app links under the `Apps` overflow menu.
+- **Apps** edits shared names, icons, colors, themes, and navigation visibility.
+- **Launcher** shows the same icon-and-name grid used on desktop and mobile. Select a tile to edit its app in a popover (a bottom sheet on phones). Changes update the app entry and both previews immediately.
+- **Desktop top bar** manages icon-only pinned apps, with names available as tooltips and accessible labels.
+
+**Show in launcher** and **Pin to desktop top bar** are independent. Pinning an app does not remove it from the launcher, and hiding it from navigation does not restrict its URL or permissions. Apps which disable their automatic app link, and apps the current user cannot access, do not appear in either navigation view.
+
+Drag launcher tiles or pinned icons to reorder each view independently. You can also select a tile and use **Move earlier** / **Move later**, or focus a tile and use Alt+arrow keys. Changes save automatically, and **Save Changes** can retry a failed save.
+
+Existing **Always show** choices initialize desktop pins. The previous app order initializes both sequences; an existing alphabetical overflow order initializes the launcher order. Explicit visibility and order changes are stored separately. The active app's own menu and custom menu items remain available on its pages.
 
 ### Admin Color Scheme
 
