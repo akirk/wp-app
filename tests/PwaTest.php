@@ -55,7 +55,7 @@ class PwaTest extends TestCase {
 
 	public function test_enabled_offline_features_load_and_precache_their_own_assets_in_app_scope() {
 		global $wp_app_route;
-		$config       = Pwa::register(
+		$config = Pwa::register(
             'offline-assets',
             [
 				'cache_policy'   => 'shell',
@@ -65,6 +65,7 @@ class PwaTest extends TestCase {
 				'cache_identity' => '7',
 			]
         );
+		do_action( 'wp_enqueue_scripts' );
 		$wp_app_route = [ 'app_path' => 'another-app' ];
 		ob_start();
 		wp_app_do_scoped_action( 'wp_app_head_scripts' );
@@ -87,6 +88,52 @@ class PwaTest extends TestCase {
 		$config = Pwa::register( 'outbox-only', [ 'outbox' => true ] );
 		$this->assertArrayHasKey( 'wp-app-outbox', $config['runtime_assets'] );
 		$this->assertArrayNotHasKey( 'wp-app-offline-pages', $config['runtime_assets'] );
+	}
+
+	public function test_shared_shell_is_dispatched_without_live_head_injection_or_inline_scripts() {
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', __DIR__ . '/fixtures/' ); }
+		$config = Pwa::register(
+            'shared-shell',
+            [
+				'cache_policy'   => 'shell',
+				'local_data'     => true,
+				'cache_identity' => '7',
+				'offline_shell'  => [
+					'content'       => __DIR__ . '/fixtures/templates/offline-content.php',
+					'bootstrap_url' => 'https://example.org/shared-shell/config',
+					'offline_data'  => [ 'userId' => 7 ],
+				],
+			]
+        );
+		add_action(
+            'wp_head',
+            static function () {
+				echo 'live-secret-must-not-be-cached';
+			}
+        );
+		add_action(
+            'wp_footer',
+            static function () {
+				echo 'live-footer-must-not-be-cached';
+			}
+        );
+		ob_start();
+		$handled = Pwa::maybe_handle_app_request( 'shared-shell', 'offline' );
+		$html    = ob_get_clean();
+		preg_match( '/data-wp-app-bootstrap="([^"]+)"/', $html, $match );
+		$bootstrap = json_decode( html_entity_decode( $match[1], ENT_QUOTES ), true );
+		$this->assertSame( $config['service_worker_url'], $bootstrap['worker']['url'] );
+		$this->assertSame( $config['cache_name'], $bootstrap['worker']['cacheName'] );
+		$this->assertSame( $config['precache'], $bootstrap['worker']['requiredUrls'] );
+		$this->assertTrue( $handled );
+		$this->assertStringContainsString( 'test-app-shell', $html );
+		$this->assertStringContainsString( 'data-wp-app-bootstrap=', $html );
+		$this->assertStringContainsString( 'wp-app-local-data-js', $html );
+		$this->assertStringContainsString( 'wp-app-bootstrap-js', $html );
+		$this->assertStringNotContainsString( 'live-secret', $html );
+		$this->assertStringNotContainsString( 'live-footer', $html );
+		$this->assertDoesNotMatchRegularExpression( '/<script(?![^>]*src=)[^>]*>/', $html );
 	}
 
 	protected function setUp(): void {

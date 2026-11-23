@@ -176,4 +176,4 @@ composer phpcs
 
 GPL-2.0-or-later
 
-For explicit offline shell caching and durable client-side operation queues, see [Offline shells and outboxes](docs/offline.md).
+For shared application shells, safe bootstrap, local data, offline caching, and durable operation queues, see [Offline shells and outboxes](docs/offline.md).

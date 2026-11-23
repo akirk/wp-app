@@ -215,6 +215,7 @@ self.addEventListener("message", function(event) {
 	function sendCacheStatus(ok, cachedCount, totalCount, cachedUrls) {
 		sendMessage(event.source, {
 			type: config.cacheStatusMessageType,
+			version: cacheName,
 			ok: !!ok,
 			cachedCount: cachedCount || 0,
 			totalCount: totalCount || 0,

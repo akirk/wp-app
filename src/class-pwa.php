@@ -10,6 +10,7 @@ if ( class_exists( 'WpApp\Pwa' ) ) {
  * Progressive Web App support for WpApp applications.
  */
 class Pwa {
+	const APP_SHELL_SUPPORTED     = true;
 	const OFFLINE_PAGES_SUPPORTED = true;
 	const MANIFEST_REQUEST        = 'wp-app-manifest';
 	const SERVICE_WORKER_REQUEST  = 'wp-app-service-worker';
@@ -133,6 +134,20 @@ class Pwa {
 			return true;
 		}
 
+		if ( ! empty( $config['offline_shell'] ) && $request_path === $config['offline_shell_path'] ) {
+			global $wp_app_route;
+			$previous     = $wp_app_route;
+			$wp_app_route = [
+				'app_path' => $app_path,
+				'pattern'  => $request_path,
+			];
+			try {
+				do_action( 'wp_app_before_render', __DIR__ . '/templates/wp-app-shell.php', $wp_app_route );
+				self::render_shell( $app_path, true );
+			} finally {
+				$wp_app_route = $previous; }
+			return true;
+		}
 		return false;
 	}
 
@@ -163,12 +178,48 @@ class Pwa {
 		return self::add_query_args( $url, is_array( $args ) ? $args : [] );
 	}
 
+	/** Render an app document; only the isolated fallback is suitable for precaching. */
+	public static function render_shell( $app_path, $offline = false ) {
+		$config = self::get_config( $app_path );
+		$shell  = $config['offline_shell'] ?? [];
+		if ( empty( $shell['content'] ) || ! is_file( $shell['content'] ) ) {
+			throw new \InvalidArgumentException( 'An app shell requires an existing content template.' );
+		}
+		if ( ! empty( $shell['capability'] ) && ! current_user_can( $shell['capability'] ) ) {
+			wp_die( 'Sign in with permission to open this app.', '', [ 'response' => 403 ] );
+		}
+		$bootstrap = [
+			'url'     => $shell['bootstrap_url'],
+			'offline' => $shell['offline_data'],
+			'worker'  => $config['register_service_worker'] ? [
+				'url'                    => $config['service_worker_url'],
+				'scope'                  => $config['scope_path'],
+				'cacheMessageType'       => $config['cache_message_type'],
+				'cacheStatusMessageType' => $config['cache_status_message_type'],
+				'cacheName'              => $config['cache_name'],
+				'offlineUrl'             => $config['offline_url'],
+				'requiredUrls'           => $config['precache'],
+			] : null,
+		];
+		if ( ! did_action( 'wp_enqueue_scripts' ) ) {
+			do_action( 'wp_enqueue_scripts' );
+		}
+		if ( ! headers_sent() ) {
+			nocache_headers();
+			header( 'X-Wp-App-Offline: ' . $config['cache_identity'] );
+			if ( $offline || ! empty( $shell['csp'] ) ) {
+				header( 'Content-Security-Policy: ' . ( $shell['csp'] ?? "script-src 'self'; object-src 'none'; base-uri 'self'" ) );
+			}
+		}
+		require __DIR__ . '/templates/wp-app-shell.php';
+	}
+
 	/** Version the selected framework's offline runtime, independent of app files. */
 	public static function runtime_version() {
 		static $version;
 		if ( ! $version ) {
-			$hashes = [ hash_file( 'sha256', __FILE__ ) ];
-			foreach ( [ 'wp-app-worker.js', 'wp-app-outbox.js', 'wp-app-offline-pages.js' ] as $asset ) {
+			$hashes = [ hash_file( 'sha256', __FILE__ ), hash_file( 'sha256', __DIR__ . '/templates/wp-app-shell.php' ) ];
+			foreach ( [ 'wp-app-worker.js', 'wp-app-outbox.js', 'wp-app-offline-pages.js', 'wp-app-local-data.js', 'wp-app-bootstrap.js', 'wp-app-storage.js' ] as $asset ) {
 				$hashes[] = hash_file( 'sha256', dirname( __DIR__ ) . '/assets/' . $asset );
 			}
 			$version = WP_APP_VERSION . '-' . substr( hash( 'sha256', implode( '', $hashes ) ), 0, 12 );
@@ -179,11 +230,20 @@ class Pwa {
 	/** Resolve runtime assets from the selected provider for enabled features. */
 	private static function runtime_assets( $config ) {
 		$assets = [];
+		if ( ! empty( $config['outbox'] ) || ! empty( $config['local_data'] ) ) {
+			$assets['wp-app-storage'] = 'wp-app-storage.js';
+		}
 		if ( ! empty( $config['outbox'] ) ) {
 			$assets['wp-app-outbox'] = 'wp-app-outbox.js';
 		}
 		if ( ! empty( $config['visited_pages'] ) ) {
 			$assets['wp-app-offline-pages'] = 'wp-app-offline-pages.js';
+		}
+		if ( ! empty( $config['local_data'] ) ) {
+			$assets['wp-app-local-data'] = 'wp-app-local-data.js';
+		}
+		if ( ! empty( $config['offline_shell'] ) ) {
+			$assets['wp-app-bootstrap'] = 'wp-app-bootstrap.js';
 		}
 		foreach ( $assets as $handle => $file ) {
 			$assets[ $handle ] = self::add_query_args( wp_app_get_asset_url( $file ), [ 'ver' => self::runtime_version() ] );
@@ -198,30 +258,34 @@ class Pwa {
 	 * @param array  $config Normalized PWA config.
 	 */
 	private static function register_template_hooks( $app_path, $config ) {
-		foreach ( $config['runtime_assets'] as $handle => $url ) {
-			// Print before application scripts, even in minimal shell templates.
-			wp_app_enqueue_script( $handle, $url, [], false, false, $app_path );
-		}
+		$enqueue = static function () use ( $app_path, $config ) {
+			foreach ( $config['runtime_assets'] as $handle => $url ) {
+				wp_app_enqueue_script( $handle, $url, [], false, false, $app_path );
+			}
+		};
+		if ( function_exists( 'did_action' ) && did_action( 'wp_enqueue_scripts' ) ) {
+			$enqueue(); } else {
+			add_action( 'wp_enqueue_scripts', $enqueue ); }
 
-		if ( $config['head_tags'] ) {
-			$meta_hook = 'wp_app_head_meta_' . self::sanitize_hook_suffix( $app_path );
-			add_action(
-				$meta_hook,
-				function () use ( $config ) {
-					self::render_head_tags( $config );
-				}
-			);
-		}
+			if ( $config['head_tags'] ) {
+				$meta_hook = 'wp_app_head_meta_' . self::sanitize_hook_suffix( $app_path );
+				add_action(
+                    $meta_hook,
+                    function () use ( $config ) {
+                        self::render_head_tags( $config );
+                    }
+				);
+			}
 
-		if ( $config['register_service_worker'] ) {
-			$script_hook = 'wp_app_body_close_' . self::sanitize_hook_suffix( $app_path );
-			add_action(
-				$script_hook,
-				function () use ( $config ) {
-					self::render_registration_script( $config );
-				}
-			);
-		}
+			if ( $config['register_service_worker'] && empty( $config['offline_shell'] ) ) {
+				$script_hook = 'wp_app_body_close_' . self::sanitize_hook_suffix( $app_path );
+				add_action(
+                    $script_hook,
+                    function () use ( $config ) {
+                        self::render_registration_script( $config );
+                    }
+				);
+			}
 	}
 
 	/**
@@ -422,6 +486,7 @@ class Pwa {
 	 * @param array $config Normalized PWA config.
 	 */
 	private static function send_service_worker( $config ) {
+		self::send_header( 'Cache-Control: no-store' );
 		self::send_header( 'Content-Type: application/javascript; charset=UTF-8' );
 		self::send_header( 'Service-Worker-Allowed: ' . $config['service_worker_allowed'] );
 		echo self::get_service_worker_script( $config );
@@ -477,17 +542,38 @@ class Pwa {
 		$theme_color         = isset( $config['theme_color'] ) ? (string) $config['theme_color'] : '#2271b1';
 		$background_color    = isset( $config['background_color'] ) ? (string) $config['background_color'] : '#ffffff';
 		$scope_url           = isset( $config['scope'] ) ? self::normalize_url( $config['scope'] ) : $app_url;
-		$offline_url         = isset( $config['offline_url'] ) ? self::normalize_url( $config['offline_url'] ) : $app_url;
+		$offline_url         = isset( $config['offline_url'] ) ? self::normalize_url( $config['offline_url'] ) : ( ! empty( $config['offline_shell'] ) ? self::app_url( $app_path, 'offline/' ) : $app_url );
 		$precache            = isset( $config['precache'] ) && is_array( $config['precache'] ) ? $config['precache'] : [];
 		$cache_policy        = $config['cache_policy'] ?? 'scope';
 		if ( ! in_array( $cache_policy, [ 'scope', 'shell' ], true ) ) {
 			throw new \InvalidArgumentException( 'Unknown PWA cache policy.' );
 		}
-		if ( 'shell' === $cache_policy && empty( $config['offline_url'] ) ) {
+		if ( 'shell' === $cache_policy && empty( $config['offline_url'] ) && empty( $config['offline_shell'] ) ) {
 			throw new \InvalidArgumentException( 'Shell caching requires an explicit offline_url.' );
 		}
 		if ( ! empty( $config['visited_pages'] ) && ( 'shell' !== $cache_policy || empty( $config['cache_identity'] ) ) ) {
 			throw new \InvalidArgumentException( 'Visited pages require shell caching and a non-empty cache_identity.' );
+		}
+		if ( ! empty( $config['offline_shell'] ) ) {
+			$shell = $config['offline_shell'];
+			if ( ! is_array( $shell ) || empty( $shell['content'] ) || ! is_file( $shell['content'] ) || empty( $shell['bootstrap_url'] ) || ! isset( $shell['offline_data']['userId'] ) ) {
+				throw new \InvalidArgumentException( 'An app shell requires content, bootstrap_url, and offline_data.userId.' );
+			}
+			if ( isset( $config['cache_identity'] ) && (string) $config['cache_identity'] !== (string) $shell['offline_data']['userId'] ) {
+				throw new \InvalidArgumentException( 'Shell bootstrap and cache identities must match.' );
+			}
+			$config['cache_identity'] = (string) $shell['offline_data']['userId'];
+			$shell_scope_path         = self::url_path( $app_url );
+			$offline_path             = self::url_path( $offline_url );
+			if ( 0 !== strpos( $offline_path, $shell_scope_path ) || strlen( $offline_path ) <= strlen( $shell_scope_path ) ) {
+				throw new \InvalidArgumentException( 'An app shell needs a dedicated fallback path inside its app scope.' );
+			}
+			foreach ( [ PHP_URL_HOST, PHP_URL_SCHEME, PHP_URL_PORT ] as $component ) {
+				$value = wp_parse_url( $offline_url, $component );
+				if ( null !== $value && $value !== wp_parse_url( $app_url, $component ) ) {
+					throw new \InvalidArgumentException( 'An app shell fallback must have the app origin.' );
+				}
+			}
 		}
 		$runtime_assets  = self::runtime_assets( $config );
 		$precache        = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( 'shell' === $cache_policy ? [ $offline_url ] : [ $app_url, $offline_url ], $precache, array_values( $runtime_assets ) ) ) ) ) );
@@ -521,6 +607,9 @@ class Pwa {
 		return [
 			'cache_policy'                     => $cache_policy,
 			'outbox'                           => ! empty( $config['outbox'] ),
+			'local_data'                       => ! empty( $config['local_data'] ),
+			'offline_shell'                    => $config['offline_shell'] ?? [],
+			'offline_shell_path'               => ! empty( $config['offline_shell'] ) ? trim( substr( self::url_path( $offline_url ), strlen( self::url_path( $app_url ) ) ), '/' ) : '',
 			'runtime_assets'                   => $runtime_assets,
 			'visited_pages'                    => ! empty( $config['visited_pages'] ),
 			'cache_identity'                   => isset( $config['cache_identity'] ) ? (string) $config['cache_identity'] : '',
@@ -536,7 +625,7 @@ class Pwa {
 			'scope_path'                       => $scope_path,
 			'offline_url'                      => $offline_url,
 			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' ) . ( $runtime_assets ? '-' . self::runtime_version() : '' )
-				. ( ! empty( $config['visited_pages'] ) ? '-' . md5( (string) $config['cache_identity'] ) : '' ),
+				. ( ! empty( $config['cache_identity'] ) ? '-' . md5( (string) $config['cache_identity'] ) : '' ),
 			'cache_prefix'                     => $cache_prefix,
 			'cacheable_paths'                  => $cacheable_paths,
 			'cacheable_search_params'          => isset( $config['cacheable_search_params'] ) && is_array( $config['cacheable_search_params'] ) ? array_values( $config['cacheable_search_params'] ) : [],
@@ -566,7 +655,7 @@ class Pwa {
 	 * @return array Endpoint paths.
 	 */
 	private static function get_endpoint_paths( $config ) {
-		return array_values( array_unique( array_merge( $config['manifest_paths'], $config['service_worker_paths'] ) ) );
+		return array_values( array_unique( array_merge( $config['manifest_paths'], $config['service_worker_paths'], ! empty( $config['offline_shell_path'] ) ? [ $config['offline_shell_path'] ] : [] ) ) );
 	}
 
 	/**

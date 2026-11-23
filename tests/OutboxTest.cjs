@@ -7,10 +7,11 @@ const path = require('node:path');
 const {chromium} = require('playwright');
 
 async function fixture(t) {
+    const storage = fs.readFileSync(path.join(__dirname, '../assets/wp-app-storage.js'));
     const source = fs.readFileSync(path.join(__dirname, '../assets/wp-app-outbox.js'));
     const server = http.createServer((req, res) => {
-        res.setHeader('Content-Type', req.url === '/outbox.js' ? 'application/javascript' : 'text/html');
-        res.end(req.url === '/outbox.js' ? source : '<script src="/outbox.js"></script>');
+        res.setHeader('Content-Type', ['/outbox.js','/storage.js'].includes(req.url) ? 'application/javascript' : 'text/html');
+        res.end(req.url === '/outbox.js' ? source : req.url === '/storage.js' ? storage : '<script src="/storage.js"></script><script src="/outbox.js"></script>');
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const browser = await chromium.launch();
@@ -93,4 +94,14 @@ test('a failing draft predicate aborts enqueue without losing the draft', async 
     assert.equal(result.error, 'Draft changed');
     assert.equal(result.entries.length, 0);
     assert.equal(result.drafts[0].text, 'Keep me');
+});
+
+test('structured conflicts stay queued and are not replayed until the app resolves them', async t => {
+    const page = await fixture(t);
+    const result = await page.evaluate(async () => {
+        let attempts=0;
+        const queue=new WpAppOutbox({scope:location.origin+'/conflicts/',userId:7,session:async()=>({userId:7}),send:async()=>{attempts++;const error=new Error('Server changed');error.status=409;error.details={code:'conflict',note:{version:'server-v2'}};throw error;},acknowledge:()=>true});
+        await queue.enqueue({id:'one',userId:7,createdAt:new Date().toISOString()});await queue.sync();await queue.sync();const rows=await queue.rows('entries');queue.destroy();return {attempts,rows};
+    });
+    assert.equal(result.attempts,1);assert.equal(result.rows[0].state,'conflict');assert.equal(result.rows[0].conflict.note.version,'server-v2');
 });

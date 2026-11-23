@@ -3,41 +3,13 @@
     'use strict';
     window.WpAppOutbox = function (config) {
         if (!config.scope || !config.userId || !config.acknowledge) throw new Error('Outbox requires scope, userId and acknowledge.');
-        var dbPromise, channel;
+        var channel;
         var running = false, lastError = '';
         var dbName = config.databaseName || ('wp-app-outbox:' + config.scope + ':' + config.userId);
         var listeners = [];
         function changed() { listeners.forEach(function (listener) { listener(); }); if (channel) channel.postMessage('changed'); }
-        function openDB() {
-            if (!dbPromise) dbPromise = new Promise(function (resolve, reject) {
-                if (!window.indexedDB) return reject(new Error('Local storage unavailable. Keep your text here and save online.'));
-                var request = indexedDB.open(dbName, 1);
-                request.onupgradeneeded = function () {
-                    ['entries', 'drafts', 'meta'].forEach(function (name) { request.result.createObjectStore(name, {keyPath: 'id'}); });
-                };
-                request.onsuccess = function () { resolve(request.result); };
-                request.onerror = function () { reject(request.error); };
-                request.onblocked = function () { reject(new Error('Local storage is blocked. Close other app tabs and retry.')); };
-            });
-            return dbPromise;
-        }
-        function transaction(stores, mode, work) {
-            return openDB().then(function (db) {
-                return new Promise(function (resolve, reject) {
-                    var tx = db.transaction(stores, mode);
-                    var value;
-                    tx.oncomplete = function () { resolve(value); };
-                    tx.onerror = tx.onabort = function () { reject(tx.error || new Error('Local save failed. Your text has not been cleared.')); };
-                    try { work(tx, function (result) { value = result; }); }
-                catch (error) { tx.abort(); reject(error); }
-                });
-            });
-        }
-        function rows(store) {
-            return transaction([store], 'readonly', function (tx, done) {
-                tx.objectStore(store).getAll().onsuccess = function (event) { done(event.target.result); };
-            });
-        }
+        var storage = config.storage || new window.WpAppStorage(Object.assign({}, config, {databaseName: dbName}));
+        var rows = storage.rows, transaction = storage.transaction;
         async function request(data) {
             var controller = new AbortController();
             var timer = setTimeout(function () { controller.abort(); }, 20000);
@@ -49,12 +21,12 @@
                 });
                 var result;
                 try { result = await response.json(); } catch (_) { throw new Error('Could not verify saving. Entry kept for retry; log in if your session expired.'); }
-                if (!response.ok || !result.success) throw new Error(result.data && result.data.message || 'Could not sync. Your entry remains on this device.');
+                if (!response.ok || !result.success) { var error = new Error(result.data && result.data.message || 'Could not sync. Your entry remains on this device.'); error.status = response.status; error.details = result.data; throw error; }
                 return result.data;
             } finally { clearTimeout(timer); }
         }
         async function replay() {
-            var entries = await rows('entries');
+            var entries = (await rows('entries')).filter(entry => entry.state !== 'conflict');
             if (!entries.length) return;
             var session = config.session ? await config.session() : await request({action: config.sessionAction});
             if (Number(session.userId) !== Number(config.userId)) throw new Error('Sign in to the account that saved these entries. They have not been sent.');
@@ -63,7 +35,13 @@
                 try {
                     var receipt = config.send ? await config.send(entry, session) : await request({action: config.syncAction, nonce: session.nonce, [config.payloadField || 'operation']: JSON.stringify(entry)});
                     if (!config.acknowledge(receipt, entry)) throw new Error('Server did not acknowledge this entry. Kept for retry.');
+                    if (config.onAcknowledged) await config.onAcknowledged(receipt, entry);
                 } catch (error) {
+                    // Structured conflicts remain local until the app explicitly resolves them.
+                    if (error.status === 409 && error.details && error.details.code === 'conflict') {
+                        entry.state = 'conflict'; entry.error = error.message; entry.conflict = error.details;
+                        await transaction(['entries'], 'readwrite', function (tx) { tx.objectStore('entries').put(entry); });
+                    }
                     // Keep this operation for retry without blocking independent entries.
                     firstError = firstError || error;
                     continue;
@@ -109,7 +87,7 @@
         return {enqueue: enqueue, rows: rows, transaction: transaction, sync: sync, changed: changed,
             subscribe: function (listener) { listeners.push(listener); return function () { listeners = listeners.filter(function (item) { return item !== listener; }); }; },
             status: function () { return {running: running, error: lastError}; },
-            destroy: function () { clearInterval(timer); document.removeEventListener('visibilitychange', visible); listeners = []; window.removeEventListener('online', sync); window.removeEventListener('focus', sync); if (channel) channel.close(); }
+            destroy: function () { clearInterval(timer); if (!config.storage && storage.close) storage.close(); document.removeEventListener('visibilitychange', visible); listeners = []; window.removeEventListener('online', sync); window.removeEventListener('focus', sync); if (channel) channel.close(); }
         };
     };
 })();
