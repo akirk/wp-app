@@ -95,6 +95,7 @@ class Settings {
 
         if ( function_exists( 'wp_enqueue_script' ) ) {
             wp_enqueue_script( 'jquery-ui-autocomplete' );
+            wp_enqueue_script( 'wp-app-settings', wp_app_get_asset_url( 'wp-app-settings.js' ), [ 'jquery-ui-autocomplete' ], WP_APP_VERSION, true );
         }
 
         if ( function_exists( 'wp_enqueue_style' ) ) {
@@ -113,6 +114,8 @@ class Settings {
             'anonymous_access'                  => 'auto',
             'provider'                          => '',
             'app_order'                         => [],
+            'launcher_order'                    => [],
+            'desktop_order'                     => [],
             'apps'                              => [],
         ];
     }
@@ -208,7 +211,10 @@ class Settings {
         $apps     = isset( $settings['apps'] ) && is_array( $settings['apps'] ) ? $settings['apps'] : [];
         $app      = isset( $apps[ $app_path ] ) && is_array( $apps[ $app_path ] ) ? $apps[ $app_path ] : [];
 
-        return array_merge( self::get_default_app_settings(), $app );
+        $normalized                     = array_merge( self::get_default_app_settings(), $app );
+        $normalized['show_in_launcher'] = array_key_exists( 'show_in_launcher', $app ) ? ! empty( $app['show_in_launcher'] ) : ! empty( $settings['show_inactive_apps_in_overflow'] );
+        $normalized['pin_to_desktop']   = array_key_exists( 'pin_to_desktop', $app ) ? ! empty( $app['pin_to_desktop'] ) : ( ( empty( $settings['only_show_active_app'] ) || ! empty( $normalized['always_show'] ) ) && ( ! empty( $normalized['show_icon'] ) || ! empty( $normalized['show_text'] ) ) );
+        return $normalized;
     }
 
     /**
@@ -218,14 +224,51 @@ class Settings {
      * @return bool True when the app should be shown globally.
      */
     public static function should_show_global_app_link( $app_path ) {
-        $settings = self::get_settings();
-
-        if ( empty( $settings['only_show_active_app'] ) ) {
-            return true;
-        }
-
         $app_settings = self::get_app_settings( $app_path );
-        return ! empty( $app_settings['always_show'] );
+        return $app_settings['pin_to_desktop'];
+    }
+
+    /** Get accessible apps in the independent launcher or desktop order. */
+    public static function get_navigation_apps( $placement ) {
+        $apps    = self::get_registered_apps();
+        $order   = self::get_navigation_order( $placement );
+        $ordered = [];
+        foreach ( array_merge( (array) $order, array_keys( $apps ) ) as $path ) {
+            if ( ! isset( $apps[ $path ] ) || isset( $ordered[ $path ] ) || ! self::can_customize_navigation( $path ) ) {
+                continue;
+            }
+            $app = self::get_app_settings( $path );
+            if ( ! empty( $app[ 'desktop' === $placement ? 'pin_to_desktop' : 'show_in_launcher' ] ) ) {
+                $ordered[ $path ] = $apps[ $path ];
+            }
+        }
+        return $ordered;
+    }
+
+    /** Initialize independent orders from the previous shared order. */
+    public static function get_navigation_order( $placement ) {
+        $settings = self::get_settings();
+        $apps     = self::get_registered_apps();
+        $key      = 'desktop' === $placement ? 'desktop_order' : 'launcher_order';
+        if ( empty( $settings[ $key ] ) && 'launcher' === $placement && ! empty( $settings['sort_overflow_menu_alphabetically'] ) ) {
+            uksort(
+                $apps,
+                static function ( $a, $b ) use ( $apps ) {
+					$a_settings = self::get_app_settings( $a );
+					$b_settings = self::get_app_settings( $b );
+					return strnatcasecmp( '' !== $a_settings['title'] ? $a_settings['title'] : ( $apps[ $a ]['name'] ?? $a ), '' !== $b_settings['title'] ? $b_settings['title'] : ( $apps[ $b ]['name'] ?? $b ) );
+				}
+            );
+            return array_keys( $apps );
+        }
+        $order = ! empty( $settings[ $key ] ) ? $settings[ $key ] : $settings['app_order'];
+        return array_values( array_intersect( array_unique( array_merge( (array) $order, array_keys( $apps ) ) ), array_keys( $apps ) ) );
+    }
+
+    /** App navigation is independent of access to the app itself. */
+    public static function can_customize_navigation( $path ) {
+        $masterbar = self::get_masterbar_for_app( $path );
+        return Registry::can_user_access_app( $path ) && ( ! $masterbar || $masterbar->is_admin_bar_app_link_enabled() );
     }
 
     /**
@@ -537,6 +580,11 @@ class Settings {
                     'always_show'          => ! empty( $app_settings['always_show'] ),
                     'default_theme'        => isset( $app_settings['default_theme'] ) ? sanitize_key( $app_settings['default_theme'] ) : '',
                 ];
+                foreach ( [ 'show_in_launcher', 'pin_to_desktop' ] as $field ) {
+                    if ( array_key_exists( $field, $app_settings ) ) {
+                        $apps[ $app_path ][ $field ] = ! empty( $app_settings[ $field ] );
+                    }
+                }
             }
         }
 
@@ -547,8 +595,21 @@ class Settings {
             'anonymous_access'                  => isset( $value['anonymous_access'] ) && in_array( $value['anonymous_access'], [ 'auto', '404', 'redirect' ], true ) ? $value['anonymous_access'] : 'auto',
             'provider'                          => isset( $value['provider'] ) ? self::sanitize_provider_plugin_file( $value['provider'] ) : '',
             'app_order'                         => $order,
+            'launcher_order'                    => self::sanitize_navigation_order( $value['launcher_order'] ?? [] ),
+            'desktop_order'                     => self::sanitize_navigation_order( $value['desktop_order'] ?? [] ),
             'apps'                              => $apps,
         ];
+    }
+
+    private static function sanitize_navigation_order( $value ) {
+        $order = [];
+        foreach ( is_array( $value ) ? $value : [] as $path ) {
+            $path = self::sanitize_app_path( $path );
+            if ( '' !== $path && ! in_array( $path, $order, true ) ) {
+                $order[] = $path;
+            }
+        }
+        return $order;
     }
 
     /**
@@ -558,511 +619,138 @@ class Settings {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
         }
-
         $settings = self::get_settings();
         $apps     = self::get_registered_apps();
+        $config   = [
+            'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+            'nonce'         => wp_create_nonce( 'wp-app-admin-bar-refresh' ),
+            'dashicons'     => self::get_dashicon_options(),
+            'saved'         => __( 'Saved' ),
+            'saving'        => __( 'Saving…' ),
+            'failed'        => __( 'Save failed. Your changes are still on this page. Try Save Changes again.' ),
+            'launcher'      => __( 'Launcher' ),
+            'hidden'        => __( 'Hidden from launcher' ),
+            'pinned'        => __( 'Pinned to desktop' ),
+            'emptyLauncher' => __( 'No apps in the launcher. Enable Show in launcher in an app’s options.' ),
+            'emptyDesktop'  => __( 'No pinned icons. Pin an app using the menu below.' ),
+            'moveEarlier'   => __( 'Move earlier' ),
+            'moveLater'     => __( 'Move later' ),
+        ];
         ?>
-        <div class="wrap">
+        <div class="wrap wp-app-navigation-settings" data-wp-app-config="<?php echo esc_attr( wp_json_encode( $config ) ); ?>">
             <h1><?php echo esc_html__( 'WP Apps' ); ?></h1>
-            <style>
-                .wp-app-settings-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                    margin-top: 16px;
-                    max-width: 1100px;
-                }
-
-                .wp-app-settings-row {
-                    box-sizing: border-box;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 16px;
-                    margin-top: 0;
-                    max-width: none;
-                    min-width: 0;
-                    padding: 0;
-                    width: 100%;
-                }
-
-                .wp-app-settings-row::before,
-                .wp-app-settings-row::after {
-                    background: #2271b1;
-                    content: "";
-                    display: none;
-                    height: 3px;
-                    margin: -2px 12px;
-                }
-
-                .wp-app-settings-row-summary {
-                    align-items: center;
-                    box-sizing: border-box;
-                    display: grid;
-                    gap: 14px;
-                    grid-template-columns: 32px minmax(0, 1fr) auto 32px;
-                    height: 64px;
-                    padding: 10px 12px;
-                }
-
-                .wp-app-settings-row.is-dragging {
-                    opacity: 0.35;
-                }
-
-                .wp-app-settings-row.is-drag-over {
-                    border-color: #c3c4c7;
-                    box-shadow: none;
-                }
-
-                .wp-app-settings-row.is-drop-before::before,
-                .wp-app-settings-row.is-drop-after::after {
-                    display: block;
-                }
-
-                .wp-app-settings-handle {
-                    align-items: center;
-                    background: transparent;
-                    border: 0;
-                    border-radius: 2px;
-                    color: #50575e;
-                    cursor: grab;
-                    display: grid;
-                    gap: 3px;
-                    grid-template-columns: repeat(2, 4px);
-                    justify-content: center;
-                    margin: 0;
-                    min-height: 32px;
-                    padding: 0;
-                    width: 32px;
-                }
-
-                .wp-app-settings-handle:active {
-                    cursor: grabbing;
-                }
-
-                .wp-app-settings-handle:focus {
-                    outline: 0;
-                }
-
-                .wp-app-settings-handle:focus-visible {
-                    box-shadow: 0 0 0 2px #2271b1;
-                    outline: 2px solid transparent;
-                }
-
-                .wp-app-settings-handle-dot {
-                    background: currentColor;
-                    border-radius: 50%;
-                    display: block;
-                    height: 4px;
-                    opacity: 0.72;
-                    width: 4px;
-                }
-
-                .wp-app-settings-row-preview {
-                    min-width: 0;
-                    overflow: hidden;
-                }
-
-                .wp-app-settings-row-toggles {
-                    align-items: center;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 8px 12px;
-                    justify-content: flex-end;
-                }
-
-                .wp-app-settings-row-toggles label {
-                    white-space: nowrap;
-                }
-
-                .wp-app-settings-row-details {
-                    border-top: 1px solid #dcdcde;
-                    display: grid;
-                    gap: 14px 20px;
-                    grid-template-columns: minmax(0, 1fr) auto;
-                    padding: 12px 12px 14px 58px;
-                }
-
-                .wp-app-settings-row-details[hidden] {
-                    display: none;
-                }
-
-                .wp-app-settings-row-fields,
-                .wp-app-settings-row-status {
-                    min-width: 0;
-                }
-
-                .wp-app-settings-expand {
-                    align-items: center;
-                    background: transparent;
-                    border: 0;
-                    color: #50575e;
-                    cursor: pointer;
-                    display: flex;
-                    height: 32px;
-                    justify-content: center;
-                    margin: 0;
-                    padding: 0;
-                    width: 32px;
-                }
-
-                .wp-app-settings-expand:focus {
-                    box-shadow: 0 0 0 2px #2271b1;
-                    outline: 2px solid transparent;
-                }
-
-                .wp-app-settings-expand .dashicons {
-                    height: 20px;
-                    transition: transform 120ms ease-in-out;
-                    width: 20px;
-                }
-
-                .wp-app-settings-row.is-expanded .wp-app-settings-expand .dashicons {
-                    transform: rotate(90deg);
-                }
-
-                .wp-app-masterbar-preview-wrap {
-                    display: inline-block;
-                    max-width: 100%;
-                    min-height: 32px;
-                    position: relative;
-                    vertical-align: top;
-                }
-
-                .wp-app-masterbar-preview-wrap.is-hidden {
-                    opacity: 0.58;
-                }
-
-                .wp-app-masterbar-preview-wrap #wpadminbar {
-                    display: inline-block;
-                    min-width: 0;
-                    position: static;
-                    width: auto;
-                    z-index: auto;
-                }
-
-                .wp-app-masterbar-preview-wrap #wpadminbar .ab-top-menu > li {
-                    position: relative;
-                }
-
-                .wp-app-masterbar-preview-wrap #wpadminbar .ab-sub-wrapper {
-                    z-index: 2;
-                }
-
-                .wp-app-dashicon-autocomplete.ui-autocomplete {
-                    background: #fff;
-                    border: 1px solid #c3c4c7;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-                    box-sizing: border-box;
-                    margin: 0;
-                    max-height: 260px;
-                    overflow-x: hidden;
-                    overflow-y: auto;
-                    padding: 4px 0;
-                    z-index: 100000;
-                }
-
-                .wp-app-dashicon-autocomplete .ui-menu-item-wrapper {
-                    align-items: center;
-                    color: #1d2327;
-                    display: flex;
-                    gap: 8px;
-                    line-height: 1.4;
-                    padding: 6px 10px;
-                }
-
-                .wp-app-dashicon-autocomplete .ui-menu-item-wrapper.ui-state-active {
-                    background: #2271b1;
-                    border: 0;
-                    color: #fff;
-                    margin: 0;
-                }
-
-                .wp-app-dashicon-autocomplete .dashicons {
-                    font-size: 18px;
-                    height: 18px;
-                    line-height: 18px;
-                    width: 18px;
-                }
-
-                .wp-app-dashicon-autocomplete code {
-                    background: transparent;
-                    color: inherit;
-                    font-size: 12px;
-                    padding: 0;
-                }
-
-                .wp-app-settings-row .form-table {
-                    margin-top: 0;
-                }
-
-                .wp-app-settings-row .form-table th {
-                    padding-bottom: 8px;
-                    padding-top: 8px;
-                    width: 120px;
-                }
-
-                .wp-app-settings-row .form-table td {
-                    padding-bottom: 8px;
-                    padding-top: 8px;
-                }
-
-                .wp-app-settings-row .regular-text {
-                    max-width: 100%;
-                    width: 100%;
-                }
-
-                .wp-app-settings-row .form-table td p {
-                    margin-bottom: 10px;
-                }
-
-                .wp-app-settings-field {
-                    margin: 0 0 10px;
-                }
-
-                .wp-app-settings-field:last-child {
-                    margin-bottom: 0;
-                }
-
-                .wp-app-masterbar-visibility-note {
-                    margin: 0;
-                }
-
-                .wp-app-masterbar-visibility-note code {
-                    font-size: 12px;
-                }
-
-                .wp-app-settings-card-actions {
-                    margin: 0;
-                    text-align: right;
-                }
-
-                .wp-app-settings-save-status {
-                    color: #50575e;
-                    display: inline-block;
-                    margin-left: 8px;
-                }
-
-                .wp-app-settings-save-status.is-saved {
-                    color: #008a20;
-                }
-
-                .wp-app-settings-save-status.is-failed {
-                    color: #b32d2e;
-                }
-
-                .wp-app-settings-drag-preview {
-                    background: #fff;
-                    border: 1px solid #2271b1;
-                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-                    box-sizing: border-box;
-                    left: -9999px;
-                    max-width: 1100px;
-                    opacity: 0.96;
-                    pointer-events: none;
-                    position: fixed;
-                    top: -9999px;
-                    width: 720px;
-                    z-index: 100000;
-                }
-
-                .wp-app-settings-drag-preview .wp-app-settings-row-summary {
-                    height: 64px;
-                }
-
-                @media (max-width: 960px) {
-                    .wp-app-settings-row-details {
-                        grid-template-columns: 1fr;
-                        padding-left: 12px;
-                    }
-
-                    .wp-app-settings-card-actions {
-                        text-align: left;
-                    }
-                }
-            </style>
-            <form method="post" action="options.php">
+            <form method="post" action="options.php" data-wp-app-settings-form>
                 <?php settings_fields( 'wp_app_masterbar' ); ?>
-
-                <span class="wp-app-settings-save-status" data-wp-app-save-status hidden></span>
-                <?php if ( empty( $apps ) ) : ?>
-                    <p><?php echo esc_html__( 'No WpApp apps are currently registered.' ); ?></p>
-                <?php endif; ?>
-
-                <div class="wp-app-settings-list" data-wp-app-settings-list>
-                    <?php foreach ( $apps as $app_path => $metadata ) : ?>
-                        <?php
-                        $app_settings      = self::get_app_settings( $app_path );
-                        $app_name          = isset( $metadata['name'] ) ? $metadata['name'] : $app_path;
-                        $visibility_status = self::get_masterbar_visibility_status( $app_path, $app_settings, $metadata );
-                        $can_customize     = self::should_render_app_settings_controls( $visibility_status );
-                        $themes            = isset( $metadata['themes'] ) && is_array( $metadata['themes'] ) ? $metadata['themes'] : [];
-                        ?>
-                        <section
-                            class="card wp-app-settings-card wp-app-settings-row"
-                            data-default-title="<?php echo esc_attr( $app_name ); ?>"
-                            data-default-letter="<?php echo esc_attr( strtoupper( substr( $app_name, 0, 1 ) ) ); ?>"
-                            data-default-dashicon="<?php echo esc_attr( isset( $metadata['dashicon'] ) ? $metadata['dashicon'] : '' ); ?>"
-                            data-icon-url="<?php echo esc_url( isset( $metadata['icon_url'] ) ? $metadata['icon_url'] : '' ); ?>"
-                            data-default-icon-background="<?php echo esc_attr( isset( $metadata['icon_background'] ) ? $metadata['icon_background'] : '' ); ?>"
-                            data-default-icon-color="<?php echo esc_attr( isset( $metadata['icon_color'] ) ? $metadata['icon_color'] : '' ); ?>"
-                            data-force-show-text="0"
-                            data-app-path="<?php echo esc_attr( $app_path ); ?>"
-                        >
-                            <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[app_order][]" value="<?php echo esc_attr( $app_path ); ?>">
-                            <div class="wp-app-settings-row-summary">
-                                <span class="wp-app-settings-handle" role="button" tabindex="0" draggable="true" aria-label="<?php echo esc_attr__( 'Reorder app' ); ?>">
-                                    <span class="wp-app-settings-handle-dot" aria-hidden="true"></span>
-                                    <span class="wp-app-settings-handle-dot" aria-hidden="true"></span>
-                                    <span class="wp-app-settings-handle-dot" aria-hidden="true"></span>
-                                    <span class="wp-app-settings-handle-dot" aria-hidden="true"></span>
-                                    <span class="wp-app-settings-handle-dot" aria-hidden="true"></span>
-                                    <span class="wp-app-settings-handle-dot" aria-hidden="true"></span>
-                                </span>
-                                <div class="wp-app-settings-row-preview">
-                                    <?php self::render_preview( $app_settings, $metadata, $app_name, $app_path ); ?>
-                                </div>
-                                <div class="wp-app-settings-row-toggles">
-                                    <?php if ( $can_customize ) : ?>
-                                        <?php self::render_checkbox( $app_path, 'show_icon', $app_settings['show_icon'], __( 'Icon' ) ); ?>
-                                        <?php self::render_checkbox( $app_path, 'show_text', $app_settings['show_text'], __( 'Text' ) ); ?>
-                                        <?php if ( self::should_render_always_show_setting( $visibility_status ) ) : ?>
-                                            <?php self::render_checkbox( $app_path, 'always_show', $app_settings['always_show'], __( 'Always show' ) ); ?>
-                                        <?php endif; ?>
+                <p class="wp-app-settings-save-status" data-wp-app-save-status role="status" aria-live="polite" hidden></p>
+                <?php foreach ( [ 'only_show_active_app', 'show_inactive_apps_in_overflow', 'sort_overflow_menu_alphabetically' ] as $legacy ) : ?>
+                    <input type="hidden" name="<?php echo esc_attr( self::OPTION . '[' . $legacy . ']' ); ?>" value="<?php echo empty( $settings[ $legacy ] ) ? '0' : '1'; ?>">
+                <?php endforeach; ?>
+                <details class="wp-app-settings-section">
+                    <summary><h2><?php echo esc_html__( 'Apps' ); ?></h2></summary>
+                    <p><?php echo esc_html__( 'Edit app names, icons, and visibility here or select an app in either preview. Names and icons are shared everywhere. Hiding an app changes navigation, not access to its URL.' ); ?></p>
+                    <div class="wp-app-settings-apps" data-wp-app-settings-list>
+                        <?php foreach ( $apps as $app_path => $metadata ) : ?>
+                            <?php
+                            $app_settings  = self::get_app_settings( $app_path );
+                            $app_name      = isset( $metadata['name'] ) ? $metadata['name'] : $app_path;
+                            $title         = '' !== trim( $app_settings['title'] ) ? trim( $app_settings['title'] ) : $app_name;
+                            $can_customize = self::can_customize_navigation( $app_path );
+                            $themes        = isset( $metadata['themes'] ) && is_array( $metadata['themes'] ) ? $metadata['themes'] : [];
+                            ?>
+                            <details class="wp-app-settings-app" data-app-path="<?php echo esc_attr( $app_path ); ?>"
+                                data-default-title="<?php echo esc_attr( $app_name ); ?>"
+                                data-default-icon="<?php echo esc_attr( self::get_effective_app_icon_value( [], $metadata ) ); ?>"
+                                data-default-background="<?php echo esc_attr( $metadata['icon_background'] ?? '' ); ?>"
+                                data-default-color="<?php echo esc_attr( $metadata['icon_color'] ?? '' ); ?>"
+                                data-navigation-enabled="<?php echo $can_customize ? '1' : '0'; ?>">
+                                <summary>
+                                    <span class="wp-app-settings-app-icon"><?php echo Masterbar::get_app_link_icon_html_for_app( $app_path, $metadata, $title ); ?></span>
+                                    <span><strong data-app-name><?php echo esc_html( $title ); ?></strong><small data-app-visibility><?php echo esc_html( $app_settings['show_in_launcher'] ? __( 'Launcher' ) : __( 'Hidden from launcher' ) ); ?><?php echo $app_settings['pin_to_desktop'] ? ' · ' . esc_html__( 'Pinned to desktop' ) : ''; ?></small></span>
+                                </summary>
+                                <div class="wp-app-settings-editor" data-app-editor>
+                                    <?php if ( ! $can_customize ) : ?>
+                                        <p><?php echo esc_html__( 'This app has disabled its navigation entry or is not available to your account.' ); ?></p>
                                     <?php endif; ?>
-                                </div>
-                                <button
-                                    type="button"
-                                    class="wp-app-settings-expand"
-                                    aria-expanded="false"
-                                    aria-controls="<?php echo esc_attr( self::get_field_id( $app_path, 'details' ) ); ?>"
-                                    aria-label="<?php echo esc_attr__( 'Expand app settings' ); ?>"
-                                >
-                                    <span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
-                                </button>
-                            </div>
-                            <div id="<?php echo esc_attr( self::get_field_id( $app_path, 'details' ) ); ?>" class="wp-app-settings-row-details" hidden>
-                                <div class="wp-app-settings-row-fields">
-                                    <?php if ( $can_customize ) : ?>
-                                        <table class="form-table" role="presentation">
-                                            <tr>
-                                                <th scope="row">
-                                                    <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'title' ) ); ?>"><?php echo esc_html__( 'Title' ); ?></label>
-                                                </th>
-                                                <td>
-                                                    <input
-                                                        id="<?php echo esc_attr( self::get_field_id( $app_path, 'title' ) ); ?>"
-                                                        class="regular-text"
-                                                        type="text"
-                                                        name="<?php echo esc_attr( self::get_field_name( $app_path, 'title' ) ); ?>"
-                                                        data-wp-app-setting="title"
-                                                        value="<?php echo esc_attr( $app_settings['title'] ); ?>"
-                                                        placeholder="<?php echo esc_attr( $app_name ); ?>"
-                                                    >
-                                                </td>
-                                            </tr>
-                                            <?php if ( count( $themes ) > 1 ) : ?>
-                                                <tr>
-                                                    <th scope="row">
-                                                        <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'default_theme' ) ); ?>"><?php echo esc_html__( 'Default theme' ); ?></label>
-                                                    </th>
-                                                    <td>
-                                                        <select
-                                                            id="<?php echo esc_attr( self::get_field_id( $app_path, 'default_theme' ) ); ?>"
-                                                            name="<?php echo esc_attr( self::get_field_name( $app_path, 'default_theme' ) ); ?>"
-                                                        >
-                                                            <?php foreach ( $themes as $theme_slug => $theme ) : ?>
-                                                                <option value="<?php echo esc_attr( $theme_slug ); ?>" <?php selected( $app_settings['default_theme'], $theme_slug ); ?>>
-                                                                    <?php echo esc_html( isset( $theme['name'] ) ? $theme['name'] : $theme_slug ); ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <p class="description"><?php echo esc_html__( 'Used when a user has not selected a personal app theme.' ); ?></p>
-                                                    </td>
-                                                </tr>
-                                            <?php endif; ?>
-                                            <tr>
-                                                <th scope="row">
-                                                    <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon' ) ); ?>"><?php echo esc_html__( 'Icon' ); ?></label>
-                                                </th>
-                                                <td>
-                                                    <input
-                                                        id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon' ) ); ?>"
-                                                        class="regular-text"
-                                                        type="text"
-                                                        name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon' ) ); ?>"
-                                                        data-wp-app-setting="icon"
-                                                        value="<?php echo esc_attr( self::get_effective_app_icon_value( $app_settings, $metadata ) ); ?>"
-                                                        data-wp-app-dashicon-autocomplete="1"
-                                                        placeholder="<?php echo esc_attr__( 'e.g. dashicons-admin-site or https://example.org/icon.svg' ); ?>"
-                                                    >
-                                                    <p class="description"><?php echo esc_html__( 'Use an image URL, emoji or' ); ?> <a href="https://developer.wordpress.org/resource/dashicons/" target="_blank" rel="noopener noreferrer"><?php echo esc_html__( 'Dashicon' ); ?></a> <?php echo esc_html__( 'class.' ); ?></p>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th scope="row">
-                                                    <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_background' ) ); ?>"><?php echo esc_html__( 'Icon background' ); ?></label>
-                                                </th>
-                                                <td>
-                                                    <input
-                                                        id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_background' ) ); ?>"
-                                                        class="regular-text"
-                                                        type="text"
-                                                        name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon_background' ) ); ?>"
-                                                        data-wp-app-setting="icon_background"
-                                                        value="<?php echo esc_attr( self::get_effective_app_setting_value( $app_settings, $metadata, 'icon_background' ) ); ?>"
-                                                        placeholder="<?php echo esc_attr__( 'e.g. #2271b1 or linear-gradient(135deg, #f7971e, #ffd200)' ); ?>"
-                                                    >
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <th scope="row">
-                                                    <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_color' ) ); ?>"><?php echo esc_html__( 'Icon foreground' ); ?></label>
-                                                </th>
-                                                <td>
-                                                    <input
-                                                        id="<?php echo esc_attr( self::get_field_id( $app_path, 'icon_color' ) ); ?>"
-                                                        class="regular-text"
-                                                        type="text"
-                                                        name="<?php echo esc_attr( self::get_field_name( $app_path, 'icon_color' ) ); ?>"
-                                                        data-wp-app-setting="icon_color"
-                                                        value="<?php echo esc_attr( self::get_effective_app_setting_value( $app_settings, $metadata, 'icon_color' ) ); ?>"
-                                                        placeholder="<?php echo esc_attr__( 'e.g. #fff' ); ?>"
-                                                    >
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    <?php else : ?>
-                                        <?php self::render_hidden_app_settings( $app_path, $app_settings ); ?>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="wp-app-settings-row-status">
-                                    <?php self::render_visibility_note_if_needed( $app_path, $visibility_status ); ?>
-                                    <?php if ( $can_customize ) : ?>
-                                        <p class="wp-app-settings-card-actions">
-                                            <button type="submit" class="button button-primary"><?php echo esc_html__( 'Save' ); ?></button>
+                                    <?php foreach ( [ 'show_icon', 'show_text', 'generate_letter_icon', 'always_show' ] as $legacy ) : ?>
+                                        <input type="hidden" name="<?php echo esc_attr( self::get_field_name( $app_path, $legacy ) ); ?>" value="<?php echo empty( $app_settings[ $legacy ] ) ? '0' : '1'; ?>">
+                                    <?php endforeach; ?>
+                                    <?php
+                                    $fields = [
+                                        'title'           => [ __( 'Name' ), $app_settings['title'], $app_name ],
+                                        'icon'            => [ __( 'Icon' ), self::get_effective_app_icon_value( $app_settings, $metadata ), __( 'e.g. dashicons-admin-site or https://example.org/icon.svg' ) ],
+                                        'icon_background' => [ __( 'Icon background' ), self::get_effective_app_setting_value( $app_settings, $metadata, 'icon_background' ), __( 'e.g. #2271b1 or linear-gradient(135deg, #f7971e, #ffd200)' ) ],
+                                        'icon_color'      => [ __( 'Icon color' ), self::get_effective_app_setting_value( $app_settings, $metadata, 'icon_color' ), __( 'e.g. #fff' ) ],
+                                    ];
+                                    ?>
+                                    <?php foreach ( $fields as $field => $definition ) : ?>
+                                        <p class="wp-app-settings-field">
+                                            <label for="<?php echo esc_attr( self::get_field_id( $app_path, $field ) ); ?>"><?php echo esc_html( $definition[0] ); ?></label>
+                                            <input class="regular-text" type="text" id="<?php echo esc_attr( self::get_field_id( $app_path, $field ) ); ?>" name="<?php echo esc_attr( self::get_field_name( $app_path, $field ) ); ?>" data-wp-app-setting="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $definition[1] ); ?>" placeholder="<?php echo esc_attr( $definition[2] ); ?>"<?php echo 'icon' === $field ? ' data-wp-app-dashicon-autocomplete="1"' : ''; ?>>
                                         </p>
+                                    <?php endforeach; ?>
+                                    <p class="description"><?php echo esc_html__( 'Use an image URL, emoji, letter, or Dashicon class for the icon.' ); ?></p>
+                                    <div class="wp-app-settings-visibility">
+                                        <?php if ( $can_customize ) : ?>
+                                            <?php self::render_checkbox( $app_path, 'show_in_launcher', $app_settings['show_in_launcher'], __( 'Show in launcher' ) ); ?>
+                                            <?php self::render_checkbox( $app_path, 'pin_to_desktop', $app_settings['pin_to_desktop'], __( 'Pin to desktop top bar' ) ); ?>
+                                        <?php else : ?>
+                                            <?php foreach ( [ 'show_in_launcher', 'pin_to_desktop' ] as $field ) : ?>
+                                                <input type="hidden" name="<?php echo esc_attr( self::get_field_name( $app_path, $field ) ); ?>" value="<?php echo empty( $app_settings[ $field ] ) ? '0' : '1'; ?>">
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ( count( $themes ) > 1 ) : ?>
+                                        <p class="wp-app-settings-field">
+                                            <label for="<?php echo esc_attr( self::get_field_id( $app_path, 'default_theme' ) ); ?>"><?php echo esc_html__( 'Default theme' ); ?></label>
+                                            <select id="<?php echo esc_attr( self::get_field_id( $app_path, 'default_theme' ) ); ?>" name="<?php echo esc_attr( self::get_field_name( $app_path, 'default_theme' ) ); ?>">
+                                                <?php foreach ( $themes as $slug => $theme ) : ?>
+                                                    <option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $app_settings['default_theme'], $slug ); ?>><?php echo esc_html( $theme['name'] ?? $slug ); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </p>
+                                    <?php else : ?>
+                                        <input type="hidden" name="<?php echo esc_attr( self::get_field_name( $app_path, 'default_theme' ) ); ?>" value="<?php echo esc_attr( $app_settings['default_theme'] ); ?>">
                                     <?php endif; ?>
                                 </div>
-                            </div>
-                        </section>
-                    <?php endforeach; ?>
-                </div>
-
+                            </details>
+                        <?php endforeach; ?>
+                        <?php
+                        if ( empty( $apps ) ) :
+							?>
+                            <p><?php echo esc_html__( 'No WpApp apps are currently registered.' ); ?></p><?php endif; ?>
+                    </div>
+                </details>
+                <details class="wp-app-settings-section" open>
+                    <summary><h2><?php echo esc_html__( 'Launcher' ); ?></h2></summary>
+                    <p><?php echo esc_html__( 'The same launcher appears on desktop and mobile. Select a tile to edit it. Drag tiles to reorder, or select a tile and use the move buttons. Pinned apps stay in the launcher unless you hide them here.' ); ?></p>
+                    <?php self::render_navigation_preview( 'launcher' ); ?>
+                </details>
+                <details class="wp-app-settings-section" open>
+                    <summary><h2><?php echo esc_html__( 'Desktop top bar' ); ?></h2></summary>
+                    <p><?php echo esc_html__( 'Pinned apps appear as icons with their names in tooltips. Select an icon to edit or unpin it. This order is independent of the launcher.' ); ?></p>
+                    <?php self::render_navigation_preview( 'desktop' ); ?>
+                    <p><label for="wp-app-add-pin"><?php echo esc_html__( 'Add another app' ); ?></label>
+                        <select id="wp-app-add-pin" data-add-pin><option value=""><?php echo esc_html__( 'Choose an app…' ); ?></option>
+                            <?php foreach ( $apps as $path => $metadata ) : ?>
+                                <?php
+                                if ( ! self::can_customize_navigation( $path ) ) {
+									continue; }
+								?>
+                                <option value="<?php echo esc_attr( $path ); ?>"><?php echo esc_html( $metadata['name'] ?? $path ); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </p>
+                </details>
+                <dialog class="wp-app-settings-popover" aria-labelledby="wp-app-editor-heading" data-app-dialog>
+                    <div class="wp-app-settings-popover-header"><h2 id="wp-app-editor-heading"></h2><button type="button" class="button" data-close-editor><?php echo esc_html__( 'Done' ); ?></button></div>
+                    <p data-editor-status role="status" aria-live="polite" hidden></p>
+                    <div data-editor-slot></div>
+                    <div class="wp-app-settings-move-controls">
+                        <button type="button" class="button" data-move="-1"><?php echo esc_html__( 'Move earlier' ); ?></button>
+                        <button type="button" class="button" data-move="1"><?php echo esc_html__( 'Move later' ); ?></button>
+                    </div>
+                </dialog>
                 <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><?php echo esc_html__( 'App menu visibility' ); ?></th>
-                        <td>
-                            <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[only_show_active_app]" value="0">
-                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[only_show_active_app]" value="1" <?php checked( ! empty( $settings['only_show_active_app'] ) ); ?>> <?php echo esc_html__( 'Only show the active app by default' ); ?></label><br>
-                            <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="0">
-                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[show_inactive_apps_in_overflow]" value="1" <?php checked( ! empty( $settings['show_inactive_apps_in_overflow'] ) ); ?>> <?php echo esc_html__( 'Show inactive apps in the overflow menu on app pages' ); ?></label><br>
-                            <input type="hidden" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="0">
-                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION ); ?>[sort_overflow_menu_alphabetically]" value="1" <?php checked( ! empty( $settings['sort_overflow_menu_alphabetically'] ) ); ?>> <?php echo esc_html__( 'Sort overflow menu alphabetically (override order above)' ); ?></label>
-                            <?php if ( self::is_only_registered_app() ) : ?>
-                                <p class="description"><?php echo esc_html__( 'A single app is shown in the masterbar instead of being collapsed into a menu of its own. Uncheck Always show below to collapse it anyway.' ); ?></p>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
                     <?php if ( self::is_login_url_modified() || in_array( $settings['anonymous_access'], [ '404', 'redirect' ], true ) ) : ?>
                     <tr>
                         <th scope="row"><label for="wp-app-anonymous-access"><?php echo esc_html__( 'Login redirects' ); ?></label></th>
@@ -1097,624 +785,38 @@ class Settings {
                     </tr>
                 </table>
 
+
                 <?php submit_button(); ?>
             </form>
-            <script>
-                const wpAppAdminBarRefresh = {
-                    ajaxUrl: "<?php echo esc_js( function_exists( 'admin_url' ) ? admin_url( 'admin-ajax.php' ) : '' ); ?>",
-                    nonce: "<?php echo esc_js( function_exists( 'wp_create_nonce' ) ? wp_create_nonce( 'wp-app-admin-bar-refresh' ) : '' ); ?>"
-                };
-                const wpAppDashiconOptions = <?php echo wp_json_encode( self::get_dashicon_options() ); ?>;
-
-                document.addEventListener("input", wpAppUpdateMasterbarPreview);
-                document.addEventListener("input", wpAppAutosaveSettingChange);
-                document.addEventListener("change", wpAppUpdateMasterbarPreview);
-                document.addEventListener("change", wpAppAutosaveSettingChange);
-                document.addEventListener("click", wpAppToggleSettingsRow);
-                document.addEventListener("keydown", wpAppPreventAutosaveFieldSubmit);
-                document.addEventListener("submit", wpAppSubmitSettingsForm);
-                document.addEventListener("DOMContentLoaded", wpAppSetupDashiconAutocomplete);
-                window.addEventListener("load", wpAppSetupDashiconAutocomplete);
-                wpAppShowSavedStatus();
-                wpAppSetupDashiconAutocomplete();
-                document.querySelectorAll("[data-wp-app-settings-list]").forEach(wpAppMakeSettingsListSortable);
-
-                let wpAppAutosaveTimer = null;
-                let wpAppAutosaveController = null;
-
-                function wpAppAutosaveSettingChange(event) {
-                    if (!event.target.matches("[data-wp-app-setting][name^='<?php echo esc_js( self::OPTION ); ?>']")) {
-                        return;
-                    }
-
-                    if (event.type === "input" && event.target.matches("input[type='checkbox']")) {
-                        return;
-                    }
-
-                    const form = event.target.form;
-
-                    if (!form) {
-                        return;
-                    }
-
-                    wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
-                    clearTimeout(wpAppAutosaveTimer);
-                    wpAppAutosaveTimer = setTimeout(function() {
-                        wpAppSubmitAutosave(form);
-                    }, event.type === "input" ? 500 : 250);
-                }
-
-                function wpAppPreventAutosaveFieldSubmit(event) {
-                    if (event.key !== "Enter" || !event.target.matches("input[type='text'][data-wp-app-setting][name^='<?php echo esc_js( self::OPTION ); ?>']")) {
-                        return;
-                    }
-
-                    const form = event.target.form;
-
-                    event.preventDefault();
-
-                    if (!form) {
-                        return;
-                    }
-
-                    wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
-                    clearTimeout(wpAppAutosaveTimer);
-                    wpAppSubmitAutosave(form);
-                }
-
-                function wpAppSubmitSettingsForm(event) {
-                    const form = event.target;
-
-                    if (!form || !form.querySelector("[name^='<?php echo esc_js( self::OPTION ); ?>']")) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
-                    clearTimeout(wpAppAutosaveTimer);
-                    wpAppSubmitAutosave(form);
-                }
-
-                function wpAppSubmitAutosave(form) {
-                    if (!window.fetch) {
-                        wpAppSetSaveStatus("<?php echo esc_js( __( 'Save failed' ) ); ?>", false, true);
-                        return;
-                    }
-
-                    if (wpAppAutosaveController) {
-                        wpAppAutosaveController.abort();
-                    }
-
-                    wpAppAutosaveController = window.AbortController ? new AbortController() : null;
-
-                    fetch(form.getAttribute("action") || window.location.href, {
-                        body: new FormData(form),
-                        credentials: "same-origin",
-                        method: "POST",
-                        signal: wpAppAutosaveController ? wpAppAutosaveController.signal : undefined
-                    }).then(function(response) {
-                        if (!response.ok) {
-                            throw new Error("Autosave failed");
-                        }
-
-                        wpAppSetSaveStatus("<?php echo esc_js( __( 'Saved' ) ); ?>", true);
-                        wpAppRefreshAdminBar();
-                    }).catch(function(error) {
-                        if (error && error.name === "AbortError") {
-                            return;
-                        }
-
-                        wpAppSetSaveStatus("<?php echo esc_js( __( 'Save failed' ) ); ?>", false, true);
-                    });
-                }
-
-                function wpAppShowSavedStatus() {
-                    const params = new URLSearchParams(window.location.search);
-
-                    if (params.get("settings-updated") === "true") {
-                        wpAppSetSaveStatus("<?php echo esc_js( __( 'Saved' ) ); ?>", true);
-                    }
-                }
-
-                function wpAppSetSaveStatus(message, saved, failed) {
-                    const status = document.querySelector("[data-wp-app-save-status]");
-
-                    if (!status) {
-                        return;
-                    }
-
-                    status.textContent = message;
-                    status.hidden = false;
-                    status.classList.toggle("is-saved", !!saved);
-                    status.classList.toggle("is-failed", !!failed);
-                }
-
-                function wpAppSetupDashiconAutocomplete() {
-                    if (!window.jQuery || !window.jQuery.ui || !window.jQuery.ui.autocomplete) {
-                        return;
-                    }
-
-                    window.jQuery("[data-wp-app-dashicon-autocomplete='1']").each(function() {
-                        const input = this;
-
-                        if (input.dataset.wpAppDashiconAutocompleteReady === "1") {
-                            return;
-                        }
-
-                        window.jQuery(input).autocomplete({
-                            appendTo: "body",
-                            classes: {
-                                "ui-autocomplete": "wp-app-dashicon-autocomplete"
-                            },
-                            delay: 0,
-                            minLength: 0,
-                            source: wpAppDashiconOptions,
-                            focus: function(event, ui) {
-                                wpAppUpdateMasterbarPreview({ target: input }, ui.item.value);
-                                return false;
-                            },
-                            select: function(event, ui) {
-                                input.value = ui.item.value;
-                                input.dispatchEvent(new Event("input", { bubbles: true }));
-                                input.dispatchEvent(new Event("change", { bubbles: true }));
-                                return false;
-                            },
-                            close: function() {
-                                input.dispatchEvent(new Event("input", { bubbles: true }));
-                            }
-                        }).on("focus", function() {
-                            window.jQuery(this).autocomplete("search", "");
-                        });
-
-                        window.jQuery(input).autocomplete("instance")._renderItem = function(ul, item) {
-                            return window.jQuery("<li>")
-                                .append(
-                                    window.jQuery("<div>")
-                                        .append(window.jQuery("<span>").addClass("dashicons " + item.value).attr("aria-hidden", "true"))
-                                        .append(window.jQuery("<code>").text(item.value))
-                                )
-                                .appendTo(ul);
-                        };
-
-                        input.dataset.wpAppDashiconAutocompleteReady = "1";
-                    });
-                }
-
-                function wpAppRefreshAdminBar() {
-                    const adminBars = Array.from(document.querySelectorAll("#wpadminbar"));
-                    const adminBar = adminBars.find(function(node) {
-                        return !node.closest(".wp-app-masterbar-preview-wrap");
-                    });
-                    const rootMenu = adminBar ? adminBar.querySelector("#wp-admin-bar-root-default") : null;
-
-                    console.log("WP Apps admin bar refresh: start", {
-                        adminBars: adminBars.length,
-                        hasAdminBar: !!adminBar,
-                        hasRootMenu: !!rootMenu,
-                        ajaxUrl: wpAppAdminBarRefresh.ajaxUrl
-                    });
-
-                    if (!window.fetch || !adminBar || !rootMenu || !wpAppAdminBarRefresh.ajaxUrl) {
-                        console.log("WP Apps admin bar refresh: skipped");
-                        return;
-                    }
-
-                    const body = new FormData();
-                    body.append("action", "wp_app_admin_bar_nodes");
-                    body.append("nonce", wpAppAdminBarRefresh.nonce);
-
-                    fetch(wpAppAdminBarRefresh.ajaxUrl, {
-                        body,
-                        credentials: "same-origin",
-                        method: "POST"
-                    }).then(function(response) {
-                        console.log("WP Apps admin bar refresh: response", {
-                            ok: response.ok,
-                            status: response.status
-                        });
-
-                        if (!response.ok) {
-                            throw new Error("Admin bar refresh failed");
-                        }
-
-                        return response.json();
-                    }).then(function(payload) {
-                        console.log("WP Apps admin bar refresh: payload", payload);
-
-                        if (!payload || !payload.success || !payload.data || !Array.isArray(payload.data.nodes)) {
-                            console.log("WP Apps admin bar refresh: invalid payload");
-                            return;
-                        }
-
-                        wpAppPatchAdminBar(rootMenu, payload.data.nodes);
-                    }).catch(function(error) {
-                        console.log("WP Apps admin bar refresh: failed", error);
-                    });
-                }
-
-                function wpAppPatchAdminBar(rootMenu, nodes) {
-                    const incomingTopNodes = nodes.filter(function(node) {
-                        return !node.parent;
-                    });
-                    const incomingOverflowNode = incomingTopNodes.find(function(node) {
-                        return node.id === "wp-app-admin-overflow";
-                    });
-                    const incomingAppLinkNodes = incomingTopNodes.filter(function(node) {
-                        return node.id !== "wp-app-admin-overflow";
-                    });
-                    const existingAppLinkNodes = Array.from(rootMenu.children).filter(function(node) {
-                        return node.id.indexOf("wp-admin-bar-wp-app-link-") === 0;
-                    });
-                    const existingOverflowNode = wpAppFindAdminBarChild(rootMenu, "wp-admin-bar-wp-app-admin-overflow");
-
-                    console.log("WP Apps admin bar refresh: patch", {
-                        existingAppLinkNodes: existingAppLinkNodes.length,
-                        hasExistingOverflowNode: !!existingOverflowNode,
-                        incomingNodes: nodes.length,
-                        incomingTopNodes: incomingTopNodes.length,
-                        incomingAppLinkNodes: incomingAppLinkNodes.length,
-                        hasIncomingOverflowNode: !!incomingOverflowNode
-                    });
-
-                    existingAppLinkNodes.forEach(function(node) {
-                        node.remove();
-                    });
-
-                    if (incomingOverflowNode) {
-                        wpAppUpsertAdminBarNode(rootMenu, incomingOverflowNode, null, true);
-                    } else if (existingOverflowNode) {
-                        existingOverflowNode.remove();
-                    }
-
-                    const overflowAnchor = wpAppFindAdminBarChild(rootMenu, "wp-admin-bar-wp-app-admin-overflow");
-
-                    incomingAppLinkNodes.forEach(function(node) {
-                        wpAppUpsertAdminBarNode(rootMenu, node, overflowAnchor, false);
-                    });
-
-                    console.log("WP Apps admin bar refresh: patched");
-                }
-
-                function wpAppUpsertAdminBarNode(rootMenu, node, anchor, refreshExistingContent) {
-                    const template = document.createElement("template");
-                    template.innerHTML = node.html.trim();
-
-                    const refreshedNode = template.content.firstElementChild;
-                    const currentNode = refreshedNode ? wpAppFindAdminBarChild(rootMenu, refreshedNode.id) : null;
-
-                    if (!refreshedNode) {
-                        return;
-                    }
-
-                    if (!currentNode) {
-                        rootMenu.insertBefore(refreshedNode, anchor || null);
-                        return;
-                    }
-
-                    if (refreshExistingContent) {
-                        wpAppRefreshAdminBarNodeContent(currentNode, refreshedNode);
-                    } else {
-                        rootMenu.insertBefore(refreshedNode, anchor || currentNode);
-                        currentNode.remove();
-                    }
-                }
-
-                function wpAppFindAdminBarChild(rootMenu, id) {
-                    return Array.from(rootMenu.children).find(function(node) {
-                        return node.id === id;
-                    }) || null;
-                }
-
-                function wpAppRefreshAdminBarNodeContent(currentNode, refreshedNode) {
-                    const currentItem = Array.from(currentNode.children).find(function(child) {
-                        return child.classList.contains("ab-item");
-                    });
-                    const refreshedItem = Array.from(refreshedNode.children).find(function(child) {
-                        return child.classList.contains("ab-item");
-                    });
-                    const currentSubmenu = Array.from(currentNode.children).find(function(child) {
-                        return child.classList.contains("ab-sub-wrapper");
-                    });
-                    const refreshedSubmenu = Array.from(refreshedNode.children).find(function(child) {
-                        return child.classList.contains("ab-sub-wrapper");
-                    });
-
-                    currentNode.className = refreshedNode.className;
-
-                    if (currentItem && refreshedItem) {
-                        currentItem.replaceWith(refreshedItem);
-                    } else if (refreshedItem) {
-                        currentNode.insertBefore(refreshedItem, currentNode.firstChild);
-                    } else if (currentItem) {
-                        currentItem.remove();
-                    }
-
-                    if (currentSubmenu && refreshedSubmenu) {
-                        currentSubmenu.innerHTML = refreshedSubmenu.innerHTML;
-                    } else if (refreshedSubmenu) {
-                        currentNode.appendChild(refreshedSubmenu);
-                    } else if (currentSubmenu) {
-                        currentSubmenu.remove();
-                    }
-                }
-
-                function wpAppToggleSettingsRow(event) {
-                    const button = event.target.closest(".wp-app-settings-expand");
-
-                    if (!button) {
-                        return;
-                    }
-
-                    const row = button.closest(".wp-app-settings-row");
-                    const details = row ? row.querySelector(".wp-app-settings-row-details") : null;
-                    const expanded = button.getAttribute("aria-expanded") === "true";
-
-                    if (!row || !details) {
-                        return;
-                    }
-
-                    button.setAttribute("aria-expanded", expanded ? "false" : "true");
-                    button.setAttribute("aria-label", expanded ? "<?php echo esc_js( __( 'Expand app settings' ) ); ?>" : "<?php echo esc_js( __( 'Collapse app settings' ) ); ?>");
-                    row.classList.toggle("is-expanded", !expanded);
-                    details.hidden = expanded;
-                }
-
-                function wpAppUpdateMasterbarPreview(event, previewIcon) {
-                    const card = event.target.closest(".wp-app-settings-card");
-
-                    if (!card) {
-                        return;
-                    }
-
-                    const titleField = card.querySelector("[data-wp-app-setting='title']");
-                    const iconField = card.querySelector("[data-wp-app-setting='icon']");
-                    const defaultTitle = card.dataset.defaultTitle || "";
-                    const defaultDashicon = card.dataset.defaultDashicon || "";
-                    const iconUrl = card.dataset.iconUrl || "";
-                    const forceShowText = card.dataset.forceShowText === "1";
-                    const title = titleField.value.trim() || defaultTitle;
-                    const icon = typeof previewIcon === "string" ? previewIcon.trim() : iconField.value.trim();
-                    const iconBackgroundField = card.querySelector("[data-wp-app-setting='icon_background']");
-                    const iconColorField = card.querySelector("[data-wp-app-setting='icon_color']");
-                    const iconBackground = sanitizeIconCssValue(iconBackgroundField ? iconBackgroundField.value : "") || sanitizeIconCssValue(card.dataset.defaultIconBackground || "");
-                    const iconColor = sanitizeIconCssValue(iconColorField ? iconColorField.value : "") || sanitizeIconCssValue(card.dataset.defaultIconColor || "");
-                    const showTextField = card.querySelector("[data-wp-app-setting='show_text']");
-                    const showIconField = card.querySelector("[data-wp-app-setting='show_icon']");
-                    const preview = card.querySelector(".wp-app-masterbar-preview-wrap");
-                    const iconWrap = preview.querySelector(".wp-app-link-icon");
-                    const textWrap = preview.querySelector(".wp-app-link-text");
-
-                    function sanitizeIconCssValue(value) {
-                        value = (value || "").replace(/\s+/g, " ").trim();
-
-                        if (!value || value.length > 300 || /[^a-z0-9#.,%()\/\s+-]/i.test(value)) {
-                            return "";
-                        }
-
-                        if ((value.match(/\(/g) || []).length !== (value.match(/\)/g) || []).length) {
-                            return "";
-                        }
-
-                        if (/(^|[^a-z-])(url|var|attr|expression|image-set|element|env)\s*\(/i.test(value)) {
-                            return "";
-                        }
-
-                        return value;
-                    }
-
-                    function getIconStyle() {
-                        const rules = [];
-
-                        if (iconBackground) {
-                            rules.push("background: " + iconBackground);
-                        }
-
-                        if (iconColor) {
-                            rules.push("color: " + iconColor);
-                        }
-
-                        return rules.join("; ");
-                    }
-
-                    function resetIcon(kind, useStyle) {
-                        const iconStyle = useStyle ? getIconStyle() : "";
-                        iconWrap.className = "wp-app-link-icon wp-app-link-icon-" + kind + (kind === "dashicon" && iconStyle ? " wp-app-link-icon-styled" : "");
-                        iconWrap.removeAttribute("style");
-
-                        if (iconStyle) {
-                            iconWrap.style.cssText = iconStyle;
-                        }
-                    }
-
-                    function renderImageIcon(url) {
-                        const img = document.createElement("img");
-                        resetIcon("image", false);
-                        img.alt = "";
-                        img.decoding = "async";
-                        img.src = url;
-                        iconWrap.appendChild(img);
-                    }
-
-                    textWrap.textContent = title;
-                    textWrap.hidden = !forceShowText && !showTextField.checked;
-                    iconWrap.innerHTML = "";
-                    iconWrap.hidden = !showIconField.checked;
-                    preview.classList.remove("is-hidden");
-
-                    if (!showIconField.checked) {
-                        preview.classList.toggle("is-hidden", !showTextField.checked);
-                        return;
-                    }
-
-                    if (icon) {
-                        if (/^dashicons-[a-z0-9-]+$/.test(icon)) {
-                            const span = document.createElement("span");
-                            resetIcon("dashicon", true);
-                            span.className = "dashicons " + icon;
-                            iconWrap.appendChild(span);
-                        } else if (/^https?:\/\//i.test(icon)) {
-                            renderImageIcon(icon);
-                        } else {
-                            resetIcon("generated", true);
-                            iconWrap.textContent = icon;
-                        }
-                    } else if (defaultDashicon) {
-                        const span = document.createElement("span");
-                        resetIcon("dashicon", true);
-                        span.className = "dashicons " + defaultDashicon;
-                        iconWrap.appendChild(span);
-                    } else if (iconUrl) {
-                        renderImageIcon(iconUrl);
-                    } else {
-                        resetIcon("generated", true);
-                        iconWrap.textContent = (title.charAt(0) || card.dataset.defaultLetter || "").toUpperCase();
-                    }
-                }
-
-                function wpAppMakeSettingsListSortable(list) {
-                    let dragging = null;
-                    let dropTarget = null;
-                    let dropBefore = true;
-                    let dragPreview = null;
-
-                    function clearDropIndicators() {
-                        list.querySelectorAll(".is-drag-over, .is-drop-before, .is-drop-after").forEach(function(row) {
-                            row.classList.remove("is-drag-over", "is-drop-before", "is-drop-after");
-                        });
-                    }
-
-                    function clearDragPreview() {
-                        if (dragPreview && dragPreview.parentNode) {
-                            dragPreview.parentNode.removeChild(dragPreview);
-                        }
-
-                        dragPreview = null;
-                    }
-
-                    function createDragPreview(row) {
-                        const summary = row.querySelector(".wp-app-settings-row-summary");
-
-                        if (!summary) {
-                            return null;
-                        }
-
-                        const bounds = row.getBoundingClientRect();
-                        const preview = document.createElement("div");
-                        preview.className = "wp-app-settings-drag-preview";
-                        preview.style.width = Math.max(320, Math.round(bounds.width)) + "px";
-                        preview.appendChild(summary.cloneNode(true));
-                        document.body.appendChild(preview);
-                        return preview;
-                    }
-
-                    list.addEventListener("dragstart", function(event) {
-                        const handle = event.target.closest(".wp-app-settings-handle");
-                        const row = handle ? handle.closest(".wp-app-settings-row") : null;
-
-                        if (!row) {
-                            event.preventDefault();
-                            return;
-                        }
-
-                        dragging = row;
-                        row.classList.add("is-dragging");
-                        dragPreview = createDragPreview(row);
-                        event.dataTransfer.effectAllowed = "move";
-                        event.dataTransfer.setData("text/plain", row.dataset.appPath || "");
-
-                        if (dragPreview && event.dataTransfer.setDragImage) {
-                            event.dataTransfer.setDragImage(dragPreview, 24, 32);
-                        }
-                    });
-
-                    list.addEventListener("dragover", function(event) {
-                        const row = event.target.closest(".wp-app-settings-row");
-
-                        if (!dragging || !row || row === dragging) {
-                            return;
-                        }
-
-                        event.preventDefault();
-
-                        const bounds = row.getBoundingClientRect();
-                        dropTarget = row;
-                        dropBefore = event.clientY < bounds.top + bounds.height / 2;
-
-                        clearDropIndicators();
-                        row.classList.add("is-drag-over", dropBefore ? "is-drop-before" : "is-drop-after");
-                    });
-
-                    list.addEventListener("dragleave", function(event) {
-                        const row = event.target.closest(".wp-app-settings-row");
-
-                        if (row && !row.contains(event.relatedTarget)) {
-                            row.classList.remove("is-drag-over", "is-drop-before", "is-drop-after");
-                        }
-                    });
-
-                    list.addEventListener("drop", function(event) {
-                        event.preventDefault();
-
-                        if (dragging && dropTarget && dropTarget !== dragging) {
-                            list.insertBefore(dragging, dropBefore ? dropTarget : dropTarget.nextSibling);
-                            wpAppAutosaveSettingsList(list);
-                        }
-
-                        clearDropIndicators();
-                    });
-
-                    list.addEventListener("dragend", function() {
-                        if (dragging) {
-                            dragging.classList.remove("is-dragging");
-                        }
-
-                        dragging = null;
-                        dropTarget = null;
-                        dropBefore = true;
-                        clearDragPreview();
-                        clearDropIndicators();
-                    });
-
-                    list.addEventListener("keydown", function(event) {
-                        if (!event.target.closest(".wp-app-settings-handle") || !["ArrowUp", "ArrowDown"].includes(event.key)) {
-                            return;
-                        }
-
-                        const row = event.target.closest(".wp-app-settings-row");
-
-                        if (!row) {
-                            return;
-                        }
-
-                        event.preventDefault();
-
-                        if (event.key === "ArrowUp" && row.previousElementSibling) {
-                            list.insertBefore(row, row.previousElementSibling);
-                            wpAppAutosaveSettingsList(list);
-                        } else if (event.key === "ArrowDown" && row.nextElementSibling) {
-                            list.insertBefore(row.nextElementSibling, row);
-                            wpAppAutosaveSettingsList(list);
-                        }
-
-                        event.target.focus();
-                    });
-                }
-
-                function wpAppAutosaveSettingsList(list) {
-                    const form = list.closest("form");
-
-                    if (!form) {
-                        return;
-                    }
-
-                    wpAppSetSaveStatus("<?php echo esc_js( __( 'Saving...' ) ); ?>");
-                    clearTimeout(wpAppAutosaveTimer);
-                    wpAppAutosaveTimer = setTimeout(function() {
-                        wpAppSubmitAutosave(form);
-                    }, 250);
-                }
-            </script>
         </div>
+        <?php
+    }
+
+    private static function render_navigation_preview( $placement ) {
+        $order_key = 'desktop' === $placement ? 'desktop_order' : 'launcher_order';
+        $order     = self::get_navigation_order( $placement );
+        ?>
+        <div data-order-inputs="<?php echo esc_attr( $placement ); ?>">
+            <?php foreach ( $order as $path ) : ?>
+                <input type="hidden" name="<?php echo esc_attr( self::OPTION . '[' . $order_key . '][]' ); ?>" value="<?php echo esc_attr( $path ); ?>">
+            <?php endforeach; ?>
+        </div>
+        <div class="wp-app-settings-navigation-preview wp-app-settings-preview-<?php echo esc_attr( $placement ); ?>" data-navigation-preview="<?php echo esc_attr( $placement ); ?>">
+            <?php foreach ( self::get_navigation_apps( $placement ) as $path => $metadata ) : ?>
+                <?php
+                $app  = self::get_app_settings( $path );
+                $name = '' !== trim( $app['title'] ) ? trim( $app['title'] ) : ( $metadata['name'] ?? $path );
+                ?>
+                <button type="button" class="wp-app-settings-tile" data-edit-app="<?php echo esc_attr( $path ); ?>" title="<?php echo esc_attr( $name ); ?>" aria-label="<?php echo esc_attr( $name ); ?>" draggable="true">
+                    <?php echo Masterbar::get_app_link_icon_html_for_app( $path, $metadata, $name ); ?>
+                    <?php
+                    if ( 'launcher' === $placement ) :
+						?>
+                        <span><?php echo esc_html( $name ); ?></span><?php endif; ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+        <p class="description" data-empty-preview="<?php echo esc_attr( $placement ); ?>" hidden></p>
         <?php
     }
 
