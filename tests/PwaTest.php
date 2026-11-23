@@ -7,6 +7,29 @@ use WpApp\Pwa;
 use WpApp\WpApp;
 
 class PwaTest extends TestCase {
+	public function test_shell_policy_precaches_only_explicit_shell_and_assets() {
+		$config = Pwa::register(
+            'private-notes',
+            [
+				'cache_policy' => 'shell',
+				'offline_url'  => 'https://example.org/private-notes/capture/',
+				'precache'     => [ 'https://example.org/assets/capture.js' ],
+			]
+        );
+		$this->assertSame( 'shell', $config['cache_policy'] );
+		$this->assertSame( [ 'https://example.org/private-notes/capture/', 'https://example.org/assets/capture.js' ], $config['precache'] );
+	}
+
+	public function test_shell_policy_requires_explicit_shell_url() {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register( 'private-notes', [ 'cache_policy' => 'shell' ] );
+	}
+
+	public function test_unknown_policy_cannot_silently_enable_scope_caching() {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register( 'private-notes', [ 'cache_policy' => 'typo' ] );
+	}
+
 	protected function setUp(): void {
 		parent::setUp();
 

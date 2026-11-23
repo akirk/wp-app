@@ -175,3 +175,5 @@ composer phpcs
 ## License
 
 GPL-2.0-or-later
+
+For explicit offline shell caching and durable client-side operation queues, see [Offline shells and outboxes](docs/offline.md).
