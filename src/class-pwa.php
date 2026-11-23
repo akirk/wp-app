@@ -163,6 +163,34 @@ class Pwa {
 		return self::add_query_args( $url, is_array( $args ) ? $args : [] );
 	}
 
+	/** Version the selected framework's offline runtime, independent of app files. */
+	public static function runtime_version() {
+		static $version;
+		if ( ! $version ) {
+			$hashes = [ hash_file( 'sha256', __FILE__ ) ];
+			foreach ( [ 'wp-app-worker.js', 'wp-app-outbox.js', 'wp-app-offline-pages.js' ] as $asset ) {
+				$hashes[] = hash_file( 'sha256', dirname( __DIR__ ) . '/assets/' . $asset );
+			}
+			$version = WP_APP_VERSION . '-' . substr( hash( 'sha256', implode( '', $hashes ) ), 0, 12 );
+		}
+		return $version;
+	}
+
+	/** Resolve runtime assets from the selected provider for enabled features. */
+	private static function runtime_assets( $config ) {
+		$assets = [];
+		if ( ! empty( $config['outbox'] ) ) {
+			$assets['wp-app-outbox'] = 'wp-app-outbox.js';
+		}
+		if ( ! empty( $config['visited_pages'] ) ) {
+			$assets['wp-app-offline-pages'] = 'wp-app-offline-pages.js';
+		}
+		foreach ( $assets as $handle => $file ) {
+			$assets[ $handle ] = self::add_query_args( wp_app_get_asset_url( $file ), [ 'ver' => self::runtime_version() ] );
+		}
+		return $assets;
+	}
+
 	/**
 	 * Register head and service worker registration output.
 	 *
@@ -170,6 +198,11 @@ class Pwa {
 	 * @param array  $config Normalized PWA config.
 	 */
 	private static function register_template_hooks( $app_path, $config ) {
+		foreach ( $config['runtime_assets'] as $handle => $url ) {
+			// Print before application scripts, even in minimal shell templates.
+			wp_app_enqueue_script( $handle, $url, [], false, false, $app_path );
+		}
+
 		if ( $config['head_tags'] ) {
 			$meta_hook = 'wp_app_head_meta_' . self::sanitize_hook_suffix( $app_path );
 			add_action(
@@ -456,7 +489,8 @@ class Pwa {
 		if ( ! empty( $config['visited_pages'] ) && ( 'shell' !== $cache_policy || empty( $config['cache_identity'] ) ) ) {
 			throw new \InvalidArgumentException( 'Visited pages require shell caching and a non-empty cache_identity.' );
 		}
-		$precache        = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( 'shell' === $cache_policy ? [ $offline_url ] : [ $app_url, $offline_url ], $precache ) ) ) ) );
+		$runtime_assets  = self::runtime_assets( $config );
+		$precache        = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( 'shell' === $cache_policy ? [ $offline_url ] : [ $app_url, $offline_url ], $precache, array_values( $runtime_assets ) ) ) ) ) );
 		$cache_prefix    = isset( $config['cache_prefix'] ) ? (string) $config['cache_prefix'] : 'wp-app-' . sanitize_key( $app_path ) . '-';
 		$scope_path      = self::url_path( $scope_url );
 		$cacheable_paths = isset( $config['cacheable_paths'] ) && is_array( $config['cacheable_paths'] ) ? $config['cacheable_paths'] : [];
@@ -486,6 +520,8 @@ class Pwa {
 
 		return [
 			'cache_policy'                     => $cache_policy,
+			'outbox'                           => ! empty( $config['outbox'] ),
+			'runtime_assets'                   => $runtime_assets,
 			'visited_pages'                    => ! empty( $config['visited_pages'] ),
 			'cache_identity'                   => isset( $config['cache_identity'] ) ? (string) $config['cache_identity'] : '',
 			'app_path'                         => $app_path,
@@ -499,7 +535,7 @@ class Pwa {
 			'scope_url'                        => $scope_url,
 			'scope_path'                       => $scope_path,
 			'offline_url'                      => $offline_url,
-			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' )
+			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' ) . ( $runtime_assets ? '-' . self::runtime_version() : '' )
 				. ( ! empty( $config['visited_pages'] ) ? '-' . md5( (string) $config['cache_identity'] ) : '' ),
 			'cache_prefix'                     => $cache_prefix,
 			'cacheable_paths'                  => $cacheable_paths,

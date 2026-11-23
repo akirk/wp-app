@@ -53,6 +53,42 @@ class PwaTest extends TestCase {
 		$this->assertNotSame( $first['cache_name'], $second['cache_name'] );
 	}
 
+	public function test_enabled_offline_features_load_and_precache_their_own_assets_in_app_scope() {
+		global $wp_app_route;
+		$config       = Pwa::register(
+            'offline-assets',
+            [
+				'cache_policy'   => 'shell',
+				'offline_url'    => 'https://example.org/offline-assets/capture/',
+				'outbox'         => true,
+				'visited_pages'  => true,
+				'cache_identity' => '7',
+			]
+        );
+		$wp_app_route = [ 'app_path' => 'another-app' ];
+		ob_start();
+		wp_app_do_scoped_action( 'wp_app_head_scripts' );
+		$other = ob_get_clean();
+		$this->assertStringNotContainsString( 'wp-app-outbox', $other );
+		$this->assertStringNotContainsString( 'wp-app-offline-pages', $other );
+
+		$wp_app_route = [ 'app_path' => 'offline-assets' ];
+		ob_start();
+		wp_app_do_scoped_action( 'wp_app_head_scripts' );
+		$html = ob_get_clean();
+		foreach ( [ 'wp-app-outbox', 'wp-app-offline-pages' ] as $handle ) {
+			$this->assertStringContainsString( $handle . '-js', $html );
+			$this->assertContains( $config['runtime_assets'][ $handle ], $config['precache'] );
+			$this->assertStringContainsString( $config['runtime_assets'][ $handle ], $html );
+		}
+	}
+
+	public function test_outbox_alone_does_not_load_visited_page_runtime() {
+		$config = Pwa::register( 'outbox-only', [ 'outbox' => true ] );
+		$this->assertArrayHasKey( 'wp-app-outbox', $config['runtime_assets'] );
+		$this->assertArrayNotHasKey( 'wp-app-offline-pages', $config['runtime_assets'] );
+	}
+
 	protected function setUp(): void {
 		parent::setUp();
 
