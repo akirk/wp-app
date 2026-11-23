@@ -7,18 +7,18 @@ const {chromium} = require('playwright');
 async function fixture(t) {
     let mode='live';
     const server=http.createServer((req,res)=>{
-        if(req.url.startsWith('/assets/')){res.setHeader('Content-Type','application/javascript');return res.end(fs.readFileSync(path.join(__dirname,'../assets',path.basename(req.url))));}
+        if(req.url.startsWith('/assets/')){res.setHeader('Content-Type','application/javascript');return res.end(fs.readFileSync(path.join(__dirname,'../assets',req.url.slice('/assets/'.length))));}
         if(req.url==='/bootstrap'){
             if(mode==='network'){req.socket.destroy();return;}
             res.setHeader('Content-Type','application/json');if(mode==='denied')res.statusCode=403;
             return res.end(JSON.stringify({userId:mode==='changed'?8:7,nonce:'fresh-memory-only'}));
         }
-        res.setHeader('Content-Type','text/html');res.end('<script src="/assets/wp-app-storage.js"></script><script src="/assets/wp-app-local-data.js"></script>');
+        res.setHeader('Content-Type','text/html');res.end('<script src="/assets/offline/data.js"></script>');
     });
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
     const browser=await chromium.launch(),page=await browser.newPage();t.after(async()=>{await browser.close();await new Promise(resolve=>server.close(resolve));});
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    return {page,mode(value){mode=value;},async boot(){await page.evaluate(()=>{var root=document.createElement('div');root.setAttribute('data-wp-app-bootstrap',JSON.stringify({url:location.origin+'/bootstrap',offline:{userId:7,label:'safe offline data'}}));document.body.append(root);});await page.addScriptTag({url:new URL('/assets/wp-app-bootstrap.js',page.url()).href});return page.evaluate(()=>wpAppBootstrap.then(result=>result,error=>({error:error.message})));}};
+    return {page,mode(value){mode=value;},async boot(){await page.evaluate(()=>{var root=document.createElement('div');root.setAttribute('data-wp-app-bootstrap',JSON.stringify({url:location.origin+'/bootstrap',offline:{userId:7,label:'safe offline data'}}));document.body.append(root);});await page.addScriptTag({url:new URL('/assets/offline/client.js',page.url()).href});return page.evaluate(()=>wpAppBootstrap.then(result=>result,error=>({error:error.message})));}};
 }
 test('named collections replace atomically without losing other collections and support Blob data',async t=>{
     const {page}=await fixture(t);

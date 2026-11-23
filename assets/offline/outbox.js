@@ -75,11 +75,12 @@
         function visible() { if (!document.hidden) sync(); }
         document.addEventListener('visibilitychange', visible);
         var timer = setInterval(function () { if (!document.hidden) sync(); }, config.retryInterval || 5000);
-        async function enqueue(entry, draftId, clearDraft) {
+        async function enqueue(entry, draftId, clearDraft, persist) {
             if (!entry.id || !entry.createdAt || Number(entry.userId) !== Number(config.userId)) throw new Error('Operation requires id, createdAt and matching userId.');
-            await transaction(['entries', 'drafts'], 'readwrite', function (tx) {
+            await transaction(persist ? ['entries', 'drafts', 'records'] : ['entries', 'drafts'], 'readwrite', function (tx) {
                 tx.objectStore('entries').put(entry);
                 if (draftId && (!clearDraft || clearDraft())) tx.objectStore('drafts').delete(draftId);
+                if (persist) { var result = persist(tx); if (result && typeof result.then === 'function') throw new Error('Enqueue persistence must be synchronous.'); }
             });
             if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
             changed();

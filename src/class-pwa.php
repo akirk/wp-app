@@ -219,7 +219,7 @@ class Pwa {
 		static $version;
 		if ( ! $version ) {
 			$hashes = [ hash_file( 'sha256', __FILE__ ), hash_file( 'sha256', __DIR__ . '/templates/wp-app-shell.php' ) ];
-			foreach ( [ 'wp-app-worker.js', 'wp-app-outbox.js', 'wp-app-offline-pages.js', 'wp-app-local-data.js', 'wp-app-bootstrap.js', 'wp-app-storage.js' ] as $asset ) {
+			foreach ( [ 'offline/worker.js', 'offline/outbox.js', 'offline/client.js', 'offline/data.js' ] as $asset ) {
 				$hashes[] = hash_file( 'sha256', dirname( __DIR__ ) . '/assets/' . $asset );
 			}
 			$version = WP_APP_VERSION . '-' . substr( hash( 'sha256', implode( '', $hashes ) ), 0, 12 );
@@ -231,20 +231,15 @@ class Pwa {
 	private static function runtime_assets( $config ) {
 		$assets = [];
 		if ( ! empty( $config['outbox'] ) || ! empty( $config['local_data'] ) ) {
-			$assets['wp-app-storage'] = 'wp-app-storage.js';
+			$assets['wp-app-offline-data'] = 'offline/data.js';
 		}
 		if ( ! empty( $config['outbox'] ) ) {
-			$assets['wp-app-outbox'] = 'wp-app-outbox.js';
+			$assets['wp-app-outbox'] = 'offline/outbox.js';
 		}
-		if ( ! empty( $config['visited_pages'] ) ) {
-			$assets['wp-app-offline-pages'] = 'wp-app-offline-pages.js';
+		if ( ! empty( $config['visited_pages'] ) || ! empty( $config['offline_shell'] ) ) {
+			$assets['wp-app-offline-client'] = 'offline/client.js';
 		}
-		if ( ! empty( $config['local_data'] ) ) {
-			$assets['wp-app-local-data'] = 'wp-app-local-data.js';
-		}
-		if ( ! empty( $config['offline_shell'] ) ) {
-			$assets['wp-app-bootstrap'] = 'wp-app-bootstrap.js';
-		}
+
 		foreach ( $assets as $handle => $file ) {
 			$assets[ $handle ] = self::add_query_args( wp_app_get_asset_url( $file ), [ 'ver' => self::runtime_version() ] );
 		}
@@ -519,7 +514,7 @@ class Pwa {
 
 		return 'self.wpAppWorker = ' . wp_json_encode( $service_worker_config ) . ";\n"
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read a bundled local asset, never a remote URL.
-			. file_get_contents( dirname( __DIR__ ) . '/assets/wp-app-worker.js' );
+			. file_get_contents( dirname( __DIR__ ) . '/assets/offline/worker.js' );
 	}
 
 	/**

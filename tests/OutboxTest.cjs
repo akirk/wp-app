@@ -7,8 +7,8 @@ const path = require('node:path');
 const {chromium} = require('playwright');
 
 async function fixture(t) {
-    const storage = fs.readFileSync(path.join(__dirname, '../assets/wp-app-storage.js'));
-    const source = fs.readFileSync(path.join(__dirname, '../assets/wp-app-outbox.js'));
+    const storage = fs.readFileSync(path.join(__dirname, '../assets/offline/data.js'));
+    const source = fs.readFileSync(path.join(__dirname, '../assets/offline/outbox.js'));
     const server = http.createServer((req, res) => {
         res.setHeader('Content-Type', ['/outbox.js','/storage.js'].includes(req.url) ? 'application/javascript' : 'text/html');
         res.end(req.url === '/outbox.js' ? source : req.url === '/storage.js' ? storage : '<script src="/storage.js"></script><script src="/outbox.js"></script>');
@@ -104,4 +104,18 @@ test('structured conflicts stay queued and are not replayed until the app resolv
         await queue.enqueue({id:'one',userId:7,createdAt:new Date().toISOString()});await queue.sync();await queue.sync();const rows=await queue.rows('entries');queue.destroy();return {attempts,rows};
     });
     assert.equal(result.attempts,1);assert.equal(result.rows[0].state,'conflict');assert.equal(result.rows[0].conflict.note.version,'server-v2');
+});
+
+test('a queued operation and its local view commit or abort together', async t => {
+    const page = await fixture(t);
+    const result = await page.evaluate(async () => {
+        const local = new WpAppLocalData(outbox);
+        await local.put('notes',{id:'one',text:'original'});
+        let failure;
+        try { await outbox.enqueue({id:'failed',userId:7,createdAt:new Date().toISOString()},null,null,tx=>{local.write(tx,'notes',{id:'one',text:'partial'});throw new Error('Local model failed');}); } catch(error){failure=error.message;}
+        const afterFailure={entries:await outbox.rows('entries'),note:await local.get('notes','one')};
+        await outbox.enqueue({id:'saved',userId:7,createdAt:new Date().toISOString()},null,null,tx=>local.write(tx,'notes',{id:'one',text:'committed'}));
+        return {failure,afterFailure,entries:await outbox.rows('entries'),note:await local.get('notes','one')};
+    });
+    assert.equal(result.failure,'Local model failed');assert.equal(result.afterFailure.entries.length,0);assert.equal(result.afterFailure.note.text,'original');assert.equal(result.entries[0].id,'saved');assert.equal(result.note.text,'committed');
 });

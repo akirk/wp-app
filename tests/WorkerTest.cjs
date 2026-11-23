@@ -12,7 +12,7 @@ function worker() {
     const cache = {put: async (key, value) => stored.set(typeof key === 'string' ? key : key.url, value),
         match: async key => stored.get(typeof key === 'string' ? key : key.url)};
     const self = {wpAppWorker: config, addEventListener: (type, fn) => handlers[type] = fn, skipWaiting: async () => {}};
-    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../assets/wp-app-worker.js'), 'utf8'), {
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../assets/offline/worker.js'), 'utf8'), {
         self, URL, Response, location: {origin: 'https://example.org'},
         caches: {open: async () => cache}, fetch: async () => response.clone()
     });

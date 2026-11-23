@@ -71,13 +71,13 @@ class PwaTest extends TestCase {
 		wp_app_do_scoped_action( 'wp_app_head_scripts' );
 		$other = ob_get_clean();
 		$this->assertStringNotContainsString( 'wp-app-outbox', $other );
-		$this->assertStringNotContainsString( 'wp-app-offline-pages', $other );
+		$this->assertStringNotContainsString( 'wp-app-offline-client', $other );
 
 		$wp_app_route = [ 'app_path' => 'offline-assets' ];
 		ob_start();
 		wp_app_do_scoped_action( 'wp_app_head_scripts' );
 		$html = ob_get_clean();
-		foreach ( [ 'wp-app-outbox', 'wp-app-offline-pages' ] as $handle ) {
+		foreach ( [ 'wp-app-offline-data', 'wp-app-outbox', 'wp-app-offline-client' ] as $handle ) {
 			$this->assertStringContainsString( $handle . '-js', $html );
 			$this->assertContains( $config['runtime_assets'][ $handle ], $config['precache'] );
 			$this->assertStringContainsString( $config['runtime_assets'][ $handle ], $html );
@@ -87,7 +87,7 @@ class PwaTest extends TestCase {
 	public function test_outbox_alone_does_not_load_visited_page_runtime() {
 		$config = Pwa::register( 'outbox-only', [ 'outbox' => true ] );
 		$this->assertArrayHasKey( 'wp-app-outbox', $config['runtime_assets'] );
-		$this->assertArrayNotHasKey( 'wp-app-offline-pages', $config['runtime_assets'] );
+		$this->assertArrayNotHasKey( 'wp-app-offline-client', $config['runtime_assets'] );
 	}
 
 	public function test_shared_shell_is_dispatched_without_live_head_injection_or_inline_scripts() {
@@ -129,8 +129,8 @@ class PwaTest extends TestCase {
 		$this->assertTrue( $handled );
 		$this->assertStringContainsString( 'test-app-shell', $html );
 		$this->assertStringContainsString( 'data-wp-app-bootstrap=', $html );
-		$this->assertStringContainsString( 'wp-app-local-data-js', $html );
-		$this->assertStringContainsString( 'wp-app-bootstrap-js', $html );
+		$this->assertStringContainsString( 'wp-app-offline-data-js', $html );
+		$this->assertStringContainsString( 'wp-app-offline-client-js', $html );
 		$this->assertStringNotContainsString( 'live-secret', $html );
 		$this->assertStringNotContainsString( 'live-footer', $html );
 		$this->assertDoesNotMatchRegularExpression( '/<script(?![^>]*src=)[^>]*>/', $html );
@@ -138,6 +138,8 @@ class PwaTest extends TestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		wp_scripts()->done  = [];
+		wp_scripts()->queue = [];
 
 		global $__wp_app_test_actions, $__wp_app_test_action_counts, $__wp_app_test_filters, $__wp_app_test_rewrite_rules, $wp_app_route;
 

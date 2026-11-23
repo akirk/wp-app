@@ -129,3 +129,17 @@ Enable `local_data` without `outbox` when adopting local storage independently. 
 For optimistic edits, include the app's baseline version and a stable operation ID in each payload. The server must compare that baseline and persist its receipt atomically with the write. The optional async `onAcknowledged(receipt, entry)` hook lets an app persist canonical local records before the outbox removes the operation. A failed acknowledgment hook keeps the operation queued for retry. A transport error with `status: 409` and `details.code: 'conflict'` persists the operation as `state: 'conflict'` with the details and stops automatic replay of that operation. Apps present the versions and explicitly replace or discard conflicted work after review. Independent operations still replay.
 
 Daymark can adopt the shell and bootstrap first while keeping its push worker (`register_service_worker: false`), bookmark store, uploads, and publishing queue. A small entry adapter can await `wpAppBootstrap` before starting its existing application. Later it can adopt shared storage or the outbox separately. The framework does not assume that a bookmark, a note edit, and a file upload have the same payload or conflict rules.
+
+
+## Runtime organization
+
+The JavaScript runtime lives under `assets/offline/`:
+
+- `data.js` contains scoped IndexedDB storage and named collections. Both share the same database lifecycle and are available without a queue.
+- `outbox.js` handles durable operations, transport, acknowledgment, and conflict states. It loads only when `outbox` is enabled.
+- `client.js` coordinates bootstrap, worker readiness, and visited-page inventory in the browser window. Without a bootstrap mount it does not fetch app configuration.
+- `worker.js` runs in the separate service-worker context and owns caching and navigation fallback.
+
+Storage and collections share one module; bootstrap and browser-side worker messaging share another. Public JavaScript APIs remain available. Apps continue to enable features declaratively rather than enqueueing these files.
+
+`outbox.enqueue(entry, draftId, clearDraft, persist)` accepts an optional synchronous persistence callback. Its transaction includes local records, so `persist(tx)` can call `local.write(tx, collection, value)` to commit an optimistic record with its queued operation. Throwing aborts all writes. Use the same storage adapter for the local data and outbox.
