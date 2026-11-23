@@ -245,6 +245,65 @@ class PwaTest extends TestCase {
 		$this->assertSame( '192x192', $manifest['icons'][0]['sizes'] );
 	}
 
+	public function test_worker_extensions_share_the_framework_worker_and_version_their_contents() {
+		$file = tempnam( sys_get_temp_dir(), 'wp-app-worker-' );
+		try {
+			file_put_contents( $file, 'self.addEventListener("push", event => self.registration.showNotification(self.wpAppWorker.appData.title));' );
+			$settings = [
+				'worker_scripts' => [ $file ],
+				'worker_data'    => [ 'title' => 'My app' ],
+			];
+			$first    = Pwa::register( 'push-app', $settings );
+			ob_start();
+			$this->assertTrue( Pwa::maybe_handle_app_request( 'push-app', 'wp-app-service-worker' ) );
+			$script = ob_get_clean();
+			$this->assertStringContainsString( '"appData":{"title":"My app"}', $script );
+			$this->assertStringContainsString( 'self.addEventListener("push"', $script );
+			$this->assertStringContainsString( 'self.addEventListener("fetch"', $script );
+			$this->assertStringContainsString( '}).call(self);', $script );
+			$this->assertNotContains( $file, $first['precache'] );
+			file_put_contents( $file, 'self.addEventListener("push", event => self.registration.showNotification("Updated"));' );
+			$second = Pwa::register( 'push-app', $settings );
+			$this->assertNotSame( $first['cache_name'], $second['cache_name'] );
+			$this->assertSame( $second['cache_name'], Pwa::register( 'push-app', $settings )['cache_name'] );
+			$settings['worker_data']['title'] = 'Changed';
+			$this->assertNotSame( $second['cache_name'], Pwa::register( 'push-app', $settings )['cache_name'] );
+		} finally {
+			unlink( $file );
+		}
+	}
+
+	/**
+	 * Reject script paths that cannot be bundled locally.
+	 *
+	 * @dataProvider invalid_worker_scripts
+	 */
+	public function test_worker_extensions_reject_nonlocal_or_missing_scripts( $scripts ) {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register( 'invalid-worker', [ 'worker_scripts' => $scripts ] );
+	}
+
+	public function invalid_worker_scripts() {
+		return [
+			'not an array' => [ 'worker.js' ],
+			'missing file' => [ [ __DIR__ . '/does-not-exist.js' ] ],
+			'directory'    => [ [ __DIR__ ] ],
+			'remote URL'   => [ [ 'https://example.org/worker.js' ] ],
+			'stream'       => [ [ 'data:text/javascript,self.close()' ] ],
+			'not a path'   => [ [ null ] ],
+		];
+	}
+
+	public function test_worker_extensions_reject_unserializable_data() {
+		$resource = fopen( __FILE__, 'r' );
+		try {
+			$this->expectException( \InvalidArgumentException::class );
+			Pwa::register( 'invalid-worker', [ 'worker_data' => [ 'resource' => $resource ] ] );
+		} finally {
+			fclose( $resource );
+		}
+	}
+
 	public function test_service_worker_endpoint_outputs_offline_cache_runtime() {
 		Pwa::register(
 			'recipe-cache',

@@ -143,3 +143,38 @@ The JavaScript runtime lives under `assets/offline/`:
 Storage and collections share one module; bootstrap and browser-side worker messaging share another. Public JavaScript APIs remain available. Apps continue to enable features declaratively rather than enqueueing these files.
 
 `outbox.enqueue(entry, draftId, clearDraft, persist)` accepts an optional synchronous persistence callback. Its transaction includes local records, so `persist(tx)` can call `local.write(tx, collection, value)` to commit an optimistic record with its queued operation. Throwing aborts all writes. Use the same storage adapter for the local data and outbox.
+
+## App-specific service worker handlers
+
+Add push notifications or other app events to the framework worker instead of registering a second worker:
+
+```php
+$app->enable_pwa( [
+    'cache_policy' => 'shell',
+    'offline_url' => home_url( '/my-app/offline/' ),
+    'worker_scripts' => [ __DIR__ . '/assets/push-worker.js' ],
+    'worker_data' => [ 'restUrl' => rest_url( 'my-app/v1/' ) ],
+] );
+```
+
+`worker_scripts` is an ordered list of readable local filesystem paths, supplied by trusted app code. wp-app reads and bundles those files into its generated worker response after the framework runtime. They do not need public URLs, separate precache entries, or `importScripts()`. Each file executes synchronously inside its own function scope, with `self` as `this`. Use classic JavaScript files rather than module imports or exports. A syntax or startup error prevents the new worker from installing; the browser keeps the previous active worker.
+
+Inside an extension:
+
+```js
+self.addEventListener('push', function (event) {
+    const data = event.data ? event.data.json() : {};
+    event.waitUntil(self.registration.showNotification(data.title || 'My app', {
+        body: data.body || '',
+        data: {restUrl: self.wpAppWorker.appData.restUrl}
+    }));
+});
+```
+
+The framework retains registration, install/activate caching, navigation fallback, shell refresh, and readiness checks. Extensions register standard service worker event listeners such as `push`, `notificationclick`, and `pushsubscriptionchange`, using `event.waitUntil()` for asynchronous work. They share the same registration and scope; do not register a second worker, replace framework configuration, or independently call `skipWaiting()` or `clients.claim()`. Avoid overlapping fetch handlers: only one handler can call `respondWith()` for a request. Reserve `wp-app-` message names for the framework.
+
+`worker_data` must be a JSON-serializable PHP array. Its values are exposed as `self.wpAppWorker.appData` and can be inspected in the worker response, so supply public configuration rather than credentials or private records. App-owned caches should use a separate prefix from the framework's `cache_prefix`, so framework activation leaves them intact. Apps remain responsible for those caches' lifecycle and logout cleanup.
+
+Extension contents and data automatically contribute to the cache version; editing a file changes both worker bytes and the cache name even when its path and the app version stay the same. The framework runtime version also contributes when extensions are enabled. A framework or extension update therefore rebuilds the offline cache while preserving unrelated app caches.
+
+Daymark can use this API to move push handling into an extension of the framework worker. Adopting that worker still requires declaring its exact offline asset URLs in `precache` and handling the transition from its previous cache/message protocol; storage and publishing queues can remain unchanged.

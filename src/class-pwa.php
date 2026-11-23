@@ -510,11 +510,18 @@ class Pwa {
 			'versionMessageType'     => $config['version_message_type'],
 			'syncTag'                => $config['sync_tag'],
 			'syncMessageType'        => $config['sync_message_type'],
+			'appData'                => $config['worker_data'],
 		];
+
+		$extensions = '';
+		foreach ( $config['worker_sources'] as $source ) {
+			// Separate lexical scopes let extensions use their own top-level names.
+			$extensions .= "\n;(function () {\n" . $source . "\n}).call(self);\n";
+		}
 
 		return 'self.wpAppWorker = ' . wp_json_encode( $service_worker_config ) . ";\n"
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read a bundled local asset, never a remote URL.
-			. file_get_contents( dirname( __DIR__ ) . '/assets/offline/worker.js' );
+			. file_get_contents( dirname( __DIR__ ) . '/assets/offline/worker.js' ) . $extensions;
 	}
 
 	/**
@@ -570,6 +577,28 @@ class Pwa {
 				}
 			}
 		}
+		$worker_scripts = $config['worker_scripts'] ?? [];
+		$worker_data    = $config['worker_data'] ?? [];
+		if ( ! is_array( $worker_scripts ) || ! is_array( $worker_data ) ) {
+			throw new \InvalidArgumentException( 'Worker scripts and data must be arrays.' );
+		}
+		$worker_sources = [];
+		foreach ( $worker_scripts as $file ) {
+			$path = is_string( $file ) ? realpath( $file ) : false;
+			if ( ! $path || ! is_file( $path ) || ! is_readable( $path ) ) {
+				throw new \InvalidArgumentException( 'Worker scripts must be readable local files.' );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read app-registered local worker code, never a remote URL.
+			$source = file_get_contents( $path );
+			if ( false === $source ) {
+				throw new \InvalidArgumentException( 'Could not read worker script.' );
+			}
+			$worker_sources[] = $source;
+		}
+		$worker_signature = $worker_sources || $worker_data ? wp_json_encode( [ $worker_sources, $worker_data ] ) : '';
+		if ( false === $worker_signature ) {
+			throw new \InvalidArgumentException( 'Worker scripts and data must be JSON serializable.' );
+		}
 		$runtime_assets  = self::runtime_assets( $config );
 		$precache        = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( 'shell' === $cache_policy ? [ $offline_url ] : [ $app_url, $offline_url ], $precache, array_values( $runtime_assets ) ) ) ) ) );
 		$cache_prefix    = isset( $config['cache_prefix'] ) ? (string) $config['cache_prefix'] : 'wp-app-' . sanitize_key( $app_path ) . '-';
@@ -606,6 +635,9 @@ class Pwa {
 			'offline_shell'                    => $config['offline_shell'] ?? [],
 			'offline_shell_path'               => ! empty( $config['offline_shell'] ) ? trim( substr( self::url_path( $offline_url ), strlen( self::url_path( $app_url ) ) ), '/' ) : '',
 			'runtime_assets'                   => $runtime_assets,
+			'worker_scripts'                   => $worker_scripts,
+			'worker_sources'                   => $worker_sources,
+			'worker_data'                      => $worker_data,
 			'visited_pages'                    => ! empty( $config['visited_pages'] ),
 			'cache_identity'                   => isset( $config['cache_identity'] ) ? (string) $config['cache_identity'] : '',
 			'app_path'                         => $app_path,
@@ -619,7 +651,8 @@ class Pwa {
 			'scope_url'                        => $scope_url,
 			'scope_path'                       => $scope_path,
 			'offline_url'                      => $offline_url,
-			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' ) . ( $runtime_assets ? '-' . self::runtime_version() : '' )
+			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' ) . ( $runtime_assets || $worker_sources ? '-' . self::runtime_version() : '' )
+				. ( $worker_signature ? '-' . substr( hash( 'sha256', $worker_signature ), 0, 12 ) : '' )
 				. ( ! empty( $config['cache_identity'] ) ? '-' . md5( (string) $config['cache_identity'] ) : '' ),
 			'cache_prefix'                     => $cache_prefix,
 			'cacheable_paths'                  => $cacheable_paths,
