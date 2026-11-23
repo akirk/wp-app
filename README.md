@@ -175,3 +175,5 @@ composer phpcs
 ## License
 
 GPL-2.0-or-later
+
+For shared application shells, safe bootstrap, local data, offline caching, and durable operation queues, see [Offline shells and outboxes](docs/offline.md).

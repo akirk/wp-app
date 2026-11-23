@@ -7,8 +7,172 @@ use WpApp\Pwa;
 use WpApp\WpApp;
 
 class PwaTest extends TestCase {
+	public function test_app_shell_defaults_to_shell_caching() {
+		$config = Pwa::register(
+			'safe-shell',
+			[
+				'offline_shell' => [
+					'content'       => __DIR__ . '/fixtures/templates/offline-content.php',
+					'bootstrap_url' => 'https://example.org/safe-shell/config',
+					'offline_data'  => [ 'userId' => 7 ],
+				],
+			]
+		);
+		$this->assertSame( 'shell', $config['cache_policy'] );
+		$this->assertNotContains( 'https://example.org/safe-shell/', $config['precache'] );
+		$this->assertNotContains( $config['offline_shell']['bootstrap_url'], $config['precache'] );
+	}
+
+	public function test_app_shell_rejects_scope_caching() {
+		$this->expectException( \InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'An app shell requires shell caching.' );
+		Pwa::register(
+			'unsafe-shell',
+			[
+				'cache_policy'  => 'scope',
+				'offline_shell' => [
+					'content'       => __DIR__ . '/fixtures/templates/offline-content.php',
+					'bootstrap_url' => 'https://example.org/unsafe-shell/config',
+					'offline_data'  => [ 'userId' => 7 ],
+				],
+			]
+		);
+	}
+
+	public function test_shell_policy_precaches_only_explicit_shell_and_assets() {
+		$config = Pwa::register(
+            'private-notes',
+            [
+				'cache_policy' => 'shell',
+				'offline_url'  => 'https://example.org/private-notes/capture/',
+				'precache'     => [ 'https://example.org/assets/capture.js' ],
+			]
+        );
+		$this->assertSame( 'shell', $config['cache_policy'] );
+		$this->assertSame( [ 'https://example.org/private-notes/capture/', 'https://example.org/assets/capture.js' ], $config['precache'] );
+	}
+
+	public function test_shell_policy_requires_explicit_shell_url() {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register( 'private-notes', [ 'cache_policy' => 'shell' ] );
+	}
+
+	public function test_unknown_policy_cannot_silently_enable_scope_caching() {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register( 'private-notes', [ 'cache_policy' => 'typo' ] );
+	}
+
+	public function test_visited_pages_require_an_account_identity() {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register(
+            'private-notes',
+            [
+				'cache_policy'  => 'shell',
+				'offline_url'   => 'https://example.org/private-notes/',
+				'visited_pages' => true,
+			]
+        );
+	}
+
+	public function test_visited_page_caches_are_isolated_by_identity() {
+		$settings = [
+			'cache_policy'  => 'shell',
+			'offline_url'   => 'https://example.org/private-notes/',
+			'visited_pages' => true,
+		];
+		$first    = Pwa::register( 'private-notes', $settings + [ 'cache_identity' => '7' ] );
+		$second   = Pwa::register( 'private-notes', $settings + [ 'cache_identity' => '8' ] );
+		$this->assertNotSame( $first['cache_name'], $second['cache_name'] );
+	}
+
+	public function test_enabled_offline_features_load_and_precache_their_own_assets_in_app_scope() {
+		global $wp_app_route;
+		$config = Pwa::register(
+            'offline-assets',
+            [
+				'cache_policy'   => 'shell',
+				'offline_url'    => 'https://example.org/offline-assets/capture/',
+				'outbox'         => true,
+				'visited_pages'  => true,
+				'cache_identity' => '7',
+			]
+        );
+		do_action( 'wp_enqueue_scripts' );
+		$wp_app_route = [ 'app_path' => 'another-app' ];
+		ob_start();
+		wp_app_do_scoped_action( 'wp_app_head_scripts' );
+		$other = ob_get_clean();
+		$this->assertStringNotContainsString( 'wp-app-outbox', $other );
+		$this->assertStringNotContainsString( 'wp-app-offline-client', $other );
+
+		$wp_app_route = [ 'app_path' => 'offline-assets' ];
+		ob_start();
+		wp_app_do_scoped_action( 'wp_app_head_scripts' );
+		$html = ob_get_clean();
+		foreach ( [ 'wp-app-offline-data', 'wp-app-outbox', 'wp-app-offline-client' ] as $handle ) {
+			$this->assertStringContainsString( $handle . '-js', $html );
+			$this->assertContains( $config['runtime_assets'][ $handle ], $config['precache'] );
+			$this->assertNull( wp_scripts()->registered[ $handle ]->ver, 'Already-versioned runtime URLs must not receive a WordPress version query.' );
+			$this->assertStringContainsString( $config['runtime_assets'][ $handle ], $html );
+		}
+	}
+
+	public function test_outbox_alone_does_not_load_visited_page_runtime() {
+		$config = Pwa::register( 'outbox-only', [ 'outbox' => true ] );
+		$this->assertArrayHasKey( 'wp-app-outbox', $config['runtime_assets'] );
+		$this->assertArrayNotHasKey( 'wp-app-offline-client', $config['runtime_assets'] );
+	}
+
+	public function test_shared_shell_is_dispatched_without_live_head_injection_or_inline_scripts() {
+		if ( ! defined( 'ABSPATH' ) ) {
+			define( 'ABSPATH', __DIR__ . '/fixtures/' ); }
+		$config = Pwa::register(
+            'shared-shell',
+            [
+				'cache_policy'   => 'shell',
+				'local_data'     => true,
+				'cache_identity' => '7',
+				'offline_shell'  => [
+					'content'       => __DIR__ . '/fixtures/templates/offline-content.php',
+					'bootstrap_url' => 'https://example.org/shared-shell/config',
+					'offline_data'  => [ 'userId' => 7 ],
+				],
+			]
+        );
+		add_action(
+            'wp_head',
+            static function () {
+				echo 'live-secret-must-not-be-cached';
+			}
+        );
+		add_action(
+            'wp_footer',
+            static function () {
+				echo 'live-footer-must-not-be-cached';
+			}
+        );
+		ob_start();
+		$handled = Pwa::maybe_handle_app_request( 'shared-shell', 'offline' );
+		$html    = ob_get_clean();
+		preg_match( '/data-wp-app-bootstrap="([^"]+)"/', $html, $match );
+		$bootstrap = json_decode( html_entity_decode( $match[1], ENT_QUOTES ), true );
+		$this->assertSame( $config['service_worker_url'], $bootstrap['worker']['url'] );
+		$this->assertSame( $config['cache_name'], $bootstrap['worker']['cacheName'] );
+		$this->assertSame( $config['precache'], $bootstrap['worker']['requiredUrls'] );
+		$this->assertTrue( $handled );
+		$this->assertStringContainsString( 'test-app-shell', $html );
+		$this->assertStringContainsString( 'data-wp-app-bootstrap=', $html );
+		$this->assertStringContainsString( 'wp-app-offline-data-js', $html );
+		$this->assertStringContainsString( 'wp-app-offline-client-js', $html );
+		$this->assertStringNotContainsString( 'live-secret', $html );
+		$this->assertStringNotContainsString( 'live-footer', $html );
+		$this->assertDoesNotMatchRegularExpression( '/<script(?![^>]*src=)[^>]*>/', $html );
+	}
+
 	protected function setUp(): void {
 		parent::setUp();
+		wp_scripts()->done  = [];
+		wp_scripts()->queue = [];
 
 		global $__wp_app_test_actions, $__wp_app_test_action_counts, $__wp_app_test_filters, $__wp_app_test_rewrite_rules, $wp_app_route;
 
@@ -112,6 +276,65 @@ class PwaTest extends TestCase {
 		$this->assertSame( 'standalone', $manifest['display'] );
 		$this->assertSame( 'Offline recipe notes.', $manifest['description'] );
 		$this->assertSame( '192x192', $manifest['icons'][0]['sizes'] );
+	}
+
+	public function test_worker_extensions_share_the_framework_worker_and_version_their_contents() {
+		$file = tempnam( sys_get_temp_dir(), 'wp-app-worker-' );
+		try {
+			file_put_contents( $file, 'self.addEventListener("push", event => self.registration.showNotification(self.wpAppWorker.appData.title));' );
+			$settings = [
+				'worker_scripts' => [ $file ],
+				'worker_data'    => [ 'title' => 'My app' ],
+			];
+			$first    = Pwa::register( 'push-app', $settings );
+			ob_start();
+			$this->assertTrue( Pwa::maybe_handle_app_request( 'push-app', 'wp-app-service-worker' ) );
+			$script = ob_get_clean();
+			$this->assertStringContainsString( '"appData":{"title":"My app"}', $script );
+			$this->assertStringContainsString( 'self.addEventListener("push"', $script );
+			$this->assertStringContainsString( 'self.addEventListener("fetch"', $script );
+			$this->assertStringContainsString( '}).call(self);', $script );
+			$this->assertNotContains( $file, $first['precache'] );
+			file_put_contents( $file, 'self.addEventListener("push", event => self.registration.showNotification("Updated"));' );
+			$second = Pwa::register( 'push-app', $settings );
+			$this->assertNotSame( $first['cache_name'], $second['cache_name'] );
+			$this->assertSame( $second['cache_name'], Pwa::register( 'push-app', $settings )['cache_name'] );
+			$settings['worker_data']['title'] = 'Changed';
+			$this->assertNotSame( $second['cache_name'], Pwa::register( 'push-app', $settings )['cache_name'] );
+		} finally {
+			unlink( $file );
+		}
+	}
+
+	/**
+	 * Reject script paths that cannot be bundled locally.
+	 *
+	 * @dataProvider invalid_worker_scripts
+	 */
+	public function test_worker_extensions_reject_nonlocal_or_missing_scripts( $scripts ) {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register( 'invalid-worker', [ 'worker_scripts' => $scripts ] );
+	}
+
+	public function invalid_worker_scripts() {
+		return [
+			'not an array' => [ 'worker.js' ],
+			'missing file' => [ [ __DIR__ . '/does-not-exist.js' ] ],
+			'directory'    => [ [ __DIR__ ] ],
+			'remote URL'   => [ [ 'https://example.org/worker.js' ] ],
+			'stream'       => [ [ 'data:text/javascript,self.close()' ] ],
+			'not a path'   => [ [ null ] ],
+		];
+	}
+
+	public function test_worker_extensions_reject_unserializable_data() {
+		$resource = fopen( __FILE__, 'r' );
+		try {
+			$this->expectException( \InvalidArgumentException::class );
+			Pwa::register( 'invalid-worker', [ 'worker_data' => [ 'resource' => $resource ] ] );
+		} finally {
+			fclose( $resource );
+		}
 	}
 
 	public function test_service_worker_endpoint_outputs_offline_cache_runtime() {

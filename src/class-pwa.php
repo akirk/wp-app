@@ -10,8 +10,10 @@ if ( class_exists( 'WpApp\Pwa' ) ) {
  * Progressive Web App support for WpApp applications.
  */
 class Pwa {
-	const MANIFEST_REQUEST       = 'wp-app-manifest';
-	const SERVICE_WORKER_REQUEST = 'wp-app-service-worker';
+	const APP_SHELL_SUPPORTED     = true;
+	const OFFLINE_PAGES_SUPPORTED = true;
+	const MANIFEST_REQUEST        = 'wp-app-manifest';
+	const SERVICE_WORKER_REQUEST  = 'wp-app-service-worker';
 
 	/**
 	 * Registered PWA configurations keyed by app path.
@@ -132,6 +134,20 @@ class Pwa {
 			return true;
 		}
 
+		if ( ! empty( $config['offline_shell'] ) && $request_path === $config['offline_shell_path'] ) {
+			global $wp_app_route;
+			$previous     = $wp_app_route;
+			$wp_app_route = [
+				'app_path' => $app_path,
+				'pattern'  => $request_path,
+			];
+			try {
+				do_action( 'wp_app_before_render', __DIR__ . '/templates/wp-app-shell.php', $wp_app_route );
+				self::render_shell( $app_path, true );
+			} finally {
+				$wp_app_route = $previous; }
+			return true;
+		}
 		return false;
 	}
 
@@ -162,6 +178,74 @@ class Pwa {
 		return self::add_query_args( $url, is_array( $args ) ? $args : [] );
 	}
 
+	/** Render an app document; only the isolated fallback is suitable for precaching. */
+	public static function render_shell( $app_path, $offline = false ) {
+		$config = self::get_config( $app_path );
+		$shell  = $config['offline_shell'] ?? [];
+		if ( empty( $shell['content'] ) || ! is_file( $shell['content'] ) ) {
+			throw new \InvalidArgumentException( 'An app shell requires an existing content template.' );
+		}
+		if ( ! empty( $shell['capability'] ) && ! current_user_can( $shell['capability'] ) ) {
+			wp_die( 'Sign in with permission to open this app.', '', [ 'response' => 403 ] );
+		}
+		$bootstrap = [
+			'url'     => $shell['bootstrap_url'],
+			'offline' => $shell['offline_data'],
+			'worker'  => $config['register_service_worker'] ? [
+				'url'                    => $config['service_worker_url'],
+				'scope'                  => $config['scope_path'],
+				'cacheMessageType'       => $config['cache_message_type'],
+				'cacheStatusMessageType' => $config['cache_status_message_type'],
+				'cacheName'              => $config['cache_name'],
+				'offlineUrl'             => $config['offline_url'],
+				'requiredUrls'           => $config['precache'],
+			] : null,
+		];
+		if ( ! did_action( 'wp_enqueue_scripts' ) ) {
+			do_action( 'wp_enqueue_scripts' );
+		}
+		if ( ! headers_sent() ) {
+			nocache_headers();
+			header( 'X-Wp-App-Offline: ' . $config['cache_identity'] );
+			if ( $offline || ! empty( $shell['csp'] ) ) {
+				header( 'Content-Security-Policy: ' . ( $shell['csp'] ?? "script-src 'self'; object-src 'none'; base-uri 'self'" ) );
+			}
+		}
+		require __DIR__ . '/templates/wp-app-shell.php';
+	}
+
+	/** Version the selected framework's offline runtime, independent of app files. */
+	public static function runtime_version() {
+		static $version;
+		if ( ! $version ) {
+			$hashes = [ hash_file( 'sha256', __FILE__ ), hash_file( 'sha256', __DIR__ . '/templates/wp-app-shell.php' ) ];
+			foreach ( [ 'offline/worker.js', 'offline/outbox.js', 'offline/client.js', 'offline/data.js' ] as $asset ) {
+				$hashes[] = hash_file( 'sha256', dirname( __DIR__ ) . '/assets/' . $asset );
+			}
+			$version = WP_APP_VERSION . '-' . substr( hash( 'sha256', implode( '', $hashes ) ), 0, 12 );
+		}
+		return $version;
+	}
+
+	/** Resolve runtime assets from the selected provider for enabled features. */
+	private static function runtime_assets( $config ) {
+		$assets = [];
+		if ( ! empty( $config['outbox'] ) || ! empty( $config['local_data'] ) ) {
+			$assets['wp-app-offline-data'] = 'offline/data.js';
+		}
+		if ( ! empty( $config['outbox'] ) ) {
+			$assets['wp-app-outbox'] = 'offline/outbox.js';
+		}
+		if ( ! empty( $config['visited_pages'] ) || ! empty( $config['offline_shell'] ) ) {
+			$assets['wp-app-offline-client'] = 'offline/client.js';
+		}
+
+		foreach ( $assets as $handle => $file ) {
+			$assets[ $handle ] = self::add_query_args( wp_app_get_asset_url( $file ), [ 'ver' => self::runtime_version() ] );
+		}
+		return $assets;
+	}
+
 	/**
 	 * Register head and service worker registration output.
 	 *
@@ -169,25 +253,34 @@ class Pwa {
 	 * @param array  $config Normalized PWA config.
 	 */
 	private static function register_template_hooks( $app_path, $config ) {
-		if ( $config['head_tags'] ) {
-			$meta_hook = 'wp_app_head_meta_' . self::sanitize_hook_suffix( $app_path );
-			add_action(
-				$meta_hook,
-				function () use ( $config ) {
-					self::render_head_tags( $config );
-				}
-			);
-		}
+		$enqueue = static function () use ( $app_path, $config ) {
+			foreach ( $config['runtime_assets'] as $handle => $url ) {
+				wp_app_enqueue_script( $handle, $url, [], null, false, $app_path );
+			}
+		};
+		if ( function_exists( 'did_action' ) && did_action( 'wp_enqueue_scripts' ) ) {
+			$enqueue(); } else {
+			add_action( 'wp_enqueue_scripts', $enqueue ); }
 
-		if ( $config['register_service_worker'] ) {
-			$script_hook = 'wp_app_body_close_' . self::sanitize_hook_suffix( $app_path );
-			add_action(
-				$script_hook,
-				function () use ( $config ) {
-					self::render_registration_script( $config );
-				}
-			);
-		}
+			if ( $config['head_tags'] ) {
+				$meta_hook = 'wp_app_head_meta_' . self::sanitize_hook_suffix( $app_path );
+				add_action(
+                    $meta_hook,
+                    function () use ( $config ) {
+                        self::render_head_tags( $config );
+                    }
+				);
+			}
+
+			if ( $config['register_service_worker'] && empty( $config['offline_shell'] ) ) {
+				$script_hook = 'wp_app_body_close_' . self::sanitize_hook_suffix( $app_path );
+				add_action(
+                    $script_hook,
+                    function () use ( $config ) {
+                        self::render_registration_script( $config );
+                    }
+				);
+			}
 	}
 
 	/**
@@ -388,6 +481,7 @@ class Pwa {
 	 * @param array $config Normalized PWA config.
 	 */
 	private static function send_service_worker( $config ) {
+		self::send_header( 'Cache-Control: no-store' );
 		self::send_header( 'Content-Type: application/javascript; charset=UTF-8' );
 		self::send_header( 'Service-Worker-Allowed: ' . $config['service_worker_allowed'] );
 		echo self::get_service_worker_script( $config );
@@ -402,6 +496,9 @@ class Pwa {
 	private static function get_service_worker_script( $config ) {
 		$service_worker_config = [
 			'cacheName'              => $config['cache_name'],
+			'cachePolicy'            => $config['cache_policy'],
+			'visitedPages'           => $config['visited_pages'],
+			'cacheIdentity'          => $config['cache_identity'],
 			'cachePrefix'            => $config['cache_prefix'],
 			'precache'               => $config['precache'],
 			'offlineUrl'             => $config['offline_url'],
@@ -413,224 +510,18 @@ class Pwa {
 			'versionMessageType'     => $config['version_message_type'],
 			'syncTag'                => $config['sync_tag'],
 			'syncMessageType'        => $config['sync_message_type'],
+			'appData'                => $config['worker_data'],
 		];
 
-		return '(function(config) {
-const cacheName = config.cacheName;
-const cachePrefix = config.cachePrefix;
-const precache = config.precache || [];
-const cacheablePaths = config.cacheablePaths || [];
-const cacheableSearchParams = config.cacheableSearchParams || [];
-
-function uniqueUrls(items) {
-	const seen = {};
-	return items.filter(function(url) {
-		if (seen[url.href]) {
-			return false;
+		$extensions = '';
+		foreach ( $config['worker_sources'] as $source ) {
+			// Separate lexical scopes let extensions use their own top-level names.
+			$extensions .= "\n;(function () {\n" . $source . "\n}).call(self);\n";
 		}
-		seen[url.href] = true;
-		return true;
-	});
-}
 
-function isCacheableRequest(url) {
-	if (url.origin !== location.origin) {
-		return false;
-	}
-
-	if (cacheablePaths.some(function(path) {
-		return path && url.pathname.indexOf(path) === 0;
-	})) {
-		return true;
-	}
-
-	return cacheableSearchParams.some(function(param) {
-		return param && url.search.indexOf(param) !== -1;
-	});
-}
-
-function sendMessage(source, message) {
-	if (source && source.postMessage) {
-		source.postMessage(message);
-	}
-}
-
-self.addEventListener("install", function(event) {
-	event.waitUntil(
-		caches.open(cacheName).then(function(cache) {
-			return cache.addAll(precache);
-		}).then(function() {
-			return self.skipWaiting();
-		})
-	);
-});
-
-self.addEventListener("activate", function(event) {
-	event.waitUntil(
-		caches.keys().then(function(keys) {
-			return Promise.all(keys.map(function(key) {
-				if (key !== cacheName && key.indexOf(cachePrefix) === 0) {
-					return caches.delete(key);
-				}
-				return Promise.resolve();
-			}));
-		}).then(function() {
-			return self.clients.claim();
-		})
-	);
-});
-
-self.addEventListener("fetch", function(event) {
-	const request = event.request;
-	const requestUrl = new URL(request.url);
-
-	if (request.method !== "GET" || !isCacheableRequest(requestUrl)) {
-		return;
-	}
-
-	event.respondWith(
-		fetch(request).then(function(response) {
-			const copy = response.clone();
-			if (response.ok) {
-				caches.open(cacheName).then(function(cache) {
-					cache.put(request, copy);
-				});
-			}
-			return response;
-		}).catch(function() {
-			return caches.match(request).then(function(response) {
-				if (response) {
-					return response;
-				}
-
-				if (request.mode === "navigate") {
-					return caches.match(requestUrl.href).then(function(urlResponse) {
-						if (urlResponse) {
-							return urlResponse;
-						}
-
-						return caches.match(config.offlineUrl).then(function(offlineResponse) {
-							return offlineResponse || caches.match(config.scopeUrl);
-						});
-					});
-				}
-
-				return caches.match(config.offlineUrl).then(function(offlineResponse) {
-					return offlineResponse || caches.match(config.scopeUrl);
-				});
-			});
-		})
-	);
-});
-
-self.addEventListener("message", function(event) {
-	if (!event.data) {
-		return;
-	}
-
-	if (event.data.type === config.versionMessageType) {
-		sendMessage(event.source, {
-			type: config.versionMessageType,
-			version: cacheName
-		});
-		return;
-	}
-
-	if (event.data.type !== config.cacheMessageType) {
-		return;
-	}
-
-	let urls = Array.isArray(event.data.urls) ? event.data.urls : [event.data.url];
-	let requiredUrls = Array.isArray(event.data.requiredUrls) ? event.data.requiredUrls : urls;
-
-	urls = uniqueUrls(urls.filter(Boolean).map(function(url) {
-		return new URL(url, location.origin);
-	}).filter(isCacheableRequest));
-	requiredUrls = uniqueUrls(requiredUrls.filter(Boolean).map(function(url) {
-		return new URL(url, location.origin);
-	}).filter(isCacheableRequest));
-
-	function sendCacheStatus(ok, cachedCount, totalCount, cachedUrls) {
-		sendMessage(event.source, {
-			type: config.cacheStatusMessageType,
-			ok: !!ok,
-			cachedCount: cachedCount || 0,
-			totalCount: totalCount || 0,
-			cachedUrls: cachedUrls || []
-		});
-	}
-
-	if (!requiredUrls.length) {
-		sendCacheStatus(false);
-		return;
-	}
-
-	event.waitUntil(caches.open(cacheName).then(function(cache) {
-		return Promise.all(urls.map(function(url) {
-			return fetch(url.href, {
-				credentials: "same-origin",
-				cache: "reload"
-			}).then(function(response) {
-				if (response.ok) {
-					return cache.put(url.href, response);
-				}
-			}).catch(function() {});
-		})).then(function() {
-			const cachedUrlResults = Promise.all(urls.map(function(url) {
-				return cache.match(url.href).then(function(cached) {
-					return {
-						href: url.href,
-						cached: !!cached
-					};
-				});
-			}));
-			const cachedUrlStatus = cachedUrlResults.then(function(results) {
-				const cachedUrls = [];
-				const cachedCount = results.reduce(function(total, result) {
-					if (result.cached) {
-						cachedUrls.push(result.href);
-						return total + 1;
-					}
-					return total;
-				}, 0);
-				return {
-					count: cachedCount,
-					urls: cachedUrls
-				};
-			});
-			const requiredReady = Promise.all(requiredUrls.map(function(url) {
-				return cache.match(url.href).then(function(cached) {
-					if (cached) {
-						return;
-					}
-					return Promise.reject(new Error("Not cached"));
-				});
-			}));
-			return Promise.all([cachedUrlStatus, requiredReady]).then(function(results) {
-				sendCacheStatus(true, results[0].count, urls.length, results[0].urls);
-			}, function() {
-				return cachedUrlStatus.then(function(status) {
-					sendCacheStatus(false, status.count, urls.length, status.urls);
-				}, function() {
-					sendCacheStatus(false, 0, urls.length, []);
-				});
-			});
-		});
-	}).catch(function() {
-		sendCacheStatus(false, 0, urls.length, []);
-	}));
-});
-
-self.addEventListener("sync", function(event) {
-	if (event.tag === config.syncTag && self.clients) {
-		event.waitUntil(self.clients.matchAll().then(function(clients) {
-			clients.forEach(function(client) {
-				client.postMessage({ type: config.syncMessageType });
-			});
-		}));
-	}
-});
-})(' . wp_json_encode( $service_worker_config ) . ');';
+		return 'self.wpAppWorker = ' . wp_json_encode( $service_worker_config ) . ";\n"
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read a bundled local asset, never a remote URL.
+			. file_get_contents( dirname( __DIR__ ) . '/assets/offline/worker.js' ) . $extensions;
 	}
 
 	/**
@@ -653,13 +544,70 @@ self.addEventListener("sync", function(event) {
 		$theme_color         = isset( $config['theme_color'] ) ? (string) $config['theme_color'] : '#2271b1';
 		$background_color    = isset( $config['background_color'] ) ? (string) $config['background_color'] : '#ffffff';
 		$scope_url           = isset( $config['scope'] ) ? self::normalize_url( $config['scope'] ) : $app_url;
-		$offline_url         = isset( $config['offline_url'] ) ? self::normalize_url( $config['offline_url'] ) : $app_url;
+		$offline_url         = isset( $config['offline_url'] ) ? self::normalize_url( $config['offline_url'] ) : ( ! empty( $config['offline_shell'] ) ? self::app_url( $app_path, 'offline/' ) : $app_url );
 		$precache            = isset( $config['precache'] ) && is_array( $config['precache'] ) ? $config['precache'] : [];
-		$precache            = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( [ $app_url, $offline_url ], $precache ) ) ) ) );
-		$cache_prefix        = isset( $config['cache_prefix'] ) ? (string) $config['cache_prefix'] : 'wp-app-' . sanitize_key( $app_path ) . '-';
-		$scope_path          = self::url_path( $scope_url );
-		$cacheable_paths     = isset( $config['cacheable_paths'] ) && is_array( $config['cacheable_paths'] ) ? $config['cacheable_paths'] : [];
-		$cacheable_paths     = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_path' ], array_merge( [ $scope_path ], $cacheable_paths ) ) ) ) );
+		$cache_policy        = $config['cache_policy'] ?? ( ! empty( $config['offline_shell'] ) ? 'shell' : 'scope' );
+		if ( ! in_array( $cache_policy, [ 'scope', 'shell' ], true ) ) {
+			throw new \InvalidArgumentException( 'Unknown PWA cache policy.' );
+		}
+		if ( 'shell' === $cache_policy && empty( $config['offline_url'] ) && empty( $config['offline_shell'] ) ) {
+			throw new \InvalidArgumentException( 'Shell caching requires an explicit offline_url.' );
+		}
+		if ( ! empty( $config['visited_pages'] ) && ( 'shell' !== $cache_policy || empty( $config['cache_identity'] ) ) ) {
+			throw new \InvalidArgumentException( 'Visited pages require shell caching and a non-empty cache_identity.' );
+		}
+		if ( ! empty( $config['offline_shell'] ) ) {
+			if ( 'shell' !== $cache_policy ) {
+				throw new \InvalidArgumentException( 'An app shell requires shell caching.' );
+			}
+			$shell = $config['offline_shell'];
+			if ( ! is_array( $shell ) || empty( $shell['content'] ) || ! is_file( $shell['content'] ) || empty( $shell['bootstrap_url'] ) || ! isset( $shell['offline_data']['userId'] ) ) {
+				throw new \InvalidArgumentException( 'An app shell requires content, bootstrap_url, and offline_data.userId.' );
+			}
+			if ( isset( $config['cache_identity'] ) && (string) $config['cache_identity'] !== (string) $shell['offline_data']['userId'] ) {
+				throw new \InvalidArgumentException( 'Shell bootstrap and cache identities must match.' );
+			}
+			$config['cache_identity'] = (string) $shell['offline_data']['userId'];
+			$shell_scope_path         = self::url_path( $app_url );
+			$offline_path             = self::url_path( $offline_url );
+			if ( 0 !== strpos( $offline_path, $shell_scope_path ) || strlen( $offline_path ) <= strlen( $shell_scope_path ) ) {
+				throw new \InvalidArgumentException( 'An app shell needs a dedicated fallback path inside its app scope.' );
+			}
+			foreach ( [ PHP_URL_HOST, PHP_URL_SCHEME, PHP_URL_PORT ] as $component ) {
+				$value = wp_parse_url( $offline_url, $component );
+				if ( null !== $value && $value !== wp_parse_url( $app_url, $component ) ) {
+					throw new \InvalidArgumentException( 'An app shell fallback must have the app origin.' );
+				}
+			}
+		}
+		$worker_scripts = $config['worker_scripts'] ?? [];
+		$worker_data    = $config['worker_data'] ?? [];
+		if ( ! is_array( $worker_scripts ) || ! is_array( $worker_data ) ) {
+			throw new \InvalidArgumentException( 'Worker scripts and data must be arrays.' );
+		}
+		$worker_sources = [];
+		foreach ( $worker_scripts as $file ) {
+			$path = is_string( $file ) ? realpath( $file ) : false;
+			if ( ! $path || ! is_file( $path ) || ! is_readable( $path ) ) {
+				throw new \InvalidArgumentException( 'Worker scripts must be readable local files.' );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read app-registered local worker code, never a remote URL.
+			$source = file_get_contents( $path );
+			if ( false === $source ) {
+				throw new \InvalidArgumentException( 'Could not read worker script.' );
+			}
+			$worker_sources[] = $source;
+		}
+		$worker_signature = $worker_sources || $worker_data ? wp_json_encode( [ $worker_sources, $worker_data ] ) : '';
+		if ( false === $worker_signature ) {
+			throw new \InvalidArgumentException( 'Worker scripts and data must be JSON serializable.' );
+		}
+		$runtime_assets  = self::runtime_assets( $config );
+		$precache        = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( 'shell' === $cache_policy ? [ $offline_url ] : [ $app_url, $offline_url ], $precache, array_values( $runtime_assets ) ) ) ) ) );
+		$cache_prefix    = isset( $config['cache_prefix'] ) ? (string) $config['cache_prefix'] : 'wp-app-' . sanitize_key( $app_path ) . '-';
+		$scope_path      = self::url_path( $scope_url );
+		$cacheable_paths = isset( $config['cacheable_paths'] ) && is_array( $config['cacheable_paths'] ) ? $config['cacheable_paths'] : [];
+		$cacheable_paths = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_path' ], array_merge( [ $scope_path ], $cacheable_paths ) ) ) ) );
 
 		$manifest = [
 			'name'             => $name,
@@ -684,6 +632,17 @@ self.addEventListener("sync", function(event) {
 		}
 
 		return [
+			'cache_policy'                     => $cache_policy,
+			'outbox'                           => ! empty( $config['outbox'] ),
+			'local_data'                       => ! empty( $config['local_data'] ),
+			'offline_shell'                    => $config['offline_shell'] ?? [],
+			'offline_shell_path'               => ! empty( $config['offline_shell'] ) ? trim( substr( self::url_path( $offline_url ), strlen( self::url_path( $app_url ) ) ), '/' ) : '',
+			'runtime_assets'                   => $runtime_assets,
+			'worker_scripts'                   => $worker_scripts,
+			'worker_sources'                   => $worker_sources,
+			'worker_data'                      => $worker_data,
+			'visited_pages'                    => ! empty( $config['visited_pages'] ),
+			'cache_identity'                   => isset( $config['cache_identity'] ) ? (string) $config['cache_identity'] : '',
 			'app_path'                         => $app_path,
 			'manifest_path'                    => $manifest_path,
 			'manifest_paths'                   => self::normalize_endpoint_paths( $manifest_path, $config['manifest_aliases'] ?? [] ),
@@ -695,7 +654,9 @@ self.addEventListener("sync", function(event) {
 			'scope_url'                        => $scope_url,
 			'scope_path'                       => $scope_path,
 			'offline_url'                      => $offline_url,
-			'cache_name'                       => isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1',
+			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' ) . ( $runtime_assets || $worker_sources ? '-' . self::runtime_version() : '' )
+				. ( $worker_signature ? '-' . substr( hash( 'sha256', $worker_signature ), 0, 12 ) : '' )
+				. ( ! empty( $config['cache_identity'] ) ? '-' . md5( (string) $config['cache_identity'] ) : '' ),
 			'cache_prefix'                     => $cache_prefix,
 			'cacheable_paths'                  => $cacheable_paths,
 			'cacheable_search_params'          => isset( $config['cacheable_search_params'] ) && is_array( $config['cacheable_search_params'] ) ? array_values( $config['cacheable_search_params'] ) : [],
@@ -725,7 +686,7 @@ self.addEventListener("sync", function(event) {
 	 * @return array Endpoint paths.
 	 */
 	private static function get_endpoint_paths( $config ) {
-		return array_values( array_unique( array_merge( $config['manifest_paths'], $config['service_worker_paths'] ) ) );
+		return array_values( array_unique( array_merge( $config['manifest_paths'], $config['service_worker_paths'], ! empty( $config['offline_shell_path'] ) ? [ $config['offline_shell_path'] ] : [] ) ) );
 	}
 
 	/**
