@@ -80,7 +80,7 @@ class PwaTest extends TestCase {
 		foreach ( [ 'wp-app-offline-data', 'wp-app-outbox', 'wp-app-offline-client' ] as $handle ) {
 			$this->assertStringContainsString( $handle . '-js', $html );
 			$this->assertContains( $config['runtime_assets'][ $handle ], $config['precache'] );
-			$this->assertNull( wp_scripts()->query( $handle, 'registered' )->ver, 'Already-versioned runtime URLs must not receive a WordPress version query.' );
+			$this->assertNull( wp_scripts()->registered[ $handle ]->ver, 'Already-versioned runtime URLs must not receive a WordPress version query.' );
 			$this->assertStringContainsString( $config['runtime_assets'][ $handle ], $html );
 		}
 	}
