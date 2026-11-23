@@ -665,7 +665,7 @@ class Settings {
                                 data-navigation-enabled="<?php echo $can_customize ? '1' : '0'; ?>">
                                 <summary>
                                     <span class="wp-app-settings-app-icon"><?php echo Masterbar::get_app_link_icon_html_for_app( $app_path, $metadata, $title ); ?></span>
-                                    <span><strong data-app-name><?php echo esc_html( $title ); ?></strong><small data-app-visibility><?php echo esc_html( $app_settings['show_in_launcher'] ? __( 'Launcher' ) : __( 'Hidden from launcher' ) ); ?><?php echo $app_settings['pin_to_desktop'] ? ' · ' . esc_html__( 'Pinned to desktop' ) : ''; ?></small></span>
+                                    <span><strong data-app-name><?php echo esc_html( $app_name ); ?></strong><small data-app-visibility><?php echo esc_html( $app_settings['show_in_launcher'] ? __( 'Launcher' ) : __( 'Hidden from launcher' ) ); ?><?php echo $app_settings['pin_to_desktop'] ? ' · ' . esc_html__( 'Pinned to desktop' ) : ''; ?></small></span>
                                 </summary>
                                 <div class="wp-app-settings-editor" data-app-editor>
                                     <?php if ( ! $can_customize ) : ?>
