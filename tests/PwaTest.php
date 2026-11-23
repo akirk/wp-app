@@ -30,6 +30,29 @@ class PwaTest extends TestCase {
 		Pwa::register( 'private-notes', [ 'cache_policy' => 'typo' ] );
 	}
 
+	public function test_visited_pages_require_an_account_identity() {
+		$this->expectException( \InvalidArgumentException::class );
+		Pwa::register(
+            'private-notes',
+            [
+				'cache_policy'  => 'shell',
+				'offline_url'   => 'https://example.org/private-notes/',
+				'visited_pages' => true,
+			]
+        );
+	}
+
+	public function test_visited_page_caches_are_isolated_by_identity() {
+		$settings = [
+			'cache_policy'  => 'shell',
+			'offline_url'   => 'https://example.org/private-notes/',
+			'visited_pages' => true,
+		];
+		$first    = Pwa::register( 'private-notes', $settings + [ 'cache_identity' => '7' ] );
+		$second   = Pwa::register( 'private-notes', $settings + [ 'cache_identity' => '8' ] );
+		$this->assertNotSame( $first['cache_name'], $second['cache_name'] );
+	}
+
 	protected function setUp(): void {
 		parent::setUp();
 

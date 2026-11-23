@@ -5,6 +5,63 @@ const precache = config.precache || [];
 const cacheablePaths = config.cacheablePaths || [];
 const cacheableSearchParams = config.cacheableSearchParams || [];
 
+// Only explicitly opted-in apps can cache authenticated page snapshots.
+const pageMessage = "wp-app-offline-pages";
+const metadataPrefix = new URL("wp-app-cached-page/", config.scopeUrl).href;
+function inApp(url) {
+    const scope = new URL(config.scopeUrl);
+    return url.origin === scope.origin && url.pathname.indexOf(scope.pathname) === 0;
+}
+function metadataUrl(url) { return metadataPrefix + encodeURIComponent(url); }
+function validPage(response) {
+    return response && response.ok && !response.redirected &&
+        (response.headers.get("Content-Type") || "").includes("text/html") &&
+        response.headers.get("X-Wp-App-Offline") === config.cacheIdentity;
+}
+async function listPages(cache) {
+    const pages = [];
+    for (const request of await cache.keys()) {
+        if (!request.url.startsWith(metadataPrefix)) continue;
+        try {
+            const record = await (await cache.match(request)).json();
+            const page = await cache.match(record.url);
+            if (!validPage(page)) continue;
+            const assets = await Promise.all(record.assets.map(url => cache.match(url)));
+            if (assets.every(Boolean)) pages.push({url: record.url, title: record.title, cachedAt: record.cachedAt});
+        } catch (_) { /* Evicted or malformed records are not available pages. */ }
+    }
+    return pages.sort((a, b) => a.title.localeCompare(b.title));
+}
+async function pageRequest(data) {
+    if (!config.visitedPages || !config.cacheIdentity || data.identity !== config.cacheIdentity) throw new Error("Offline page account changed. Reload online.");
+    const cache = await caches.open(cacheName);
+    if (data.action === "remember") {
+        const url = new URL(data.url);
+        if (!inApp(url)) throw new Error("Page is outside this app.");
+        const assets = [...new Set(data.assets || [])].map(value => new URL(value));
+        if (assets.some(asset => asset.origin !== location.origin)) throw new Error("A required asset cannot be cached.");
+        // Keep the last complete snapshot until its replacement is fully cached.
+        const response = await fetch(url.href, {credentials: "same-origin", cache: "no-store"});
+        if (!validPage(response)) throw new Error("Page could not be cached for this account.");
+        await Promise.all(assets.map(async asset => {
+            const response = await fetch(asset.href, {credentials: "same-origin", cache: "no-store"});
+            if (!cacheResponseAllowed(response) || (response.headers.get("Content-Type") || "").includes("text/html")) throw new Error("A required asset could not be cached.");
+            await cache.put(asset.href, response);
+        }));
+        await cache.put(url.href, response);
+        await cache.put(metadataUrl(url.href), new Response(JSON.stringify({
+            url: url.href, title: String(data.title || url.pathname), assets: assets.map(asset => asset.href), cachedAt: new Date().toISOString()
+        }), {headers: {"Content-Type": "application/json"}}));
+    }
+    return listPages(cache);
+}
+self.addEventListener("message", function(event) {
+    if (!event.data || event.data.type !== pageMessage) return;
+    const port = event.ports && event.ports[0];
+    if (!port) return;
+    event.waitUntil(pageRequest(event.data).then(pages => port.postMessage({pages: pages})).catch(error => port.postMessage({error: error.message})));
+});
+
 function uniqueUrls(items) {
 	const seen = {};
 	return items.filter(function(url) {
@@ -35,6 +92,11 @@ function isCacheableRequest(url) {
 	});
 }
 
+function cacheResponseAllowed(response) {
+    return response.ok && !response.redirected && (!config.visitedPages ||
+        !(response.headers.get("Content-Type") || "").includes("text/html") || validPage(response));
+}
+
 function sendMessage(source, message) {
 	if (source && source.postMessage) {
 		source.postMessage(message);
@@ -46,7 +108,7 @@ self.addEventListener("install", function(event) {
 		caches.open(cacheName).then(function(cache) {
 			return Promise.all(precache.map(async function(url) {
 				const response = await fetch(url, {credentials: "same-origin", cache: "no-store"});
-				if (!response.ok || response.redirected) throw new Error("Precache response unavailable or redirected");
+				if (!cacheResponseAllowed(response)) throw new Error("Precache response unavailable or redirected");
 				await cache.put(url, response);
 			}));
 		}).then(function() {
@@ -74,14 +136,14 @@ self.addEventListener("fetch", function(event) {
 	const request = event.request;
 	const requestUrl = new URL(request.url);
 
-	if (request.method !== "GET" || (!isCacheableRequest(requestUrl) && !(config.cachePolicy === "shell" && request.mode === "navigate"))) {
+	if (request.method !== "GET" || (!config.visitedPages && !isCacheableRequest(requestUrl) && !(config.cachePolicy === "shell" && request.mode === "navigate"))) {
 		return;
 	}
 
 	event.respondWith(
 		fetch(request).then(async function(response) {
 			const copy = response.clone();
-			if (isCacheableRequest(requestUrl) && response.ok && !response.redirected) {
+			if (isCacheableRequest(requestUrl) && cacheResponseAllowed(response)) {
 				const cache = await caches.open(cacheName);
 				await cache.put(request, copy);
 			}
@@ -89,7 +151,12 @@ self.addEventListener("fetch", function(event) {
 		}).catch(function() {
 			return caches.open(cacheName).then(async function(cache) {
 				if (config.cachePolicy === "shell") {
-					return (await cache.match(request)) || (request.mode === "navigate" ? await cache.match(config.offlineUrl) : null) || Response.error();
+					let cached = await cache.match(request);
+                    if (config.visitedPages && request.mode === "navigate" && !isCacheableRequest(requestUrl)) {
+                        const pages = await listPages(cache);
+                        if (!pages.some(page => page.url === requestUrl.href)) cached = null;
+                    }
+                    return cached || (request.mode === "navigate" ? await cache.match(config.offlineUrl) : null) || Response.error();
 				}
 				return caches.match(request);
 			}).then(function(response) {
@@ -166,7 +233,7 @@ self.addEventListener("message", function(event) {
 				credentials: "same-origin",
 				cache: "reload"
 			}).then(function(response) {
-				if (response.ok && !response.redirected) {
+				if (cacheResponseAllowed(response)) {
 					return cache.put(url.href, response);
 				}
 			}).catch(function() {});

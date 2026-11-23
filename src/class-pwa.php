@@ -10,8 +10,9 @@ if ( class_exists( 'WpApp\Pwa' ) ) {
  * Progressive Web App support for WpApp applications.
  */
 class Pwa {
-	const MANIFEST_REQUEST       = 'wp-app-manifest';
-	const SERVICE_WORKER_REQUEST = 'wp-app-service-worker';
+	const OFFLINE_PAGES_SUPPORTED = true;
+	const MANIFEST_REQUEST        = 'wp-app-manifest';
+	const SERVICE_WORKER_REQUEST  = 'wp-app-service-worker';
 
 	/**
 	 * Registered PWA configurations keyed by app path.
@@ -403,6 +404,8 @@ class Pwa {
 		$service_worker_config = [
 			'cacheName'              => $config['cache_name'],
 			'cachePolicy'            => $config['cache_policy'],
+			'visitedPages'           => $config['visited_pages'],
+			'cacheIdentity'          => $config['cache_identity'],
 			'cachePrefix'            => $config['cache_prefix'],
 			'precache'               => $config['precache'],
 			'offlineUrl'             => $config['offline_url'],
@@ -450,6 +453,9 @@ class Pwa {
 		if ( 'shell' === $cache_policy && empty( $config['offline_url'] ) ) {
 			throw new \InvalidArgumentException( 'Shell caching requires an explicit offline_url.' );
 		}
+		if ( ! empty( $config['visited_pages'] ) && ( 'shell' !== $cache_policy || empty( $config['cache_identity'] ) ) ) {
+			throw new \InvalidArgumentException( 'Visited pages require shell caching and a non-empty cache_identity.' );
+		}
 		$precache        = array_values( array_unique( array_filter( array_map( [ __CLASS__, 'normalize_url' ], array_merge( 'shell' === $cache_policy ? [ $offline_url ] : [ $app_url, $offline_url ], $precache ) ) ) ) );
 		$cache_prefix    = isset( $config['cache_prefix'] ) ? (string) $config['cache_prefix'] : 'wp-app-' . sanitize_key( $app_path ) . '-';
 		$scope_path      = self::url_path( $scope_url );
@@ -480,6 +486,8 @@ class Pwa {
 
 		return [
 			'cache_policy'                     => $cache_policy,
+			'visited_pages'                    => ! empty( $config['visited_pages'] ),
+			'cache_identity'                   => isset( $config['cache_identity'] ) ? (string) $config['cache_identity'] : '',
 			'app_path'                         => $app_path,
 			'manifest_path'                    => $manifest_path,
 			'manifest_paths'                   => self::normalize_endpoint_paths( $manifest_path, $config['manifest_aliases'] ?? [] ),
@@ -491,7 +499,8 @@ class Pwa {
 			'scope_url'                        => $scope_url,
 			'scope_path'                       => $scope_path,
 			'offline_url'                      => $offline_url,
-			'cache_name'                       => isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1',
+			'cache_name'                       => ( isset( $config['cache_name'] ) ? (string) $config['cache_name'] : $cache_prefix . 'v1' )
+				. ( ! empty( $config['visited_pages'] ) ? '-' . md5( (string) $config['cache_identity'] ) : '' ),
 			'cache_prefix'                     => $cache_prefix,
 			'cacheable_paths'                  => $cacheable_paths,
 			'cacheable_search_params'          => isset( $config['cacheable_search_params'] ) && is_array( $config['cacheable_search_params'] ) ? array_values( $config['cacheable_search_params'] ) : [],

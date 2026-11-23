@@ -58,3 +58,30 @@ node --test tests/OutboxTest.cjs tests/WorkerTest.cjs
 ```
 
 Browser tests require Playwright and Chromium.
+
+## Visited pages in the regular UI
+
+Apps can opt into caching authenticated HTML snapshots alongside the minimal fallback:
+
+```php
+$app->enable_pwa( [
+    'cache_policy' => 'shell',
+    'offline_url' => home_url( '/my-app/capture/' ),
+    'visited_pages' => true,
+    'cache_identity' => (string) get_current_user_id(),
+] );
+```
+
+This requires a non-empty account identity and adds its hash to the cache name. The worker activates one current cache per app prefix. Every cacheable HTML response must explicitly return `X-Wp-App-Offline` with that exact identity; do not add it to login screens, redirects, or action endpoints. Opt in only for safe page views. Apps should verify `WpApp\Pwa::OFFLINE_PAGES_SUPPORTED` before registering a worker when an older framework provider may be selected.
+
+Load the framework asset `wp-app-offline-pages.js` with your other page scripts. After the worker becomes active, call:
+
+```js
+await wpAppOfflinePages.remember(registration, userId);
+const pages = await wpAppOfflinePages.list(registration, userId);
+// [{url, title, cachedAt}, ...]
+```
+
+`remember` fetches the current URL and its declared script/stylesheet assets, rejecting redirects, unsuccessful downloads, cross-origin assets, and account-mismatched HTML. It stores page metadata only after the page and assets have been cached. An unsuccessful refresh keeps the last complete snapshot. `list` reads the active cache and confirms that each page and its required scripts/styles still exist; it does not infer availability from browser history or fetch unvisited links. Both methods reject if the worker identity differs. Use a list-only request offline, on panel expansion, or when refreshing an availability indicator.
+
+A listed page can be reopened at its original URL offline. Other navigation uses the configured fallback. Lists are snapshots of the cache at query time; storage can subsequently be cleared or evicted. This covers HTML and the document's declared scripts/styles. Images, attachments, fonts, dynamically imported resources, and server-side features require additional app-specific caching. Private snapshots remain local browser data, not an authentication mechanism or encrypted storage. Apps own logout cleanup and the visible explanation of offline limitations. Cached editors do not automatically gain offline saving: queue changes and resolve server conflicts separately, or prevent offline form submission so edits stay visible.

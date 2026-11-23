@@ -6,7 +6,7 @@ const path = require('node:path');
 function worker() {
     const handlers = {}, stored = new Map();
     let response = new Response('shell');
-    const config = {cachePolicy: 'shell', cacheName: 'test-v1', cachePrefix: 'test-',
+    const config = {scopeUrl: 'https://example.org/app/', cachePolicy: 'shell', cacheName: 'test-v1', cachePrefix: 'test-',
         precache: ['https://example.org/app/capture/', 'https://example.org/assets/app.js?v=1'],
         offlineUrl: 'https://example.org/app/capture/', cacheMessageType: 'cache', cacheStatusMessageType: 'status'};
     const cache = {put: async (key, value) => stored.set(typeof key === 'string' ? key : key.url, value),
