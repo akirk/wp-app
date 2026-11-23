@@ -11,12 +11,24 @@ function worker() {
         offlineUrl: 'https://example.org/app/capture/', cacheMessageType: 'cache', cacheStatusMessageType: 'status'};
     const cache = {put: async (key, value) => stored.set(typeof key === 'string' ? key : key.url, value),
         match: async key => stored.get(typeof key === 'string' ? key : key.url)};
+    const cacheStorage = {open: async () => cache};
     const self = {wpAppWorker: config, addEventListener: (type, fn) => handlers[type] = fn, skipWaiting: async () => {}};
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../assets/offline/worker.js'), 'utf8'), {
         self, URL, Response, location: {origin: 'https://example.org'},
-        caches: {open: async () => cache}, fetch: async () => response.clone()
+        caches: cacheStorage, fetch: async () => response.clone()
     });
-    return {stored, handlers, response(value) { response = value; }};
+    return {stored, handlers, cache, cacheStorage, response(value) { response = value; }};
+}
+for (const failure of ['open', 'put']) {
+    test(`successful network response survives cache ${failure} failure`, async () => {
+        const w = worker();
+        if (failure === 'open') w.cacheStorage.open = async () => { throw new Error('Storage unavailable'); };
+        else w.cache.put = async () => { throw new Error('Quota exceeded'); };
+        w.response(new Response('fresh asset', {headers: {'Content-Type': 'application/javascript'}}));
+        let done;
+        w.handlers.fetch({request: {method: 'GET', url: 'https://example.org/assets/app.js?v=1', mode: 'cors'}, respondWith: promise => done = promise});
+        assert.equal(await (await done).text(), 'fresh asset');
+    });
 }
 test('shell worker caches explicit assets and excludes private navigation responses', async () => {
     const w = worker();

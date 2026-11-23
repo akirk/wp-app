@@ -144,8 +144,10 @@ self.addEventListener("fetch", function(event) {
 		fetch(request).then(async function(response) {
 			const copy = response.clone();
 			if (isCacheableRequest(requestUrl) && cacheResponseAllowed(response)) {
-				const cache = await caches.open(cacheName);
-				await cache.put(request, copy);
+				try {
+					const cache = await caches.open(cacheName);
+					await cache.put(request, copy);
+				} catch (_) { /* Storage failures must not discard a successful network response. */ }
 			}
 			return response;
 		}).catch(function() {

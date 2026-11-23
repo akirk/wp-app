@@ -546,7 +546,7 @@ class Pwa {
 		$scope_url           = isset( $config['scope'] ) ? self::normalize_url( $config['scope'] ) : $app_url;
 		$offline_url         = isset( $config['offline_url'] ) ? self::normalize_url( $config['offline_url'] ) : ( ! empty( $config['offline_shell'] ) ? self::app_url( $app_path, 'offline/' ) : $app_url );
 		$precache            = isset( $config['precache'] ) && is_array( $config['precache'] ) ? $config['precache'] : [];
-		$cache_policy        = $config['cache_policy'] ?? 'scope';
+		$cache_policy        = $config['cache_policy'] ?? ( ! empty( $config['offline_shell'] ) ? 'shell' : 'scope' );
 		if ( ! in_array( $cache_policy, [ 'scope', 'shell' ], true ) ) {
 			throw new \InvalidArgumentException( 'Unknown PWA cache policy.' );
 		}
@@ -557,6 +557,9 @@ class Pwa {
 			throw new \InvalidArgumentException( 'Visited pages require shell caching and a non-empty cache_identity.' );
 		}
 		if ( ! empty( $config['offline_shell'] ) ) {
+			if ( 'shell' !== $cache_policy ) {
+				throw new \InvalidArgumentException( 'An app shell requires shell caching.' );
+			}
 			$shell = $config['offline_shell'];
 			if ( ! is_array( $shell ) || empty( $shell['content'] ) || ! is_file( $shell['content'] ) || empty( $shell['bootstrap_url'] ) || ! isset( $shell['offline_data']['userId'] ) ) {
 				throw new \InvalidArgumentException( 'An app shell requires content, bootstrap_url, and offline_data.userId.' );

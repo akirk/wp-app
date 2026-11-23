@@ -7,6 +7,38 @@ use WpApp\Pwa;
 use WpApp\WpApp;
 
 class PwaTest extends TestCase {
+	public function test_app_shell_defaults_to_shell_caching() {
+		$config = Pwa::register(
+			'safe-shell',
+			[
+				'offline_shell' => [
+					'content'       => __DIR__ . '/fixtures/templates/offline-content.php',
+					'bootstrap_url' => 'https://example.org/safe-shell/config',
+					'offline_data'  => [ 'userId' => 7 ],
+				],
+			]
+		);
+		$this->assertSame( 'shell', $config['cache_policy'] );
+		$this->assertNotContains( 'https://example.org/safe-shell/', $config['precache'] );
+		$this->assertNotContains( $config['offline_shell']['bootstrap_url'], $config['precache'] );
+	}
+
+	public function test_app_shell_rejects_scope_caching() {
+		$this->expectException( \InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'An app shell requires shell caching.' );
+		Pwa::register(
+			'unsafe-shell',
+			[
+				'cache_policy'  => 'scope',
+				'offline_shell' => [
+					'content'       => __DIR__ . '/fixtures/templates/offline-content.php',
+					'bootstrap_url' => 'https://example.org/unsafe-shell/config',
+					'offline_data'  => [ 'userId' => 7 ],
+				],
+			]
+		);
+	}
+
 	public function test_shell_policy_precaches_only_explicit_shell_and_assets() {
 		$config = Pwa::register(
             'private-notes',
