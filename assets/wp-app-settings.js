@@ -63,7 +63,7 @@
         }
         function render() {
             models.forEach(function (model) {
-                model.row.querySelector('[data-app-name]').textContent = name(model);
+                model.row.querySelector('[data-app-name]').textContent = model.row.dataset.defaultTitle;
                 model.row.querySelector('.wp-app-settings-app-icon').replaceChildren(icon(model));
                 model.row.querySelector('[data-app-visibility]').textContent = (visible(model, 'launcher') ? config.launcher : config.hidden) + (visible(model, 'desktop') ? ' · ' + config.pinned : '');
             });
@@ -95,7 +95,7 @@
                 if (model) { option.disabled = visible(model, 'desktop'); option.textContent = name(model); }
             });
             if (active) {
-                dialog.querySelector('h2').textContent = name(active.model);
+                dialog.querySelector('h2').textContent = active.model.row.dataset.defaultTitle;
                 const available = ordered(active.place).filter(model => visible(model, active.place));
                 const index = available.indexOf(active.model);
                 dialog.querySelector('[data-move="-1"]').disabled = index <= 0;
@@ -108,6 +108,51 @@
             editorStatus.hidden = false; editorStatus.textContent = text;
             status.classList.toggle('is-failed', !!failed); status.classList.toggle('is-saved', text === config.saved);
         }
+        function initializeToolbarMenus(fragment) {
+            // WordPress binds these interactions once at DOMContentLoaded, so
+            // replacement nodes need their own handlers after a settings save.
+            fragment.querySelectorAll('li.menupop').forEach(function (item) {
+                const button = item.querySelector(':scope > .ab-item');
+                function setOpen(open) {
+                    item.classList.toggle('hover', open);
+                    if (button) button.setAttribute('aria-expanded', String(open));
+                }
+                if (window.hoverintent) {
+                    window.hoverintent(item, () => setOpen(true), () => setOpen(false)).options({ timeout: 180 });
+                } else {
+                    item.addEventListener('mouseenter', () => setOpen(true));
+                    item.addEventListener('mouseleave', () => setOpen(false));
+                }
+                if (button) {
+                    button.addEventListener('keydown', function (event) {
+                        if (event.key !== 'Enter' || event.ctrlKey || event.shiftKey) return;
+                        event.preventDefault();
+                        setOpen(!item.classList.contains('hover'));
+                    });
+                    if ('ontouchstart' in window) button.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        const open = !item.classList.contains('hover');
+                        document.querySelectorAll('#wpadminbar li.menupop.hover').forEach(other => other.classList.remove('hover'));
+                        setOpen(open);
+                    });
+                }
+                item.addEventListener('keydown', function (event) {
+                    if (event.key !== 'Escape') return;
+                    event.stopPropagation();
+                    setOpen(false);
+                    if (button) button.focus();
+                });
+            });
+        }
+        document.body.addEventListener(/Mobile\/.+Safari/.test(navigator.userAgent) ? 'touchstart' : 'click', function (event) {
+            if (!event.target.closest('#wpadminbar li.menupop')) {
+                document.querySelectorAll('#wpadminbar li.menupop.hover').forEach(item => {
+                    item.classList.remove('hover');
+                    const button = item.querySelector(':scope > .ab-item');
+                    if (button) button.setAttribute('aria-expanded', 'false');
+                });
+            }
+        });
         async function refreshBar() {
             const menu = document.querySelector('#wpadminbar #wp-admin-bar-root-default');
             if (!menu) return;
@@ -122,6 +167,7 @@
                 owned.forEach(node => node.remove());
                 payload.data.nodes.filter(node => !node.parent).forEach(function (node) {
                     const template = document.createElement('template'); template.innerHTML = node.html;
+                    initializeToolbarMenus(template.content);
                     menu.insertBefore(template.content, next);
                 });
             } catch (_) { /* Preview edits remain available if toolbar refresh is unavailable. */ }
@@ -168,7 +214,7 @@
             active = { model, place: button.closest('[data-navigation-preview]').dataset.navigationPreview };
             placeholder = document.createComment('app editor');
             model.editor.replaceWith(placeholder); slot.append(model.editor);
-            dialog.querySelector('h2').textContent = name(model);
+            dialog.querySelector('h2').textContent = model.row.dataset.defaultTitle;
             dialog.showModal(); render(); positionEditor();
             model.fields.title.focus();
         }

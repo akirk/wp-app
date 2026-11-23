@@ -888,7 +888,7 @@ class MasterbarSettingsTest extends TestCase {
 
         $this->assertStringContainsString( 'Show in launcher', $html );
         $this->assertStringContainsString( 'Pin to desktop top bar', $html );
-        $this->assertStringContainsString( '<strong data-app-name>Preview Name</strong>', $html );
+        $this->assertStringContainsString( '<strong data-app-name>Launcher Preview App</strong>', $html );
         $this->assertStringNotContainsString( 'Mobile launcher preview', $html );
     }
 
